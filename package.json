@@ -1,0 +1,15 @@
+{
+  "name": "starlink-mobile-roadmap",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Interactive roadmap: SpaceX spectrum, D2C, and Starlink Mobile (Aug 2026)",
+  "scripts": {
+    "start": "serve -s . -l ${PORT:-3000}"
+  },
+  "dependencies": {
+    "serve": "^14.2.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

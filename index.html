@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Starlink Mobile — Interactive Roadmap (Aug 2026)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>body { margin: 0; background: #070B14; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState } = React;
+
+/* ============================================================
+   STARLINK MOBILE: FROM TEXTS IN A FIELD TO A FOURTH CARRIER
+   Interactive roadmap console — data current to Aug 2026.
+   Space layer = amber. Ground layer = blue. Constraints = red.
+   v3: adds the Configuration Lab — per-block satellite/terrestrial/
+   split assignment with computed throughput, shared between the
+   Spectrum and Physics & Capacity tabs.
+   ============================================================ */
+
+const C = {
+  ink: "#070B14",
+  panel: "#0D1424",
+  panel2: "#101A30",
+  line: "#1C2A42",
+  text: "#E8EDF6",
+  dim: "#8A98B0",
+  amber: "#FFB454",
+  amberDim: "rgba(255,180,84,0.14)",
+  blue: "#5BA8FF",
+  blueDim: "rgba(91,168,255,0.14)",
+  red: "#FF6B6B",
+  green: "#6BDB8F",
+};
+
+/* ------------------------- PHASE DATA ------------------------- */
+
+const PHASES = [
+  {
+    id: 0,
+    era: "PHASE 0 · TODAY",
+    window: "Aug 2026",
+    title: "A texting service with a spectrum war chest",
+    tier: "SMS + basic data (≈2G)",
+    tierPct: 12,
+    beamCap: "~3.1 Mbps / beam",
+    spectrum: "10 MHz leased (T-Mobile G-block)",
+    sats: "Gen1 D2C on LTE eNodeB payloads",
+    orbit: 0.06,
+    summary:
+      "Starlink D2C works — texts, alerts, and thin data over T-Mobile's leased 2×5 MHz PCS G-block (1910–1915 / 1990–1995 MHz) under the FCC's SCS framework. Measured per-beam downlink is roughly 3.1 Mbps shared across a footprint tens of km wide: a coverage product, not a capacity product. Meanwhile the pieces of a real carrier were just assembled.",
+    events: [
+      { d: "May 12, 2026", t: "FCC approves EchoStar deal (DA 26-471): 65 MHz of exclusive nationwide mid-band — AWS-4, H-block, unpaired AWS-3 — for ~$19.6B, with MSS + terrestrial rights.", side: "reg" },
+      { d: "Jun 23, 2026", t: "AWS-3 auction: SpaceX buys just 2 licenses (~$8.5M, Cincinnati Band 70 gap-fill). A training round, per TMF's Tim Farrar.", side: "reg" },
+      { d: "Jun 2026", t: "SpaceX IPO. S-1 names rural, suburban and urban mobile as the target; Starlink Mobile revenue $632M.", side: "biz" },
+      { d: "Aug 4, 2026", t: "First post-IPO earnings call: Shotwell confirms terrestrial buildout intent — femtocells on rooftop dish mounts, service \u201cend of next year.\u201d", side: "biz" },
+      { d: "Summer 2026", t: "T-Mobile US exclusivity (~$100M multi-year) expires; US Mobile becomes first MVNO with Starlink Mobile.", side: "biz" },
+    ],
+    gates: [
+      "Capacity ceiling: 2×5 MHz leased spectrum caps every beam at single-digit Mbps",
+      "No owned spectrum in handsets yet — G-block belongs to T-Mobile",
+      "In-building coverage: effectively zero (outdoor, line-of-sight technology)",
+    ],
+  },
+  {
+    id: 1,
+    era: "PHASE 1 · OWN THE AIR",
+    window: "Late 2026 → 2027",
+    title: "Close the spectrum, launch the 5G satellites",
+    tier: "Voice + real data (≈3G/4G)",
+    tierPct: 38,
+    beamCap: "~6–15 Mbps / beam (H-block first)",
+    spectrum: "65 MHz owned + 10 MHz leased",
+    sats: "Next-gen V2 D2C: 5G NR NTN, 20×20 MHz beams, MIMO",
+    orbit: 0.32,
+    summary:
+      "The pivot from tenant to landlord. H-block (1915–1920 / 1995–2000 MHz) is an existing IMT band phones can use almost immediately — doubling per-beam capacity the day it lights up. Next-gen D2C satellites move from adapted LTE to native 5G NR NTN with arrays ~5× larger, 16× more beams and 4× bandwidth per beam. SpaceX claims up to 150 Mbps to an unmodified phone.",
+    events: [
+      { d: "2027", t: "Next-gen D2D satellites begin launching; Qualcomm X105 (3GPP Rel-19) is the first modem with native Starlink Mobile 5G.", side: "space" },
+      { d: "Q3 2027", t: "Life-saving data services target; voice within months after.", side: "space" },
+      { d: "Nov 30, 2027", t: "EchoStar deal must consummate. Within 30 days, the $2.4B vendor escrow funds — and the FCC's 9-year buildout clock starts.", side: "reg" },
+      { d: "Jul 2027", t: "Upper C-band auction (160 MHz, 3.98–4.14 GHz, est. $30–75B). The size of any SpaceX bid reveals how urban its ambitions really are.", side: "reg" },
+      { d: "Late 2027", t: "\u201cStarlink Mobile\u201d consumer service target — Shotwell: \u201c100 times better, 10 times 10 better.\u201d", side: "biz" },
+    ],
+    gates: [
+      "AWS-4 (band n252) is standardized in 3GPP NTN but not yet in any handset chipset — a 2–3 year silicon + device-refresh lag",
+      "3GPP NTN doesn't yet support H-block or n70 for satellite use; SpaceX must drive standardization (or fly pre-standard)",
+      "Deferred FCC waivers (\u00a72.106 MSS allocation, \u00a725.115 handsets-as-earth-stations) still pending in GN Docket 25-340",
+    ],
+  },
+  {
+    id: 2,
+    era: "PHASE 2 · TOUCH THE GROUND",
+    window: "2027 → 2028",
+    title: "The hybrid network: femtocells + satellites",
+    tier: "Carrier-grade outdoors, patchy indoors",
+    tierPct: 62,
+    beamCap: "~15–18 Mbps / beam + terrestrial offload",
+    spectrum: "65 MHz used both from orbit and on the ground",
+    sats: "Continuous global D2D coverage target: end-2028",
+    orbit: 0.6,
+    summary:
+      "The EchoStar licenses carry terrestrial rights — so SpaceX builds down, not just up. Small n70 femtocells mount on the same rooftop brackets as ~millions of Starlink dishes, each backhauled by the broadband constellation. Satellites erase dead zones running n252; femtocells add capacity exactly where subscribers already are, running the same 2000–2020 MHz flipped to downlink. Teslas become roaming nodes: Cybercab ships with Starlink standard.",
+    events: [
+      { d: "2027–2028", t: "Femtocell deployment \u201cas you need it\u201d on rooftop dish mounts (Shotwell); Musk claims small stations could beat cellular bandwidth.", side: "ground" },
+      { d: "Early 2028", t: "Deutsche Telekom launches V2-based satellite service across Europe — the partner model scales in parallel.", side: "biz" },
+      { d: "End-2028", t: "Continuous global D2D coverage target (no more waiting for a pass).", side: "space" },
+      { d: "2028+", t: "n252/n70 handsets reach volume as chipset support (Qualcomm, MediaTek) propagates through device refresh cycles.", side: "ground" },
+    ],
+    gates: [
+      "Femtocell physics: tens of meters of range; steel and concrete still win indoors",
+      "Moffett: the femtocell plan \u201cworks best where it matters least competitively\u201d — dish density is lowest in urban cores",
+      "Self-interference: n252 satellite uplink and n70 terrestrial downlink share 2000–2020 MHz — SpaceX must partition its own network geographically",
+    ],
+  },
+  {
+    id: 3,
+    era: "PHASE 3 · SCALE OR STALL",
+    window: "2029 → 2030+",
+    title: "Starship cadence, V3, and the physical-AI prize",
+    tier: "Fourth carrier — or premium coverage layer",
+    tierPct: 88,
+    beamCap: "V3: 1 Tbps DL per satellite (claim)",
+    spectrum: "65 MHz + possible Upper C-band wins",
+    sats: "Up to 15,000 D2C sats authorized (226–435 km)",
+    orbit: 0.9,
+    summary:
+      "Everything converges on one variable: Starship. V3 broadband satellites (1 Tbps down, 160–200 Gbps up, ~4 Tbps backhaul each) fly ~60 per Starship — roughly 60 Tbps of capacity per launch — but only at a cadence (~4 launches/month) not yet demonstrated. If it happens, the real prize may not be phones at all: Musk frames the endgame as bandwidth for \u201cbillions of AI-powered devices\u201d — robotaxis, Optimus, drones — an outdoor market that plays to satellite's strengths.",
+    events: [
+      { d: "~Late 2029", t: "First FCC buildout milestone: 5 dB SINR at 70% availability across 90% of each BEA + \u2265100 kbps/MHz uplink. Miss all first-interim metrics → final deadline accelerates a year.", side: "reg" },
+      { d: "2029–2030", t: "V3 constellation buildout; ~350 Tbps network grows toward multi-Pbps if cadence holds.", side: "space" },
+      { d: "2030", t: "Upper C-band commercial deployment window — if SpaceX bid big in 2027, urban terrestrial gets real.", side: "ground" },
+      { d: "Ongoing", t: "Physical AI: Starlink standard in every Tesla; Gen3 FCC filing cites machine connectivity as the growth curve.", side: "biz" },
+    ],
+    gates: [
+      "Starship cadence is THE gate — miss it and every capacity claim slips",
+      "Final FCC milestones (9 yrs): 10 dB SINR @ 90%, 600/200 kbps/MHz spectral efficiency — automatic license termination on failure",
+      "Even at scale: one beam over tens of km cannot out-capacity thousands of urban cells — the in-building revenue core likely stays terrestrial",
+    ],
+  },
+];
+
+/* ------------------------- SPECTRUM DATA ------------------------- */
+
+const BANDS = [
+  {
+    id: "aws3",
+    name: "AWS-3 (unpaired UL)",
+    n: "n70 ↑",
+    lo: 1695, hi: 1710,
+    pair: null,
+    own: "Owned — $2.6B (Nov 2025)",
+    note: "15 MHz of uplink-only spectrum — the missing ingredient that completed Band 70. Uplink is the starved direction in satellite D2C (a <0.25 W phone must close a ~170 dB link), so dedicated UL is worth more to SpaceX than it ever was to Dish. Terrestrial from close day; a satellite supplemental-uplink (SUL) future awaits NTN standardization and FCC Earth-to-space treatment. Shared with NOAA weather-satellite downlinks: coordination zones apply.",
+    color: C.amber, status: "owned",
+  },
+  {
+    id: "g",
+    name: "PCS G-block (leased)",
+    n: "Band 25",
+    lo: 1910, hi: 1915,
+    pair: [1990, 1995],
+    own: "Leased from T-Mobile (SCS)",
+    note: "The 2×5 MHz that runs today's beta. SMS-only grant Nov 2024 (DA 24-1193); Mar 2025 waiver added ~3.1 dB more power over AT&T/Verizon objections. Exclusivity expired summer 2026. Satellite-only for SpaceX — the terrestrial rights stay with T-Mobile.",
+    color: C.blue, status: "leased",
+  },
+  {
+    id: "h",
+    name: "H-block",
+    n: "PCS H",
+    lo: 1915, hi: 1920,
+    pair: [1995, 2000],
+    own: "Owned — part of $17B (Sep 2025)",
+    note: "2×5 MHz adjacent to the G-block. Already an IMT band — existing phones can use it, so it's the fastest capacity doubler SpaceX owns. Its 1995–2000 downlink half also forms the bottom of Band 70's downlink. Caveat: 3GPP NTN doesn't yet support it for satellite; standardization work required.",
+    color: C.amber, status: "owned",
+  },
+  {
+    id: "aws4",
+    name: "AWS-4 — the switch-hitter",
+    n: "n252 / n70 ↓",
+    lo: 2000, hi: 2020,
+    pair: [2180, 2200],
+    own: "Owned — part of $17B (Sep 2025)",
+    note: "The crown jewel, with a built-in mode switch. Original config (n252): 2000–2020 as satellite UPLINK paired with 2180–2200 downlink — standardized for NTN, in no phones yet. Dish's converted config (n70): 2000–2020 flipped to terrestrial DOWNLINK paired with the AWS-3 uplink — in phones today. SpaceX owns both personalities. See the mode-switch panel and configuration lab below.",
+    color: C.amber, status: "owned",
+  },
+];
+
+/* Ledger: role of each range under each configuration */
+const LEDGER = [
+  { f: "1695–1710", sat: { t: "future supplemental UL from orbit (SUL — pending NTN + FCC)", s: "off" }, ter: { t: "n70 uplink — phone → femtocell", s: "up" }, hot: false },
+  { f: "1915–1920 (H)", sat: { t: "future satellite UL (pending NTN standardization)", s: "off" }, ter: { t: "PCS-adjacent uplink", s: "up" }, hot: false },
+  { f: "1995–2000 (H)", sat: { t: "future satellite DL (pending NTN standardization)", s: "off" }, ter: { t: "n70 downlink (bottom 5 MHz)", s: "down" }, hot: false },
+  { f: "2000–2020 (AWS-4)", sat: { t: "SATELLITE UPLINK — phone → satellite (n252)", s: "up" }, ter: { t: "FEMTOCELL DOWNLINK — femtocell → phone (n70)", s: "down" }, hot: true },
+  { f: "2180–2200 (AWS-4)", sat: { t: "satellite downlink (n252)", s: "down" }, ter: { t: "supplemental downlink via n66 (in all phones)", s: "down" }, hot: false },
+];
+
+const BROADBAND = [
+  { band: "Ku (user links)", dl: "10.7–12.7 GHz", ul: "14.0–14.5 GHz", role: "Dish ↔ satellite. Eight 250 MHz DL channels. The consumer broadband workhorse — and the backhaul for every rooftop femtocell." },
+  { band: "Ka (gateways)", dl: "17.8–18.6, 18.8–19.3 GHz", ul: "27.5–29.1, 29.5–30.0 GHz", role: "Satellite ↔ ground station feeder links." },
+  { band: "V-band", dl: "~37.5–42.5 GHz", ul: "~47.2–50.2 GHz", role: "Gen2 capacity expansion; commercially early." },
+  { band: "E-band", dl: "71–76 GHz", ul: "81–86 GHz", role: "Gen2 gateway links (granted Mar 2024) — ~4× more capacity per satellite. V3's Tbps-class backhaul lives here." },
+];
+
+/* Band readiness by year */
+const READINESS = {
+  years: [2026, 2027, 2028, 2029],
+  rows: [
+    {
+      band: "G-block (Band 25, leased)",
+      h: ["ok", "ok", "ok", "ok"],
+      o: ["ok", "ok", "ok", "ok"],
+      t: ["no", "no", "no", "no"],
+      note: "In every phone; live from orbit today via SpaceX's pre-standard LTE. Terrestrial rights stay with T-Mobile — lease covers satellite (SCS) only.",
+    },
+    {
+      band: "H-block (owned)",
+      h: ["ok", "ok", "ok", "ok"],
+      o: ["no", "part*", "ok*", "ok*"],
+      t: ["pend", "pend", "ok", "ok"],
+      note: "PCS-adjacent: handsets essentially ready. Orbit blocked until 3GPP NTN adds it (SpaceX driving; projection). Terrestrial use unlocks at deal close (≤ Nov 30, 2027).",
+    },
+    {
+      band: "AWS-3 1695–1710 (n70 ↑, owned)",
+      h: ["part", "part", "ok*", "ok*"],
+      o: ["no", "no", "part*", "part*"],
+      t: ["pend", "pend", "ok", "ok"],
+      note: "n70 is in recent flagships (Dish's legacy) but not universal; broadens with device refresh. Satellite SUL future pending NTN + FCC Earth-to-space treatment. NOAA coordination zones apply.",
+    },
+    {
+      band: "AWS-4 as n252 (satellite config)",
+      h: ["no", "part*", "part*", "ok*"],
+      o: ["ok", "ok", "ok", "ok"],
+      t: ["no", "no", "no", "no"],
+      note: "The mirror image: standardized for NTN from day one, but in zero handsets until Qualcomm X105-class silicon ships (first devices ~2027, volume ~2029). n252 is the satellite personality — no terrestrial role.",
+    },
+    {
+      band: "AWS-4 as n70 ↓ (terrestrial config)",
+      h: ["part", "part", "ok*", "ok*"],
+      o: ["no", "no", "no", "no"],
+      t: ["pend", "pend", "ok", "ok"],
+      note: "Same 2000–2020 MHz, flipped to femtocell downlink. Rides n70 handset support; terrestrial-only by definition. Cannot run in the same place as n252 satellite uplink.",
+    },
+    {
+      band: "2180–2200 via n66 (SDL)",
+      h: ["ok", "ok", "ok", "ok"],
+      o: ["ok", "ok", "ok", "ok"],
+      t: ["pend", "pend", "ok", "ok"],
+      note: "n66 downlink range is universal in phones. Serves as n252's satellite DL from orbit, or supplemental terrestrial DL — the one block useful in both modes without a fight.",
+    },
+  ],
+};
+
+/* ------------------------- CONFIGURATION LAB ------------------------- */
+/* Each block is assigned SAT, TERR, SPLIT (geographic partition: counts in
+   both zones, in different places), or OFF. Rules encode reality:
+   G-block is satellite-only (lease). Sat use of H/AWS-3 is standards-gated. */
+
+const BLOCKS = [
+  { id: "aws3", label: "1695–1710", sub: "AWS-3 · UL only · 15 MHz", ulMHz: 15, dlMHz: 0, allowed: ["terr", "sat", "split", "off"], satGate: "satellite SUL pending 3GPP NTN + FCC Earth-to-space treatment" },
+  { id: "g", label: "G-block", sub: "1910/1990 · 2×5 · leased", ulMHz: 5, dlMHz: 5, allowed: ["sat", "off"], satGate: null },
+  { id: "h", label: "H-block", sub: "1915/1995 · 2×5 · owned", ulMHz: 5, dlMHz: 5, allowed: ["terr", "sat", "split", "off"], satGate: "satellite use pending 3GPP NTN standardization" },
+  { id: "a4main", label: "2000–2020", sub: "AWS-4 · the switch-hitter · 20 MHz", ulMHz: 20, dlMHz: 20, allowed: ["sat", "terr", "split", "off"], satGate: null, switcher: true },
+  { id: "a4dl", label: "2180–2200", sub: "AWS-4 DL / n66 SDL · 20 MHz", ulMHz: 0, dlMHz: 20, allowed: ["sat", "terr", "split", "off"], satGate: null },
+];
+
+/* Spectral efficiency anchors (Mbps per MHz):
+   SAT DL gen1 0.62 = UPM measurement (≈ FCC's 9-yr 600 kbps/MHz/beam DL milestone);
+   SAT DL v2 2.48 = company-claimed 4× bandwidth-per-beam uplift (claim);
+   SAT UL gen1 0.10 = FCC 2-yr milestone floor; v2 0.30 = 9-yr milestone / claims;
+   TERR: user-set 2–6 bps/Hz small-cell efficiency. */
+const SAT_EFF = { gen1: { dl: 0.62, ul: 0.10 }, v2: { dl: 2.48, ul: 0.30 } };
+
+function calcZones(cfg) {
+  const inSat = (a) => a === "sat" || a === "split";
+  const inTerr = (a) => a === "terr" || a === "split";
+  let satDL = 0, satUL = 0, terrDL = 0, terrUL = 0;
+  const gates = [];
+  for (const b of BLOCKS) {
+    const a = cfg[b.id];
+    if (inSat(a)) {
+      // a4main in sat mode contributes UL only (n252 uplink); its DL twin is a4dl
+      satUL += b.id === "a4main" ? 20 : b.ulMHz;
+      satDL += b.id === "a4main" ? 0 : b.dlMHz;
+      if (b.satGate) gates.push(`${b.label}: ${b.satGate}`);
+    }
+    if (inTerr(a)) {
+      // a4main in terr mode contributes DL only (n70 downlink)
+      terrDL += b.id === "a4main" ? 20 : b.dlMHz;
+      terrUL += b.id === "a4main" ? 0 : b.ulMHz;
+    }
+  }
+  const eff = SAT_EFF[cfg.gen];
+  return {
+    satDLMHz: satDL, satULMHz: satUL, terrDLMHz: terrDL, terrULMHz: terrUL,
+    satDLMbps: satDL * eff.dl, satULMbps: satUL * eff.ul,
+    terrDLMbps: terrDL * cfg.terrEff, terrULMbps: terrUL * cfg.terrEff * 0.6,
+    gates,
+    boundary: cfg.a4main === "split",
+  };
+}
+
+const SCENARIOS = [
+  {
+    id: "today", name: "Today (pre-close)",
+    d: "Only the leased G-block is live from orbit. The owned 65 MHz sits idle until consummation.",
+    cfg: { aws3: "off", g: "sat", h: "off", a4main: "off", a4dl: "off", gen: "gen1" },
+  },
+  {
+    id: "close", name: "Close day, standards as-is",
+    d: "Spectrum splits along what silicon allows: n252 (2000–2020 ↑ / 2180–2200 ↓) to orbit for the phones that have it; H-block and AWS-3, already in handsets, go terrestrial.",
+    cfg: { aws3: "terr", g: "sat", h: "terr", a4main: "sat", a4dl: "sat", gen: "gen1" },
+  },
+  {
+    id: "hybrid", name: "The hybrid playbook (likely)",
+    d: "The 2 GHz blocks run split-mode: n252 satellite service over rural geography, n70/n66 femtocell service in town — the same MHz doing different jobs in different places. V2 satellites assumed.",
+    cfg: { aws3: "terr", g: "sat", h: "terr", a4main: "split", a4dl: "split", gen: "v2" },
+  },
+  {
+    id: "urban", name: "Urban-max terrestrial",
+    d: "Everything ownable feeds femtocells: 45 MHz of downlink, 20 of uplink per cell. The satellite keeps only the lease — the configuration Moffett's critique assumes.",
+    cfg: { aws3: "terr", g: "sat", h: "terr", a4main: "terr", a4dl: "terr", gen: "v2" },
+  },
+  {
+    id: "satmax", name: "Satellite-max (standards complete*)",
+    d: "Every owned MHz to orbit — 30 MHz down, 45 up per beam. The deep-rural, maritime, and disaster picture, only reachable once H-block and n70 clear NTN standardization.",
+    cfg: { aws3: "sat", g: "sat", h: "sat", a4main: "sat", a4dl: "sat", gen: "v2" },
+  },
+  {
+    id: "iot", name: "Machine / IoT overlay (2028+*)",
+    d: "Uplink-heavy for physical AI: AWS-3 runs split as terrestrial n70 uplink in town AND supplemental uplink from orbit for telemetry, drones, and vehicles everywhere else.",
+    cfg: { aws3: "split", g: "sat", h: "terr", a4main: "sat", a4dl: "sat", gen: "v2" },
+  },
+];
+
+const ASSIGN_LABEL = { sat: "SAT", terr: "TERR", split: "SPLIT", off: "OFF" };
+const ASSIGN_COLOR = { sat: C.amber, terr: C.blue, split: "url(#splitGrad)", off: C.line };
+
+function ConfigLab({ cfg, setCfg, compact }) {
+  const z = calcZones(cfg);
+  const activeScen = SCENARIOS.find((s) =>
+    Object.entries(s.cfg).every(([k, v]) => cfg[k] === v)
+  );
+
+  const cycle = (b) => {
+    const cur = cfg[b.id];
+    const i = b.allowed.indexOf(cur);
+    const next = b.allowed[(i + 1) % b.allowed.length];
+    setCfg({ ...cfg, [b.id]: next });
+  };
+
+  const totMHz = BLOCKS.reduce((s, b) => s + Math.max(b.ulMHz + b.dlMHz, 15), 0); // strip widths
+  let acc = 0;
+  const stripW = 900, stripH = 66;
+
+  return (
+    <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
+      <div className="eyebrow" style={{ color: C.green }}>
+        Configuration lab · assign every block, read the throughput{compact ? " · configured here or in the Spectrum tab" : ""}
+      </div>
+      {!compact && (
+        <p className="body" style={{ marginBottom: 12 }}>
+          SpaceX's 75 MHz isn't one network — it's a decision space. Click any block to cycle its assignment:{" "}
+          <strong style={{ color: C.amber }}>SAT</strong> (satellite zone),{" "}
+          <strong style={{ color: C.blue }}>TERR</strong> (femtocell zone),{" "}
+          <strong>SPLIT</strong> (geographic partition — both, in different places), or OFF. Presets below are the
+          strategies actually on the table. Zones are disjoint geographies, so SAT and TERR numbers coexist nationally.
+        </p>
+      )}
+
+      <div className="tglRow" style={{ marginBottom: 14 }}>
+        {SCENARIOS.map((s) => (
+          <button key={s.id} onClick={() => setCfg({ ...s.cfg, terrEff: cfg.terrEff })}
+            className={"scenBtn" + (activeScen && activeScen.id === s.id ? " on" : "")}>{s.name}</button>
+        ))}
+      </div>
+      {activeScen && <p className="body" style={{ fontSize: 13, color: C.dim, marginBottom: 12 }}>{activeScen.d}</p>}
+
+      {/* allocation strip */}
+      <svg viewBox={`0 0 ${stripW} ${stripH + 34}`} style={{ width: "100%", display: "block" }} role="img" aria-label="Spectrum block allocation strip">
+        <defs>
+          <linearGradient id="splitGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor={C.amber} /><stop offset="49%" stopColor={C.amber} />
+            <stop offset="51%" stopColor={C.blue} /><stop offset="100%" stopColor={C.blue} />
+          </linearGradient>
+        </defs>
+        {BLOCKS.map((b) => {
+          const w = (Math.max(b.ulMHz + b.dlMHz, 15) / totMHz) * (stripW - 8 * (BLOCKS.length - 1));
+          const x = acc; acc += w + 8;
+          const a = cfg[b.id];
+          return (
+            <g key={b.id} onClick={() => cycle(b)} style={{ cursor: "pointer" }}>
+              <rect x={x} y="8" width={w} height={stripH - 16} rx="4"
+                fill={a === "off" ? "transparent" : ASSIGN_COLOR[a]}
+                fillOpacity={a === "split" ? 1 : a === "off" ? 0 : 0.28}
+                stroke={a === "sat" ? C.amber : a === "terr" ? C.blue : a === "split" ? C.text : C.line}
+                strokeWidth="1.3" strokeDasharray={a === "off" ? "4 3" : "0"} />
+              <text x={x + w / 2} y={stripH / 2 - 3} textAnchor="middle" fill={C.text} fontSize="12" fontWeight="600" fontFamily="var(--disp)">{b.label}</text>
+              <text x={x + w / 2} y={stripH / 2 + 12} textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">{b.sub}</text>
+              <text x={x + w / 2} y={stripH + 12} textAnchor="middle"
+                fill={a === "sat" ? C.amber : a === "terr" ? C.blue : a === "split" ? C.text : C.dim}
+                fontSize="10" fontFamily="var(--mono)" letterSpacing="0.12em">{ASSIGN_LABEL[a]}{b.satGate && (a === "sat" || a === "split") ? "*" : ""}</text>
+              {b.switcher && <text x={x + w / 2} y={stripH + 26} textAnchor="middle" fill={C.dim} fontSize="8.5" fontFamily="var(--mono)">SAT=↑ n252 · TERR=↓ n70</text>}
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* zone outputs */}
+      <div className="zoneGrid">
+        <div className="zone" style={{ borderColor: C.amber }}>
+          <div className="zoneHead" style={{ color: C.amber }}>SATELLITE ZONE · per beam (tens of km, shared)</div>
+          <div className="zoneNums">
+            <div><span className="zN">{z.satDLMbps.toFixed(1)}</span><span className="zU">Mbps ↓</span><div className="zM">{z.satDLMHz} MHz DL</div></div>
+            <div><span className="zN">{z.satULMbps.toFixed(1)}</span><span className="zU">Mbps ↑</span><div className="zM">{z.satULMHz} MHz UL</div></div>
+          </div>
+          <div className="tglRow" style={{ marginTop: 10 }}>
+            <button onClick={() => setCfg({ ...cfg, gen: "gen1" })} className={"genBtn" + (cfg.gen === "gen1" ? " on" : "")}>Gen1 · measured</button>
+            <button onClick={() => setCfg({ ...cfg, gen: "v2" })} className={"genBtn" + (cfg.gen === "v2" ? " on" : "")}>V2 · claims (4×)</button>
+          </div>
+        </div>
+        <div className="zone" style={{ borderColor: C.blue }}>
+          <div className="zoneHead" style={{ color: C.blue }}>TERRESTRIAL ZONE · per femtocell (~50 m radius)</div>
+          <div className="zoneNums">
+            <div><span className="zN">{z.terrDLMbps.toFixed(0)}</span><span className="zU">Mbps ↓</span><div className="zM">{z.terrDLMHz} MHz DL</div></div>
+            <div><span className="zN">{z.terrULMbps.toFixed(0)}</span><span className="zU">Mbps ↑</span><div className="zM">{z.terrULMHz} MHz UL</div></div>
+          </div>
+          <label className="sliderL" style={{ marginTop: 10, fontSize: 12 }}>
+            Small-cell spectral efficiency: <strong>{cfg.terrEff} bps/Hz</strong>
+            <input type="range" min="2" max="6" step="0.5" value={cfg.terrEff}
+              onChange={(e) => setCfg({ ...cfg, terrEff: +e.target.value })} />
+          </label>
+        </div>
+      </div>
+
+      {(z.gates.length > 0 || z.boundary) && (
+        <div className="labNotes">
+          {z.boundary && <div className="labNote" style={{ color: C.red }}>⚠ 2000–2020 in SPLIT mode: n252 uplink and n70 downlink meet at zone boundaries — guard zones, beam steering and scheduling required (internal to SpaceX, but real).</div>}
+          {z.gates.map((g, i) => <div key={i} className="labNote">* {g}</div>)}
+        </div>
+      )}
+
+      {!compact && (
+        <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 12 }}>
+          Model anchors: satellite DL 0.62 Mbps/MHz/beam measured (UPM, arXiv 2506.00283 — consistent with the FCC's 9-year
+          600 kbps/MHz milestone); V2 = company-claimed 4× bandwidth-per-beam. Satellite UL 0.10–0.30 Mbps/MHz spans the
+          FCC's 2-year floor to 9-year milestone. Terrestrial bps/Hz is standard small-cell engineering range. Illustrative,
+          not predictive — the point is the shape of the trade, not the third decimal.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------- QUOTES / BENCHMARKS ------------------------- */
+
+const QUOTES_BULL = [
+  { who: "Gwynne Shotwell — SpaceX (Aug 2026)", q: "The spectrum that we purchased from EchoStar does have terrestrial components, so we definitely intend to build out the terrestrial component." },
+  { who: "Shotwell — on Starlink Mobile", q: "100 times better, 10 times 10 better — with femtocells deployed as you need it, not billions in low-band spectrum up front." },
+  { who: "Elon Musk — on the endgame", q: "With AI, humanoid robotics and vehicle robotics, the appetite for bandwidth will be much greater than it has been in the past." },
+  { who: "The structural case", q: "Own satellites, own launch at marginal cost on Starship, custom silicon, 65 MHz of exclusive contiguous nationwide mid-band — no carrier has ever vertically integrated the full stack." },
+];
+
+const QUOTES_BEAR = [
+  { who: "Craig Moffett — MoffettNathanson", q: "Extraordinarily challenging to imagine a direct-to-consumer service from Starlink that could be competitive with carrier services in the next five years. Femtocells work best where it matters least competitively." },
+  { who: "Benedict Evans", q: "The hard part is having coverage in a city with steel and concrete blocking every signal past 50 yards. What's the algebra?" },
+  { who: "David Barden — New Street Research", q: "It makes no sense to replicate networks built over three decades with roughly 1,000 MHz of spectrum using only 65 MHz." },
+  { who: "Srini Gopalan — T-Mobile US CEO", q: "I struggle to see which consumer problems they would solve by entering the market. What is the gap they're looking to serve?" },
+];
+
+const BENCHMARKS = [
+  { t: "A Big-Three MVNO or Charter offload deal", why: "Instant urban coverage while the hybrid network matures — the single biggest accelerant." },
+  { t: "Starship cadence reaching ~4 launches/month", why: "Gates V3, global D2D, and every headline capacity number. If cadence lags, discount all claims." },
+  { t: "n252 silicon shipping in mainstream phones", why: "Until AWS-4's satellite config is in handsets, the best 40 MHz can't reach a consumer device from orbit." },
+  { t: "Size of SpaceX's Upper C-band bid (Jul 2027)", why: "A big bid = serious urban terrestrial carrier. A token bid = coverage-layer + machine-connectivity strategy." },
+  { t: "EchoStar closing (≤ Nov 30, 2027) & the $2.4B escrow", why: "Early close signals confidence; escrow litigation could snarl the timeline." },
+  { t: "First FCC milestone (~late 2029)", why: "5 dB SINR @ 70% over 90% of each BEA. Missing all first-interim metrics accelerates the license-termination clock." },
+];
+
+const ENVS = {
+  rural: {
+    label: "Rural / remote",
+    users: 6, indoor: 20,
+    femto: false,
+    blurb: "Few users share the beam, most usage is outdoors or near windows, and there is no terrestrial alternative — satellite wins by default. This is where the FCC milestones are measured (outdoor availability) and where n252 satellite uplink runs unopposed.",
+  },
+  suburban: {
+    label: "Suburban",
+    users: 40, indoor: 60,
+    femto: true,
+    blurb: "The hybrid sweet spot: rooftop dishes are common, so femtocells (n70 downlink) can carry indoor and neighborhood traffic while the satellite layer covers the gaps between them. Beam sharing starts to bite for satellite-only users.",
+  },
+  urban: {
+    label: "Urban core",
+    users: 150, indoor: 85,
+    femto: true,
+    blurb: "The bear case's home turf. Hundreds of active users per beam footprint, ~85% of usage indoors behind steel and concrete the satellite cannot reach, and femtocell islands tens of meters wide cannot stitch into a blanket. This is why analysts say the in-building revenue core stays terrestrial.",
+  },
+};
+
+/* ------------------------- UI PRIMITIVES ------------------------- */
+
+function Tag({ children, tone }) {
+  const map = {
+    space: { c: C.amber, bg: C.amberDim },
+    ground: { c: C.blue, bg: C.blueDim },
+    reg: { c: "#C79BFF", bg: "rgba(199,155,255,0.12)" },
+    biz: { c: C.green, bg: "rgba(107,219,143,0.12)" },
+  };
+  const m = map[tone] || map.biz;
+  return (
+    <span style={{
+      fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.08em",
+      color: m.c, background: m.bg, padding: "2px 7px", borderRadius: 3,
+      textTransform: "uppercase", whiteSpace: "nowrap",
+    }}>{children}</span>
+  );
+}
+
+const TAG_LABEL = { space: "orbit", ground: "ground", reg: "regulatory", biz: "market" };
+
+function Dot({ s }) {
+  const map = {
+    ok: { c: C.green, t: "✓" },
+    "ok*": { c: C.green, t: "✓*" },
+    part: { c: C.amber, t: "◐" },
+    "part*": { c: C.amber, t: "◐*" },
+    no: { c: C.red, t: "✗" },
+    pend: { c: C.dim, t: "…" },
+  };
+  const m = map[s] || map.no;
+  return <span style={{ color: m.c, fontFamily: "var(--mono)", fontSize: 13 }}>{m.t}</span>;
+}
+
+/* ------------------------- TRAJECTORY ------------------------- */
+
+function Trajectory({ phase, setPhase }) {
+  const W = 900, H = 190;
+  const pathD = `M 40 ${H - 34} C ${W * 0.3} ${H - 40}, ${W * 0.55} 66, ${W - 40} 38`;
+  const pts = PHASES.map((p) => {
+    const t = 0.08 + p.orbit * 0.9;
+    const x0 = 40, y0 = H - 34, x1 = W * 0.3, y1 = H - 40, x2 = W * 0.55, y2 = 66, x3 = W - 40, y3 = 38;
+    const mt = 1 - t;
+    const x = mt*mt*mt*x0 + 3*mt*mt*t*x1 + 3*mt*t*t*x2 + t*t*t*x3;
+    const y = mt*mt*mt*y0 + 3*mt*mt*t*y1 + 3*mt*t*t*y2 + t*t*t*y3;
+    return { x, y };
+  });
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block" }} role="img"
+      aria-label="Trajectory from today's texting service to a scaled carrier">
+      <line x1="0" y1={H - 18} x2={W} y2={H - 18} stroke={C.line} strokeWidth="1" />
+      <text x="42" y={H - 4} fill={C.dim} fontSize="10" fontFamily="var(--mono)" letterSpacing="0.1em">GROUND · AUG 2026</text>
+      <text x={W - 42} y="22" fill={C.dim} fontSize="10" fontFamily="var(--mono)" letterSpacing="0.1em" textAnchor="end">SCALED SERVICE · 2030+</text>
+      <path d={pathD} fill="none" stroke={C.line} strokeWidth="1.5" strokeDasharray="1 5" />
+      <path d={pathD} fill="none" stroke={C.amber} strokeWidth="2"
+        strokeDasharray="1200" strokeDashoffset={1200 - (200 + PHASES[phase].orbit * 1000)}
+        style={{ transition: "stroke-dashoffset 700ms cubic-bezier(.4,0,.2,1)" }} opacity="0.85" />
+      {pts.map((pt, i) => (
+        <g key={i} onClick={() => setPhase(i)} style={{ cursor: "pointer" }}>
+          <circle cx={pt.x} cy={pt.y} r="16" fill="transparent" />
+          <circle cx={pt.x} cy={pt.y} r={i === phase ? 7 : 4.5}
+            fill={i === phase ? C.amber : C.panel}
+            stroke={i <= phase ? C.amber : C.dim} strokeWidth="1.5"
+            style={{ transition: "all 300ms" }} />
+          <text x={pt.x} y={pt.y - 14} textAnchor="middle" fill={i === phase ? C.text : C.dim}
+            fontSize="10" fontFamily="var(--mono)" letterSpacing="0.08em">P{i}</text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+/* ------------------------- STORY TAB ------------------------- */
+
+function StoryTab({ phase, setPhase }) {
+  const p = PHASES[phase];
+  return (
+    <div>
+      <div className="card" style={{ paddingBottom: 4 }}>
+        <Trajectory phase={phase} setPhase={setPhase} />
+        <div className="phaseNav">
+          {PHASES.map((x, i) => (
+            <button key={i} onClick={() => setPhase(i)}
+              className={"phaseBtn" + (i === phase ? " on" : "")}>
+              <span className="pb-era">{x.era}</span>
+              <span className="pb-win">{x.window}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="split">
+        <div className="card">
+          <div className="eyebrow">{p.era} — {p.window}</div>
+          <h2 className="h2">{p.title}</h2>
+          <p className="body">{p.summary}</p>
+          <div className="statGrid">
+            <div className="stat"><div className="statL">Service tier</div><div className="statV">{p.tier}</div>
+              <div className="meter"><div className="meterFill" style={{ width: p.tierPct + "%" }} /></div></div>
+            <div className="stat"><div className="statL">Per-beam capacity</div><div className="statV">{p.beamCap}</div></div>
+            <div className="stat"><div className="statL">Spectrum position</div><div className="statV">{p.spectrum}</div></div>
+            <div className="stat"><div className="statL">Space segment</div><div className="statV">{p.sats}</div></div>
+          </div>
+        </div>
+
+        <div>
+          <div className="card">
+            <div className="eyebrow">What happens</div>
+            {p.events.map((e, i) => (
+              <div key={i} className="evt">
+                <div className="evtHead">
+                  <span className="evtDate">{e.d}</span>
+                  <Tag tone={e.side}>{TAG_LABEL[e.side]}</Tag>
+                </div>
+                <div className="evtBody">{e.t}</div>
+              </div>
+            ))}
+          </div>
+          <div className="card" style={{ borderLeft: `2px solid ${C.red}` }}>
+            <div className="eyebrow" style={{ color: C.red }}>What can stop it</div>
+            {p.gates.map((g, i) => <div key={i} className="gate">{g}</div>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------- MODE-SWITCH LANDSCAPE ------------------------- */
+
+function ModeSwitch() {
+  const [split, setSplit] = useState(58);
+  const W = 900, H = 320, groundY = 252;
+  const px = (split / 100) * W;
+
+  return (
+    <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
+      <div className="eyebrow" style={{ color: C.amber }}>The switch-hitter · 2000–2020 MHz · one block, two personalities</div>
+      <p className="body" style={{ marginBottom: 6 }}>
+        The same 20 MHz is a <strong style={{ color: C.amber }}>satellite uplink</strong> in the n252 configuration and a{" "}
+        <strong style={{ color: C.blue }}>femtocell downlink</strong> in the n70 configuration. Both are SpaceX's — but they are
+        opposite link directions on identical frequencies, so they cannot coexist in the same place. Drag the partition to
+        allocate the country between the two modes and watch the interference boundary move with it.
+      </p>
+
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block" }} role="img"
+        aria-label="Landscape showing satellite n252 mode over rural areas and terrestrial n70 mode over urban areas, with a movable partition">
+        <rect x="0" y="0" width={px} height={groundY} fill={C.amberDim} opacity="0.55" />
+        <rect x={px} y="0" width={W - px} height={groundY} fill={C.blueDim} opacity="0.55" />
+        <line x1="0" y1={groundY} x2={W} y2={groundY} stroke={C.line} strokeWidth="1.5" />
+
+        <text x="18" y="26" fill={C.amber} fontSize="11" fontFamily="var(--mono)" letterSpacing="0.14em">SATELLITE MODE · n252</text>
+        <g transform="translate(150, 52)">
+          <rect x="-11" y="-7" width="22" height="14" fill={C.amber} rx="2" />
+          <rect x="-34" y="-4" width="18" height="8" fill="none" stroke={C.amber} strokeWidth="1.2" />
+          <rect x="16" y="-4" width="18" height="8" fill="none" stroke={C.amber} strokeWidth="1.2" />
+        </g>
+        <rect x="216" y={groundY - 22} width="10" height="20" rx="2" fill={C.text} opacity="0.85" />
+        <rect x="60" y={groundY - 26} width="34" height="26" fill="none" stroke={C.dim} strokeWidth="1" opacity="0.5" />
+        <line x1="221" y1={groundY - 28} x2="163" y2="70" stroke={C.amber} strokeWidth="1.6" markerEnd="url(#arrA)" />
+        <text x="235" y="150" fill={C.amber} fontSize="11" fontFamily="var(--mono)">↑ 2000–2020 (n252 UL)</text>
+        <line x1="138" y1="70" x2="98" y2={groundY - 30} stroke={C.amber} strokeWidth="1.2" strokeDasharray="4 3" markerEnd="url(#arrA)" />
+        <text x="24" y="150" fill={C.amber} fontSize="11" fontFamily="var(--mono)" opacity="0.8">↓ 2180–2200</text>
+
+        <text x={W - 18} y="26" fill={C.blue} fontSize="11" fontFamily="var(--mono)" letterSpacing="0.14em" textAnchor="end">TERRESTRIAL MODE · n70</text>
+        <rect x={W - 250} y={groundY - 128} width="62" height="128" fill={C.panel2} stroke={C.line} />
+        <rect x={W - 176} y={groundY - 90} width="52" height="90" fill={C.panel2} stroke={C.line} />
+        <rect x={W - 112} y={groundY - 156} width="70" height="156" fill={C.panel2} stroke={C.line} />
+        <circle cx={W - 77} cy={groundY - 162} r="7" fill="none" stroke={C.blue} strokeWidth="1.6" />
+        <rect x={W - 66} y={groundY - 168} width="7" height="12" fill={C.blue} rx="1" />
+        <text x={W - 112} y={groundY - 174} fill={C.blue} fontSize="10" fontFamily="var(--mono)" textAnchor="end">dish + femtocell</text>
+        <rect x={W - 210} y={groundY - 22} width="10" height="20" rx="2" fill={C.text} opacity="0.85" />
+        <line x1={W - 70} y1={groundY - 152} x2={W - 200} y2={groundY - 28} stroke={C.blue} strokeWidth="1.6" markerEnd="url(#arrB)" />
+        <text x={W - 258} y={groundY - 96} fill={C.blue} fontSize="11" fontFamily="var(--mono)" textAnchor="end">↓ 1995–2020 (n70 DL)</text>
+        <line x1={W - 198} y1={groundY - 34} x2={W - 78} y2={groundY - 148} stroke={C.blue} strokeWidth="1.2" strokeDasharray="4 3" markerEnd="url(#arrB)" />
+        <text x={W - 24} y={groundY - 60} fill={C.blue} fontSize="11" fontFamily="var(--mono)" textAnchor="end">↑ 1695–1710</text>
+        <text x={W - 24} y={groundY - 42} fill={C.blue} fontSize="10" fontFamily="var(--mono)" textAnchor="end" opacity="0.75">+ ↓ 2180–2200 via n66 SDL</text>
+
+        <rect x={px - 16} y="0" width="32" height={groundY} fill="rgba(255,107,107,0.10)" />
+        <line x1={px} y1="0" x2={px} y2={groundY} stroke={C.red} strokeWidth="1.4" strokeDasharray="5 4" />
+        <text x={px} y={groundY + 18} fill={C.red} fontSize="10" fontFamily="var(--mono)" textAnchor="middle">coordination zone</text>
+        <text x={px} y="44" fill={C.red} fontSize="10" fontFamily="var(--mono)" textAnchor="middle" opacity="0.9">n252 ↑ vs n70 ↓</text>
+
+        <defs>
+          <marker id="arrA" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M 0 0 L 8 4 L 0 8 z" fill={C.amber} />
+          </marker>
+          <marker id="arrB" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M 0 0 L 8 4 L 0 8 z" fill={C.blue} />
+          </marker>
+        </defs>
+      </svg>
+
+      <label className="sliderL" style={{ marginTop: 6 }}>
+        Geographic partition — <strong style={{ color: C.amber }}>{split}%</strong> of area in satellite mode (n252) ·{" "}
+        <strong style={{ color: C.blue }}>{100 - split}%</strong> in terrestrial mode (n70)
+        <input type="range" min="20" max="85" value={split} onChange={(e) => setSplit(+e.target.value)} />
+      </label>
+
+      <div className="mswGrid">
+        <div className="mswNote" style={{ borderColor: C.amber }}>
+          <strong style={{ color: C.amber }}>Why rural gets n252:</strong> the satellite uplink is the starved link direction, rural
+          areas have no terrestrial alternative, and the FCC's milestones (SINR, uplink kbps/MHz) are measured for outdoor
+          users over 90% of each license area's geography — which is overwhelmingly rural land.
+        </div>
+        <div className="mswNote" style={{ borderColor: C.blue }}>
+          <strong style={{ color: C.blue }}>Why urban gets n70:</strong> downlink demand concentrates where people are, n70 is
+          already in handsets (Dish's legacy), and femtocells on dish mounts put the 2000–2020 MHz to work as capacity
+          instead of coverage. 2180–2200 rides along as n66 supplemental downlink.
+        </div>
+        <div className="mswNote" style={{ borderColor: C.red }}>
+          <strong style={{ color: C.red }}>The boundary problem:</strong> a phone transmitting up at 2010 MHz is raw noise to a
+          femtocell transmitting down at 2010 MHz nearby. Because SpaceX owns both sides exclusively, this is an internal
+          engineering problem (guard zones, beam steering away from femtocell clusters, scheduling) — not a legal fight.
+          Exclusivity is what makes the mode switch usable at all.
+        </div>
+      </div>
+
+      <div className="eyebrow" style={{ marginTop: 18 }}>The same 65 MHz, read in both modes</div>
+      <div className="ledger">
+        <div className="ledgerRow head">
+          <div>Frequency (MHz)</div>
+          <div style={{ color: C.amber }}>Satellite config (n252 world)</div>
+          <div style={{ color: C.blue }}>Terrestrial config (n70 world)</div>
+        </div>
+        {LEDGER.map((r, i) => (
+          <div key={i} className={"ledgerRow" + (r.hot ? " hot" : "")}>
+            <div className="ledgerF">{r.f}</div>
+            <div><span className="dir" data-d={r.sat.s} />{r.sat.t}</div>
+            <div><span className="dir" data-d={r.ter.s} />{r.ter.t}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------- READINESS TIMELINE ------------------------- */
+
+function Readiness() {
+  const [yi, setYi] = useState(0);
+  const y = READINESS.years[yi];
+  const [selRow, setSelRow] = useState(3);
+  return (
+    <div className="card">
+      <div className="eyebrow">Band readiness — the silicon clock · slide the year</div>
+      <p className="body" style={{ marginBottom: 12 }}>
+        Owning spectrum is step one; three more gates decide when it carries traffic: is the band in <em>handsets</em>, is it
+        in the <em>3GPP NTN standard</em> (usable from orbit), and is it <em>legally live terrestrially</em> (deal close ≤ Nov 30,
+        2027). Watch how the grid fills in — and notice n252 and n70 are mirror images.
+      </p>
+      <div className="yearRow">
+        {READINESS.years.map((yy, i) => (
+          <button key={yy} className={"yearBtn" + (i === yi ? " on" : "")} onClick={() => setYi(i)}>{yy}</button>
+        ))}
+        <input type="range" min="0" max={READINESS.years.length - 1} value={yi}
+          onChange={(e) => setYi(+e.target.value)} style={{ flex: 1, accentColor: C.amber, minWidth: 120 }} aria-label="Year" />
+      </div>
+      <div className="readGrid">
+        <div className="readRow head">
+          <div>Band / configuration</div><div>Handsets</div><div>From orbit</div><div>Terrestrial</div>
+        </div>
+        {READINESS.rows.map((r, i) => (
+          <button key={i} className={"readRow" + (selRow === i ? " sel" : "")} onClick={() => setSelRow(i)}>
+            <div className="readBand">{r.band}</div>
+            <div><Dot s={r.h[yi]} /></div>
+            <div><Dot s={r.o[yi]} /></div>
+            <div><Dot s={r.t[yi]} /></div>
+          </button>
+        ))}
+      </div>
+      <div className="readNote">
+        <strong>{READINESS.rows[selRow].band} · {y}:</strong> {READINESS.rows[selRow].note}
+      </div>
+      <div className="legend">
+        <span><Dot s="ok" /> ready</span><span><Dot s="part" /> partial / in progress</span>
+        <span><Dot s="no" /> blocked</span><span><Dot s="pend" /> awaiting deal close</span>
+        <span style={{ color: C.dim }}>* = projection, not confirmed</span>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------- SPECTRUM TAB ------------------------- */
+
+function SpectrumTab({ cfg, setCfg }) {
+  const [sel, setSel] = useState("aws4");
+  const LO = 1650, HI = 2250, W = 900;
+  const x = (f) => ((f - LO) / (HI - LO)) * W;
+  const band = BANDS.find((b) => b.id === sel);
+  return (
+    <div>
+      <div className="card">
+        <div className="eyebrow">The D2C mid-band stack · 1650–2250 MHz, drawn to scale</div>
+        <p className="body" style={{ marginBottom: 18 }}>
+          Every block below is spectrum a standard phone can (or will) talk on. Amber = owned outright after the EchoStar
+          deals; blue = leased. Click a block. Then see how the pieces snap together in the mode-switch panel and the
+          configuration lab underneath.
+        </p>
+        <svg viewBox={`0 0 ${W} 150`} style={{ width: "100%", display: "block" }}>
+          <line x1="0" y1="118" x2={W} y2="118" stroke={C.line} />
+          {[1700, 1800, 1900, 2000, 2100, 2200].map((f) => (
+            <g key={f}>
+              <line x1={x(f)} y1="114" x2={x(f)} y2="122" stroke={C.dim} strokeWidth="1" />
+              <text x={x(f)} y="138" textAnchor="middle" fill={C.dim} fontSize="10" fontFamily="var(--mono)">{f}</text>
+            </g>
+          ))}
+          <text x={W} y="138" textAnchor="end" fill={C.dim} fontSize="9" fontFamily="var(--mono)">MHz</text>
+          {BANDS.map((b) => {
+            const segs = [[b.lo, b.hi, "UL"], ...(b.pair ? [[b.pair[0], b.pair[1], "DL"]] : [])];
+            return segs.map(([lo, hi, dir], i) => (
+              <g key={b.id + i} onClick={() => setSel(b.id)} style={{ cursor: "pointer" }}>
+                <rect x={x(lo)} y="52" width={Math.max(x(hi) - x(lo), 3)} height="56"
+                  fill={sel === b.id ? b.color : (b.status === "owned" ? "rgba(255,180,84,0.28)" : "rgba(91,168,255,0.28)")}
+                  stroke={b.color} strokeWidth={sel === b.id ? 1.5 : 0.75} rx="2"
+                  style={{ transition: "fill 200ms" }} />
+                <text x={x((lo + hi) / 2)} y="46" textAnchor="middle"
+                  fill={sel === b.id ? C.text : C.dim} fontSize="9" fontFamily="var(--mono)">{b.id === "aws4" && lo === 2000 ? "UL⇄DL" : dir}</text>
+              </g>
+            ));
+          })}
+          <text x={x(1702.5)} y="30" textAnchor="middle" fill={C.dim} fontSize="10" fontFamily="var(--mono)">AWS-3</text>
+          <text x={x(1915)} y="30" textAnchor="middle" fill={C.dim} fontSize="10" fontFamily="var(--mono)">G|H</text>
+          <text x={x(2010)} y="30" textAnchor="middle" fill={C.dim} fontSize="10" fontFamily="var(--mono)">AWS-4</text>
+          <text x={x(1992.5)} y="30" textAnchor="middle" fill={C.dim} fontSize="10" fontFamily="var(--mono)">G|H</text>
+          <text x={x(2190)} y="30" textAnchor="middle" fill={C.dim} fontSize="10" fontFamily="var(--mono)">AWS-4</text>
+        </svg>
+        <div className="bandDetail" style={{ borderLeft: `2px solid ${band.color}` }}>
+          <div className="eyebrow" style={{ color: band.color, marginBottom: 4 }}>{band.name} · {band.n}</div>
+          <div className="bandFreq">
+            {band.lo}–{band.hi} MHz{band.pair ? ` / ${band.pair[0]}–${band.pair[1]} MHz` : " (uplink only)"}
+            <span className="bandOwn"> — {band.own}</span>
+          </div>
+          <p className="body" style={{ fontSize: 13.5 }}>{band.note}</p>
+        </div>
+      </div>
+
+      <ModeSwitch />
+      <ConfigLab cfg={cfg} setCfg={setCfg} />
+      <Readiness />
+
+      <div className="split">
+        <div className="card">
+          <div className="eyebrow">The tally</div>
+          <div className="tallyRow"><span>Owned mid-band (EchoStar)</span><strong style={{ color: C.amber }}>65 MHz</strong></div>
+          <div className="tallyRow"><span>Leased (T-Mobile G-block)</span><strong style={{ color: C.blue }}>10 MHz</strong></div>
+          <div className="tallyRow"><span>Each Big-Three carrier</span><strong style={{ color: C.red }}>~hundreds of MHz</strong></div>
+          <p className="body" style={{ marginTop: 12 }}>
+            Barden's point in one line: incumbents assembled ~1,000 MHz over three decades. SpaceX's answer isn't more MHz —
+            it's reuse: thousands of beams from orbit, femtocells re-using the same blocks at street level, and a mode switch
+            that lets one 20 MHz block do a different job in each geography.
+          </p>
+        </div>
+        <div className="card">
+          <div className="eyebrow">The broadband stack (the backhaul)</div>
+          <div className="bbGrid">
+            {BROADBAND.map((b, i) => (
+              <div key={i} className="bbRow">
+                <div className="bbBand">{b.band}</div>
+                <div className="bbFreq">↓ {b.dl}<br />↑ {b.ul}</div>
+                <div className="bbRole">{b.role}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------- PHYSICS TAB ------------------------- */
+
+function PhysicsTab({ cfg, setCfg }) {
+  const [env, setEnv] = useState("rural");
+  const [users, setUsers] = useState(ENVS.rural.users);
+  const [indoor, setIndoor] = useState(ENVS.rural.indoor);
+
+  const pickEnv = (k) => { setEnv(k); setUsers(ENVS[k].users); setIndoor(ENVS[k].indoor); };
+
+  const z = calcZones(cfg);
+  const outdoorUsers = Math.max(1, Math.round(users * (1 - indoor / 100)));
+  const indoorUsers = users - outdoorUsers;
+  const perOutdoor = z.satDLMbps / outdoorUsers;
+  const e = ENVS[env];
+  const femtoLive = z.terrDLMbps > 0;
+
+  const satDensity = z.satDLMbps / 2000;
+  const femtoDensity = femtoLive ? z.terrDLMbps / 0.008 : 0;
+  const logMax = Math.log10(Math.max(femtoDensity, 1000) * 2);
+  const bar = (v) => Math.max(2, (Math.log10(Math.max(v, 0.001)) + 3) / (logMax + 3) * 100);
+
+  return (
+    <div>
+      <ConfigLab cfg={cfg} setCfg={setCfg} compact />
+
+      <div className="card">
+        <div className="eyebrow">Pick the terrain — everything below responds</div>
+        <div className="tglRow">
+          {Object.entries(ENVS).map(([k, v]) => (
+            <button key={k} onClick={() => pickEnv(k)} className={"envBtn" + (env === k ? " on" : "")}>{v.label}</button>
+          ))}
+        </div>
+        <p className="body" style={{ marginTop: 12 }}>{e.blurb}</p>
+      </div>
+
+      <div className="split">
+        <div className="card">
+          <div className="eyebrow">Why this is hard: the 50–60 dB problem</div>
+          <p className="body">A cell tower is a few hundred meters away pushing 20–40 W. A Starlink satellite is ~550 km away listening to a &lt;0.25 W phone with a fingernail-sized antenna.</p>
+          {[
+            { l: "Terrestrial path loss", v: 45, t: "~100–120 dB", c: C.blue },
+            { l: "LEO path loss (550 km)", v: 100, t: "~160–170 dB", c: C.amber },
+            { l: `+ building penetration (${e.label})`, v: env === "rural" ? 12 : env === "suburban" ? 22 : 32, t: env === "rural" ? "mostly avoidable" : "~20–30 dB more — satellite can't follow", c: C.red },
+          ].map((r, i) => (
+            <div key={i} style={{ marginTop: 14 }}>
+              <div className="barHead"><span>{r.l}</span><span style={{ color: r.c }}>{r.t}</span></div>
+              <div className="meter big"><div className="meterFill" style={{ width: r.v + "%", background: r.c }} /></div>
+            </div>
+          ))}
+          <p className="body" style={{ marginTop: 16 }}>
+            The fixes: ~25 m² phased arrays today (5× larger next-gen; AST's BlueBirds go to ~223 m²), satellite-side Doppler
+            pre-compensation at 7.5 km/s, 3GPP NTN timing (Rel-17 → Rel-19), laser ISLs to hand off between ~3-minute passes,
+            and dropping shells to 340–360 km for ~2.5 dB back. Physics you can't fix: steel and concrete — measured median
+            RSRP −121 dBm vs −97 dBm terrestrial, and indoors the satellite simply isn't there. That's the femtocell's job.
+          </p>
+        </div>
+
+        <div className="card">
+          <div className="eyebrow">What the configured network delivers here</div>
+          <div className="capOut">
+            <div>
+              <div className="capNum" style={{ color: C.amber }}>{z.satDLMbps.toFixed(1)}<span className="capUnit"> Mbps</span></div>
+              <div className="capL">satellite, per beam ({z.satDLMHz} MHz DL{cfg.gen === "v2" ? ", claim-anchored" : ""})</div>
+            </div>
+            <div>
+              <div className="capNum" style={{ color: C.blue }}>{perOutdoor.toFixed(2)}<span className="capUnit"> Mbps</span></div>
+              <div className="capL">per outdoor satellite user ({outdoorUsers} of {users} active)</div>
+            </div>
+          </div>
+
+          <label className="sliderL">Active users in the beam footprint: <strong>{users}</strong>
+            <input type="range" min="1" max="300" value={users} onChange={(ev) => setUsers(+ev.target.value)} />
+          </label>
+          <label className="sliderL" style={{ marginTop: 10 }}>Share of usage indoors: <strong>{indoor}%</strong>
+            <input type="range" min="0" max="95" value={indoor} onChange={(ev) => setIndoor(+ev.target.value)} />
+          </label>
+
+          <div className="indoorNote" style={{ borderColor: femtoLive && e.femto ? C.blue : C.red }}>
+            {indoorUsers > 0
+              ? femtoLive && e.femto
+                ? <><strong style={{ color: C.blue }}>{indoorUsers} indoor user{indoorUsers > 1 ? "s" : ""}</strong> are invisible to the satellite — served only where an n70 femtocell happens to be, at up to <strong style={{ color: C.blue }}>{z.terrDLMbps.toFixed(0)} Mbps ↓ / {z.terrULMbps.toFixed(0)} ↑ per cell</strong> ({z.terrDLMHz}+{z.terrULMHz} MHz), shared within ~50 m islands.</>
+                : e.femto
+                  ? <><strong style={{ color: C.red }}>{indoorUsers} indoor user{indoorUsers > 1 ? "s" : ""}</strong> have no terrestrial layer in this configuration — assign blocks to TERR in the lab above to serve them.</>
+                  : <><strong style={{ color: C.red }}>{indoorUsers} indoor user{indoorUsers > 1 ? "s" : ""}</strong> are unreachable: no femtocell layer here, and the satellite can't penetrate. In rural terrain this mostly means "step outside."</>
+              : <>Everyone's outdoors — the satellite's best case.</>}
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="eyebrow">Capacity density — why neither layer can do the other's job (log scale, illustrative)</div>
+        {[
+          { l: `Configured satellite beam spread over ~2,000 km²`, v: satDensity, c: C.amber, t: `${satDensity < 0.01 ? satDensity.toFixed(4) : satDensity.toFixed(2)} Mbps/km²` },
+          { l: femtoLive ? `Configured n70 femtocell (${z.terrDLMbps.toFixed(0)} Mbps over ~50 m radius)` : "Femtocell layer — no blocks assigned TERR", v: femtoDensity, c: C.blue, t: femtoLive ? `~${Math.round(femtoDensity).toLocaleString()} Mbps/km²` : "—" },
+        ].map((r, i) => (
+          <div key={i} style={{ marginTop: 12 }}>
+            <div className="barHead"><span>{r.l}</span><span style={{ color: r.c, fontFamily: "var(--mono)" }}>{r.t}</span></div>
+            <div className="meter big"><div className="meterFill" style={{ width: bar(r.v) + "%", background: r.c }} /></div>
+          </div>
+        ))}
+        <p className="body" style={{ marginTop: 14, color: C.dim, fontSize: 13 }}>
+          Six-plus orders of magnitude apart in the hybrid configurations — and that's the whole strategy in one chart. The
+          satellite layer buys ubiquity (every km² gets <em>something</em>); the femtocell layer buys intensity (huge Mbps/km²,
+          in dots tens of meters wide). Incumbents solve the pairing with ~250k macro towers and &gt;1M small cells; SpaceX's
+          bet is satellites + dish-mounted femtocells approximate it without the tower capex. The V2 150 Mbps headline is a
+          peak, single-user, best-case claim.
+        </p>
+      </div>
+
+      <DeployClock compact />
+    </div>
+  );
+}
+
+/* ------------------------- NETWORK TAB ------------------------- */
+
+const LAYERS = [
+  {
+    id: "sat", tone: "space", name: "Space layer — D2C satellites",
+    head: "Coverage everywhere, capacity somewhere",
+    freq: ["n252: 2000–2020 ↑ / 2180–2200 ↓", "G-block (leased, SCS)", "H-block & n70 pending NTN standardization"],
+    body: "Up to 15,000 authorized D2C satellites (226–435 km) beam 5G NR NTN straight to unmodified phones. Kills every dead zone outdoors; continuous global coverage targeted end-2028. Laser ISLs route traffic between satellites to reach a gateway. Runs the n252 personality of the 2 GHz block — satellite uplink where terrestrial n70 isn't deployed.",
+  },
+  {
+    id: "bb", tone: "space", name: "Broadband constellation — the backhaul",
+    head: "Ku to the dish, E-band to the ground",
+    freq: ["Ku 10.7–12.7 ↓ / 14.0–14.5 ↑ GHz (user)", "Ka gateways", "E-band 71–76 / 81–86 GHz (~4× capacity)"],
+    body: "V3 satellites (1 Tbps DL each, ~4 Tbps backhaul via E-band gateways) turn the broadband network into the transport layer for everything below it. This is the asset no other would-be carrier has: nationwide backhaul with zero fiber. Every femtocell is a Ku-band customer of this layer.",
+  },
+  {
+    id: "femto", tone: "ground", name: "Ground layer — rooftop femtocells",
+    head: "The dish becomes a cell site",
+    freq: ["n70: 1695–1710 ↑ / 1995–2020 ↓", "n66 SDL: 2180–2200 ↓", "Backhaul: host dish's Ku link"],
+    body: "AWS-4's terrestrial rights let SpaceX hang small cells on the same mounts as millions of existing Starlink dishes. Capacity appears exactly where subscribers already are, 'as you need it' — no towers, no auctions, no fiber pulls. The catch: tens of meters of range, and every femtocell spends the host dish's bandwidth.",
+  },
+  {
+    id: "dev", tone: "ground", name: "Device layer — phones, Teslas, robots",
+    head: "The physical-AI installed base",
+    freq: ["Today: Band 25/n70-capable phones", "2027+: n252 via Qualcomm X105 / MediaTek", "Teslas: Starlink standard from Cybercab on"],
+    body: "Phones need n252/n70 silicon to use the owned spectrum. Teslas ship with Starlink standard — every vehicle a connected node and potential mobile femtocell/relay in later phases. Musk's stated endgame: bandwidth for 'billions of AI-powered devices' — robotaxis, Optimus, drones — an outdoor market where satellite wins by default.",
+  },
+];
+
+const PATHS = {
+  rural: [
+    "Phone transmits at 2000–2020 MHz (n252 UL) straight to a D2C satellite — no ground infrastructure within miles",
+    "Satellite receives on its ~25 m² (next-gen: 5× larger) phased array, pre-compensating Doppler at 7.5 km/s",
+    "Laser ISL hops to a satellite over a gateway; E-band feeder link drops the traffic to the ground station",
+    "Return traffic arrives on 2180–2200 MHz (n252 DL). Handoff every ~3 minutes as satellites pass — invisible to the user",
+  ],
+  urban: [
+    "Phone attaches to a rooftop n70 femtocell: downlink 1995–2020 MHz, uplink 1695–1710 MHz, plus n66 SDL",
+    "The femtocell backhauls over its host Starlink dish — Ku-band up to the broadband constellation",
+    "Constellation routes via laser ISLs to an E-band gateway and into the core network",
+    "Step outside femtocell range with an n252 phone and the satellite layer catches you — one network, two radios, seamless (in theory)",
+  ],
+};
+
+function NetworkTab() {
+  const [sel, setSel] = useState("femto");
+  const [path, setPath] = useState("urban");
+  const L = LAYERS.find((l) => l.id === sel);
+  return (
+    <div>
+      <div className="split">
+        <div className="card">
+          <div className="eyebrow">One network, four layers — click each</div>
+          <div className="stack">
+            {LAYERS.map((l) => (
+              <button key={l.id} onClick={() => setSel(l.id)}
+                className={"layer" + (sel === l.id ? " on" : "")}
+                style={{ "--tone": l.tone === "space" ? C.amber : C.blue }}>
+                <span className="layerName">{l.name}</span>
+                <span className="layerTag">{l.tone === "space" ? "ORBIT" : "GROUND"}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="card" style={{ borderLeft: `2px solid ${L.tone === "space" ? C.amber : C.blue}` }}>
+          <div className="eyebrow" style={{ color: L.tone === "space" ? C.amber : C.blue }}>{L.name}</div>
+          <h3 className="h3">{L.head}</h3>
+          <div className="freqChips">
+            {L.freq.map((f, i) => <span key={i} className="chip">{f}</span>)}
+          </div>
+          <p className="body">{L.body}</p>
+          {L.id === "femto" && (
+            <p className="body" style={{ color: C.dim, fontSize: 13 }}>
+              Why this beats the Dish/EchoStar playbook: EchoStar had the spectrum but burned ~$7.3B on a terrestrial buildout
+              it couldn't finish. SpaceX inverts the cost curve — the backhaul already flies, the mounts already exist, and
+              capex follows demand instead of preceding it.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="split">
+        <div className="card">
+          <div className="eyebrow">Follow a packet</div>
+          <div className="tglRow" style={{ marginBottom: 12 }}>
+            <button className={"envBtn" + (path === "rural" ? " on" : "")} onClick={() => setPath("rural")}>Rural: satellite-direct</button>
+            <button className={"envBtn" + (path === "urban" ? " on" : "")} onClick={() => setPath("urban")}>Urban: femtocell + backhaul</button>
+          </div>
+          {PATHS[path].map((s, i) => (
+            <div key={i} className="hop"><span className="hopN">{i + 1}</span>{s}</div>
+          ))}
+        </div>
+        <div>
+          <div className="card">
+            <div className="eyebrow">The backhaul budget — the femtocell's hidden cost</div>
+            <p className="body">
+              Every femtocell rides its host dish's Ku link, and today a residential dish delivers on the order of 100–300 Mbps
+              shared with the household. A busy femtocell competes with the family's own traffic — Paul Rhodes' core critique.
+              The out: V3. At 1 Tbps per satellite (~60 Tbps added per Starship launch), per-dish capacity rises enough that a
+              rooftop cell stops being a parasite and starts being a product. The femtocell plan and the Starship cadence are
+              the same bet wearing two hats.
+            </p>
+          </div>
+          <div className="card" style={{ borderLeft: `2px solid ${C.red}` }}>
+            <div className="eyebrow" style={{ color: C.red }}>Interference — a fight SpaceX has only with itself</div>
+            <p className="body" style={{ fontSize: 13.5 }}>
+              Three coordination problems, all internal or managed: (1) n252 satellite uplink vs n70 femtocell downlink on the
+              shared 2000–2020 MHz — solved by geographic partitioning, beam steering and scheduling, possible only because
+              SpaceX owns both sides. (2) SCS out-of-band emission limits protecting AT&T/Verizon PCS neighbors — the fights
+              already litigated in the 2024–25 waiver rounds. (3) NOAA weather-satellite earth stations sharing 1695–1710 MHz —
+              inherited coordination zones around federal sites. None is a blocker; all shape where each mode can run.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------- VERDICT TAB ------------------------- */
+
+function VerdictTab() {
+  return (
+    <div>
+      <div className="split">
+        <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
+          <div className="eyebrow" style={{ color: C.green }}>The bull case</div>
+          {QUOTES_BULL.map((q, i) => (
+            <div key={i} className="quote"><p>“{q.q}”</p><div className="quoteWho">{q.who}</div></div>
+          ))}
+        </div>
+        <div className="card" style={{ borderTop: `2px solid ${C.red}` }}>
+          <div className="eyebrow" style={{ color: C.red }}>The bear case</div>
+          {QUOTES_BEAR.map((q, i) => (
+            <div key={i} className="quote"><p>“{q.q}”</p><div className="quoteWho">{q.who}</div></div>
+          ))}
+        </div>
+      </div>
+      <div className="card">
+        <div className="eyebrow">Six things that decide it — watch these</div>
+        <div className="benchGrid">
+          {BENCHMARKS.map((b, i) => (
+            <div key={i} className="bench">
+              <div className="benchT">{b.t}</div>
+              <div className="benchW">{b.why}</div>
+            </div>
+          ))}
+        </div>
+        <p className="body" style={{ marginTop: 16, color: C.dim }}>
+          Base case: SpaceX owns coverage gaps and machine connectivity outright, becomes a genuine fourth option for rural
+          and price-sensitive users by ~2028–2029, and pressures the Big Three into an MVNO — while the urban, in-building
+          revenue core stays terrestrial. Upside case requires Starship cadence <em>and</em> n252 handsets <em>and</em> femtocell
+          economics all landing. Numbers marked as claims are company figures, not verified.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------- DEPLOYMENT CLOCK ------------------------- */
+/* Fleet scale is the capacity story: total D2C capacity ≈ per-beam ×
+   beams/sat × satellites overhead. This models how fast the authorized
+   15,000 can actually exist — and what it costs to keep it existing. */
+
+const CADENCE_PRESETS = [
+  { id: "f9", name: "Falcon 9 only", per: 15, pm: 4, note: "~15 next-gen D2C birds per F9 (5× arrays are heavy), 4 dedicated launches/mo" },
+  { id: "ship2", name: "Starship · 2/mo", per: 55, pm: 2, note: "Starship flying, cadence lagging" },
+  { id: "ship4", name: "Starship · 4/mo (target)", per: 55, pm: 4, note: "The filing math: ~1,200 sats in six months" },
+  { id: "ship8", name: "Starship · 8/mo", per: 60, pm: 8, note: "The bull-case cadence" },
+];
+
+function DeployClock({ compact }) {
+  const [per, setPer] = useState(55);
+  const [pm, setPm] = useState(4);
+  const FLEET = 15000, LIFE = 5, SERVICE = 2000;
+  const monthly = per * pm;
+  const yearsToFleet = FLEET / (monthly * 12);
+  const monthsToService = SERVICE / monthly;
+  const sustainPerMonth = FLEET / LIFE / 12 / per; // launches/mo to replace 3,000/yr
+  const steadyState = Math.round(per * pm * 12 * LIFE); // fleet this cadence can sustain
+  const starved = steadyState < FLEET;
+  const preset = CADENCE_PRESETS.find((p) => p.per === per && p.pm === pm);
+  return (
+    <div className="card" style={{ borderTop: `2px solid ${C.red}` }}>
+      <div className="eyebrow" style={{ color: C.red }}>
+        The deployment clock — how long until 15,000 D2C satellites exist{compact ? " (capacity = per-beam × beams × satellites overhead)" : ""}
+      </div>
+      {!compact && (
+        <p className="body" style={{ marginBottom: 12 }}>
+          The 15,000-satellite authorization is a ceiling, not a fleet. Satellites at 226–435 km live ~5 years in measurable
+          atmosphere, so the constellation is a treadmill: every cadence below buys both a buildout speed <em>and</em> a maximum
+          sustainable fleet. Set a launch tempo and read the consequences.
+        </p>
+      )}
+      <div className="tglRow" style={{ marginBottom: 12 }}>
+        {CADENCE_PRESETS.map((p) => (
+          <button key={p.id} onClick={() => { setPer(p.per); setPm(p.pm); }}
+            className={"genBtn" + (preset && preset.id === p.id ? " on" : "")}>{p.name}</button>
+        ))}
+      </div>
+      {preset && <p className="body" style={{ fontSize: 12.5, color: C.dim, marginBottom: 10 }}>{preset.note}</p>}
+      <div className="split" style={{ gap: 12 }}>
+        <div>
+          <label className="sliderL">D2C satellites per launch: <strong>{per}</strong>
+            <input type="range" min="10" max="80" value={per} onChange={(e) => setPer(+e.target.value)} />
+          </label>
+          <label className="sliderL" style={{ marginTop: 10 }}>Dedicated launches per month: <strong>{pm}</strong>
+            <input type="range" min="1" max="10" value={pm} onChange={(e) => setPm(+e.target.value)} />
+          </label>
+        </div>
+        <div className="zoneNums" style={{ alignItems: "flex-start" }}>
+          <div>
+            <span className="zN" style={{ color: C.amber }}>{monthsToService < 1 ? "<1" : monthsToService.toFixed(0)}</span><span className="zU">mo</span>
+            <div className="zM">to a ~2,000-sat continuous-coverage-class fleet (illustrative)</div>
+          </div>
+          <div>
+            <span className="zN" style={{ color: yearsToFleet > 8 ? C.red : C.text }}>{yearsToFleet.toFixed(1)}</span><span className="zU">yrs</span>
+            <div className="zM">to 15,000 ({Math.ceil(FLEET / per).toLocaleString()} launches; from 2027 → ~{(2027 + yearsToFleet).toFixed(0)})</div>
+          </div>
+          <div>
+            <span className="zN" style={{ color: sustainPerMonth > pm ? C.red : C.green }}>{sustainPerMonth.toFixed(1)}</span><span className="zU">launches/mo</span>
+            <div className="zM">forever, just to replace ~3,000 sats/yr at 5-yr life</div>
+          </div>
+        </div>
+      </div>
+      <div className="indoorNote" style={{ borderColor: starved ? C.red : C.green }}>
+        {starved
+          ? <>At this tempo the treadmill wins: replacement alone consumes the cadence, capping the <strong style={{ color: C.red }}>sustainable fleet at ~{steadyState.toLocaleString()} satellites</strong> — the 15,000-sat capacity endgame never fully exists.</>
+          : <>This tempo sustains the full constellation: <strong style={{ color: C.green }}>steady-state capacity ~{Math.min(steadyState, 30000).toLocaleString()}-sat class</strong>, with headroom above the 15,000 authorization. Buildout and replacement can run concurrently.</>}
+      </div>
+      {!compact && (
+        <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 10 }}>
+          Assumptions on the label: ~55/launch echoes the ~1,200-in-six-months filing math; 5-year life reflects 226–435 km
+          drag and deorbit-compliance rules; ~2,000 for continuous coverage is an illustrative service threshold (the
+          end-2028 target needs the low thousands, not 15k). Attrition, failed launches, and mixed manifests all push these
+          numbers the wrong way. This is why every capacity claim in this tool carries the same footnote: Starship cadence.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------- TECHNOLOGY TAB ------------------------- */
+
+const GENS = [
+  {
+    id: "gen1", name: "D2C payload v1 — riding on V2 Mini buses (today)", tone: C.dim,
+    rows: [
+      ["What it is", "Add-on payload; most V2 Minis don't carry it"],
+      ["Radio", "Adapted LTE eNodeB, pre-standard NTN"],
+      ["Phased array", "~25 m²"],
+      ["Beams", "Few, wide — footprints tens of km"],
+      ["Beam bandwidth", "5 MHz DL (leased G-block)"],
+      ["Beam footprint", "~20–50 km across (derived)"],
+      ["Per-beam DL", "~3.1 Mbps (measured)"],
+      ["Launch", "Falcon 9, ~20+ per flight"],
+    ],
+    note: "Proof that the link closes at all: adapted LTE with satellite-side Doppler and timing compensation, hitchhiking on ~650+ broadband buses. D2C is a payload, not a V-number.",
+  },
+  {
+    id: "v2", name: "Dedicated D2C satellites — launching 2027 (claims)", tone: C.amber,
+    rows: [
+      ["What it is", "Purpose-built phone satellite; own 15,000-sat authorization"],
+      ["Radio", "Native 5G NR NTN (Rel-17→19), MIMO"],
+      ["Phased array", "~5× larger"],
+      ["Beams", "16× more, individually smaller"],
+      ["Beam bandwidth", "4× — 20×20 MHz beams"],
+      ["Beam footprint", "~5–10 km at nadir (derived)"],
+      ["Per-beam DL", "~50 Mbps class (claim-anchored)"],
+      ["Per-satellite class", "~100 Gbps ↓ / 50 Gbps ↑ (claim)"],
+    ],
+    note: "The multiplication that matters: more beams × wider beams × better links ≈ the ~100× data density SpaceX claims. Launches start on Falcon 9 in 2027 — Starship is what makes 15,000 reachable, not what phone service waits for.",
+  },
+  {
+    id: "v3", name: "V3 broadband — no phone radio as specced", tone: C.blue,
+    rows: [
+      ["What it is", "Starship-class broadband bus; parallel product line"],
+      ["Role", "Backhaul + broadband to dishes & gateways"],
+      ["Per-satellite DL", "1 Tbps (claim) — >10× V2 Mini"],
+      ["Per-satellite UL", "160–200 Gbps"],
+      ["Backhaul", "~4 Tbps via E-band gateways + laser ISLs"],
+      ["Scale", "~60 per Starship ≈ 60 Tbps per launch"],
+      ["Launch", "Starship only — the gating dependency"],
+    ],
+    note: "As publicly specced, V3 doesn't talk to phones; it feeds everything that does — femtocell backhaul, gateways, broadband. A future D2C payload on this bus is an integration choice SpaceX hasn't announced.",
+  },
+];
+
+const ARTIFACTS = [
+  { t: "Phased-array phase stability", d: "Thousands of radiating elements must stay phase-coherent through orbital thermal cycling — pointing error smears a narrow beam's capacity across the footprint." },
+  { t: "Doppler & timing pre-compensation", d: "±7.5 km/s and ~2 ms one-way delay, corrected satellite-side from ephemeris so an unmodified phone believes the tower is standing still." },
+  { t: "Laser inter-satellite links", d: "A pass lasts ~3 minutes; ISLs hand traffic to a satellite that can see a gateway, making coverage continuous without a ground station under every beam." },
+  { t: "Custom silicon & software radios", d: "Band agility across n252, n70, PCS and future bands in one payload — plus the handset side: X105/MediaTek chipsets carrying SpaceX's bands into phones." },
+  { t: "Power & thermal budgets", d: "5× larger arrays demand more generation and heat rejection through eclipse cycles; transmit power is the lever behind every dB fought over in waiver proceedings." },
+  { t: "Low-altitude drag operations", d: "Shells at 226–485 km buy ~2.5 dB of link budget but sit in measurable atmosphere: continuous ion-thruster compensation, and 5-year natural-decay compliance." },
+  { t: "Autonomous collision avoidance", d: "Up to 15,000 D2C satellites on top of the broadband fleet: conjunction screening and autonomous maneuvers at a scale no operator has managed." },
+  { t: "Manufacturing & launch cadence", d: "The quiet constraint: satellites-per-day off the line and ~4 Starship launches/month decide whether any capacity claim ships on schedule." },
+];
+
+function TechTab() {
+  const [bg, setBg] = useState("v2");
+  const W = 900, H = 300;
+  const CONFS = {
+    gen1: { grid: 2, r: 88, per: 3.1, label: "~3.1 Mbps / beam (measured)", stroke: C.dim, fill: "rgba(138,152,176,0.10)", listens: "phones" },
+    v2: { grid: 4, r: 37, per: 49.6, label: "~50 Mbps class / beam (claim)", stroke: C.amber, fill: C.amberDim, listens: "phones" },
+    v3: { grid: 8, r: 15, per: 15600, label: "multi-Gbps Ku beams to dishes (claim)", stroke: C.blue, fill: C.blueDim, listens: "dishes" },
+  };
+  const conf = CONFS[bg];
+  const total = conf.grid * conf.grid * conf.per;
+  const totalStr = total >= 1000 ? "~" + (total / 1000).toFixed(0) + " Gbps" : total.toFixed(0) + " Mbps";
+  const cells = [];
+  for (let i = 0; i < conf.grid; i++) for (let j = 0; j < conf.grid; j++) cells.push([i, j]);
+  const pad = 60;
+  const step = (W - 2 * pad) / conf.grid;
+  const stepY = (H - 70) / conf.grid;
+  return (
+    <div>
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="eyebrow">Fleet status · Aug 2026</div>
+        <p className="body">
+          Of the ~8,000-satellite active Starlink fleet, only the <strong style={{ color: C.amber }}>~650+ V2 Minis carrying the
+          D2C payload</strong> can talk to a phone at all — the rest are broadband-only. The dedicated D2C line (middle column
+          below) is authorized for up to <strong style={{ color: C.amber }}>15,000 satellites</strong> at 226–435 km; how fast that
+          fleet can exist is a launch-cadence problem, modeled in the deployment clock at the bottom of this tab.
+        </p>
+      </div>
+      <div className="genGrid">
+        {GENS.map((g) => (
+          <div key={g.id} className="card" style={{ borderTop: `2px solid ${g.tone}`, marginBottom: 0 }}>
+            <div className="eyebrow" style={{ color: g.tone === C.dim ? C.dim : g.tone }}>{g.name}</div>
+            {g.rows.map((r, i) => (
+              <div key={i} className="specRow"><span className="specL">{r[0]}</span><span className="specV">{r[1]}</span></div>
+            ))}
+            <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 10 }}>{g.note}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="eyebrow">Spot-beam evolution — the same service area, two generations</div>
+        <p className="body" style={{ marginBottom: 12 }}>
+          Capacity from orbit scales by shrinking and multiplying beams: every additional beam re-uses the same MHz over a
+          smaller patch of ground, so fewer users share each one. Toggle generations and watch the reuse math — then notice
+          what changes when the listener changes.
+        </p>
+        <div className="tglRow" style={{ marginBottom: 10 }}>
+          <button className={"genBtn" + (bg === "gen1" ? " on" : "")} onClick={() => setBg("gen1")}>D2C payload v1 · 4 wide beams</button>
+          <button className={"genBtn" + (bg === "v2" ? " on" : "")} onClick={() => setBg("v2")}>Dedicated D2C 2027 · 16× beams (claims)</button>
+          <button className={"genBtn" + (bg === "v3" ? " on" : "")} onClick={() => setBg("v3")}>V3 · Ku beams to dishes (claims)</button>
+        </div>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block" }} role="img" aria-label="Spot beam footprint comparison between satellite generations">
+          <rect x="30" y="16" width={W - 60} height={H - 56} fill="none" stroke={C.line} strokeDasharray="4 4" rx="6" />
+          <text x="40" y={H - 22} fill={C.dim} fontSize="10" fontFamily="var(--mono)">SAME SERVICE AREA (hundreds of km across)</text>
+          {cells.map(([i, j], k) => (
+            <circle key={bg + k}
+              cx={pad + step * i + step / 2}
+              cy={40 + stepY * j + stepY / 2 - 10}
+              r={conf.r}
+              fill={conf.fill}
+              stroke={conf.stroke} strokeWidth="1.2"
+              style={{ transition: "all 400ms" }} />
+          ))}
+          {bg === "v3" && (
+            <g>
+              <line x1={W - 150} y1="30" x2={W - 62} y2={H - 76} stroke={C.blue} strokeWidth="1.4" strokeDasharray="6 4" />
+              <text x={W - 40} y="30" textAnchor="end" fill={C.blue} fontSize="10" fontFamily="var(--mono)">E-band feeder → gateway</text>
+            </g>
+          )}
+          <text x={W - 40} y={H - 22} textAnchor="end" fill={conf.stroke} fontSize="11" fontFamily="var(--mono)">
+            {conf.grid * conf.grid} beams × {conf.label}
+          </text>
+        </svg>
+        <div className="capOut" style={{ marginTop: 6 }}>
+          <div>
+            <div className="capNum" style={{ color: conf.stroke }}>{totalStr}</div>
+            <div className="capL">aggregate over the area shown ({conf.grid * conf.grid} beams){bg === "v3" ? " ≈ one satellite's 1 Tbps claim" : ""}</div>
+          </div>
+          <div>
+            <div className="capNum" style={{ color: C.blue }}>{bg === "gen1" ? "1×" : bg === "v2" ? "~64×" : "~80,000×*"}</div>
+            <div className="capL">
+              {bg === "gen1" && "baseline"}
+              {bg === "v2" && "from beam count × bandwidth alone — link/MIMO gains carry the rest of the ~100× density claim"}
+              {bg === "v3" && "* apples-to-oranges on purpose: these beams close links to dish antennas with real gain, not 0.25 W phones"}
+            </div>
+          </div>
+        </div>
+        {bg === "v3" && (
+          <p className="body" style={{ fontSize: 13, color: C.dim, marginTop: 10 }}>
+            The lesson in the jump: beam capacity is set as much by <em>what's listening</em> as by the satellite. Swap the
+            fingernail phone antenna for a powered, steered dish and the same physics yields thousands of times more
+            throughput — GHz-wide Ku channels instead of MHz-wide PCS slivers. That's why V3 carries no phone radio as
+            specced and doesn't need one: it pours capacity into the dishes whose femtocells and households serve them
+            instead, while phone service scales on the dedicated D2C satellite line launching from 2027. D2C is a payload
+            and a product line — not a V-number.
+          </p>
+        )}
+      </div>
+
+      <div className="card">
+        <div className="eyebrow">How big is a spot beam? — the 60-second version</div>
+        <p className="body">
+          A phased array's beamwidth follows one rule: <span style={{ fontFamily: "var(--mono)", color: C.amber }}>beam angle ≈ wavelength ÷ antenna width</span>.
+          At ~2 GHz the wavelength is ~15 cm, and today's ~25 m² array (~5 m across) yields a ~2° beam — a footprint of
+          roughly <strong>20–50 km</strong> on the ground from 550 km, wider toward the edges of coverage. The 2027 dedicated D2C
+          satellites shrink that two ways at once: arrays ~5× the area (~2.2× wider, so a ~2.2× narrower beam) flying at
+          lower altitude (226–435 km), landing footprints around <strong style={{ color: C.amber }}>5–10 km at nadir</strong> — a ~25×
+          smaller patch of ground per beam. That shrink <em>is</em> the capacity gain: ~25× fewer people share each 20 MHz
+          channel, and 16× more beams can tile the same region re-using the same 65 MHz. (These are physics-derived
+          estimates, not published specs — and the λ/D rule is also why nobody gets sub-km phone beams at 2 GHz from
+          orbit without a hundred-meter antenna. AST's ~223 m² arrays buy beams only ~2× tighter than SpaceX's next-gen.)
+        </p>
+      </div>
+
+      <div className="card">
+        <div className="eyebrow">The engineering artifacts under management — every one must hold at scale</div>
+        <div className="benchGrid">
+          {ARTIFACTS.map((a, i) => (
+            <div key={i} className="bench">
+              <div className="benchT">{a.t}</div>
+              <div className="benchW">{a.d}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <DeployClock />
+    </div>
+  );
+}
+
+/* ------------------------- REGULATORY & STANDARDS TAB ------------------------- */
+
+const REG_SECURED = [
+  { t: "Gen2 constellation authority — 15,000 satellites", d: "Dec 2022 grant of 7,500 + Jan 9, 2026 grant of 7,500 more; new 340–485 km shells; Ku/Ka/V/E/W-band for both FSS and MSS; the no-overlapping-beam restriction waived." },
+  { t: "EchoStar transfer approved — DA 26-471 (May 12, 2026)", d: "65 MHz across all BEAs except PR/USVI via Spectrum Business Trust 2025-1; population-based buildout rules (§27.14(q)(r)(s)) waived in favor of Appendix C performance conditions." },
+  { t: "SCS authority on the G-block", d: "DA 24-1193 (Nov 2024) SMS grant; DA 25-197 (Mar 2025) waiver adding 9.4 dB of OOBE headroom ≈ 3.1 dB more power — granted over AT&T, Verizon and EchoStar objections." },
+  { t: "Exclusive AWS-4 terrestrial + MSS rights", d: "Space Bureau order DA 26-398 (Apr 23, 2026) confirmed exclusivity over the 2 GHz band — the legal foundation that makes the n252/n70 mode switch usable." },
+  { t: "E-band gateway authority", d: "71–76 / 81–86 GHz granted Mar 8, 2024 — the feeder-link lane that makes V3-class backhaul possible." },
+];
+
+const REG_PENDING = [
+  { t: "GN Docket 25-340 — the deferred waivers", d: "§2.106 (MSS allocation supporting 2000–2020 downlink flexibility) and §25.115 (treating AWS-4 handsets as licensed earth stations). Until granted, full satellite flexibility on AWS-4 isn't buttoned up.", s: "part" },
+  { t: "Satellite treatment for H-block & AWS-3", d: "Both are terrestrial licenses today; orbital use needs FCC Earth-to-space treatment — the same playbook already running for the 2 GHz block, not yet started here.", s: "part" },
+  { t: "Consummation by Nov 30, 2027 + $2.4B escrow", d: "Step-two closing deadline; escrow funds within 30 days of close. EchoStar calls it an 'unprecedented involuntary escrow' — litigation is a live risk to the timeline.", s: "part" },
+  { t: "Refiled 1.6/2.4 GHz MSS request", d: "Dismissed 2024 (DA 24-300), refiled 2025 on changed circumstances. A long shot: Globalstar/Iridium incumbency — and Amazon is acquiring Globalstar's bands for Kuiper's D2D play.", s: "no" },
+];
+
+const REG_KEEP = [
+  { t: "Appendix C buildout milestones", d: "SINR/availability, uplink throughput and spectral-efficiency metrics at 2/4/9 years over 90% of each BEA's geography. Miss all first-interim metrics → final deadline accelerates a year; miss the final metrics → automatic license termination." },
+  { t: "OOBE / PFD limits at the PCS boundary", d: "Aggregate emission caps protecting AT&T and Verizon neighbors, with cease-transmission obligations on substantiated interference — the regulatory ceiling on satellite power per beam." },
+  { t: "NOAA coordination at 1695–1710 MHz", d: "Protection zones around federal weather-satellite earth stations constrain where n70 uplink runs at full power — inherited from Dish, now SpaceX's to manage." },
+  { t: "Per-country licensing abroad", d: "Every international market is its own SCS-equivalent proceeding on a partner's spectrum. The partnership model isn't just go-to-market — it's the regulatory strategy." },
+];
+
+const STD_PIPE = [
+  { t: "Rel-17 NTN baseline", d: "Ephemeris broadcast, HARQ and random-access adaptations, relaxed timing — the foundation that makes unmodified-phone D2C standards-based at all.", s: "ok" },
+  { t: "Rel-18/19 NTN evolution", d: "Refinements through Release 19; Qualcomm's X105 is the first modem with native Starlink Mobile 5G support.", s: "ok" },
+  { t: "n252 into handset silicon", d: "Standardized for NTN from day one but in zero shipping phones; first X105-class devices ~2027, volume through refresh cycles ~2029.", s: "part" },
+  { t: "NTN band definitions for H-block & n70", d: "The satellite personalities of H-block and AWS-3 don't exist in 3GPP yet — SpaceX must champion them through the standards process, or fly pre-standard as it did with LTE on the G-block.", s: "no" },
+  { t: "RF front-end universality", d: "Beyond the modem: filters, power amplifiers and antenna tuning per band, per OEM, per SKU — the unglamorous long pole of device support.", s: "part" },
+];
+
+function RegTab() {
+  return (
+    <div>
+      <div className="split">
+        <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
+          <div className="eyebrow" style={{ color: C.green }}>Secured — the authority already in hand</div>
+          {REG_SECURED.map((r, i) => (
+            <div key={i} className="evt">
+              <div className="evtBody"><strong style={{ color: C.text }}>{r.t}.</strong> {r.d}</div>
+            </div>
+          ))}
+        </div>
+        <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
+          <div className="eyebrow" style={{ color: C.amber }}>Pending — what still has to land</div>
+          {REG_PENDING.map((r, i) => (
+            <div key={i} className="evt">
+              <div className="evtBody"><Dot s={r.s} /> <strong style={{ color: C.text }}>{r.t}.</strong> {r.d}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="split">
+        <div className="card" style={{ borderLeft: `2px solid ${C.red}` }}>
+          <div className="eyebrow" style={{ color: C.red }}>Standing obligations — conditions that never go away</div>
+          {REG_KEEP.map((r, i) => (
+            <div key={i} className="evt">
+              <div className="evtBody"><strong style={{ color: C.text }}>{r.t}.</strong> {r.d}</div>
+            </div>
+          ))}
+        </div>
+        <div className="card" style={{ borderLeft: `2px solid ${C.blue}` }}>
+          <div className="eyebrow" style={{ color: C.blue }}>The standards pipeline — 3GPP & the device ecosystem</div>
+          {STD_PIPE.map((r, i) => (
+            <div key={i} className="evt">
+              <div className="evtBody"><Dot s={r.s} /> <strong style={{ color: C.text }}>{r.t}.</strong> {r.d}</div>
+            </div>
+          ))}
+          <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 10 }}>
+            The pattern to hold onto: regulation decides whether SpaceX <em>may</em> transmit; standards decide whether any
+            phone can <em>hear</em> it. The FCC column is mostly won. The 3GPP-and-silicon column is where the schedule risk
+            lives — and it moves at the speed of chipset roadmaps and consumer upgrade cycles, which no amount of launch
+            cadence accelerates.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------- APP ------------------------- */
+
+const TABS = [
+  { id: "story", label: "The Story" },
+  { id: "spectrum", label: "Spectrum" },
+  { id: "physics", label: "Physics & Capacity" },
+  { id: "tech", label: "Technology" },
+  { id: "network", label: "The Hybrid Network" },
+  { id: "reg", label: "Regulatory & Standards" },
+  { id: "verdict", label: "Bull v Bear" },
+];
+
+function StarlinkMobileRoadmap() {
+  const [tab, setTab] = useState("story");
+  const [phase, setPhase] = useState(0);
+  const [cfg, setCfg] = useState({ ...SCENARIOS[2].cfg, terrEff: 3 });
+  return (
+    <div className="root">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+        :root { --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+                --disp: "Space Grotesk", "Avenir Next", "Segoe UI", system-ui, sans-serif; }
+        * { box-sizing: border-box; margin: 0; }
+        .root { min-height: 100vh; background:
+            radial-gradient(1200px 500px at 80% -10%, rgba(255,180,84,0.05), transparent),
+            radial-gradient(900px 400px at 10% 110%, rgba(91,168,255,0.05), transparent),
+            ${C.ink};
+          color: ${C.text}; font-family: var(--disp); padding: 28px clamp(14px, 4vw, 44px) 60px; }
+        .hdr { max-width: 1120px; margin: 0 auto 22px; }
+        .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; color: ${C.amber}; text-transform: uppercase; }
+        .title { font-size: clamp(26px, 4.4vw, 44px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.06; margin: 10px 0 8px; }
+        .title em { font-style: normal; color: ${C.amber}; }
+        .sub { color: ${C.dim}; font-size: 14px; max-width: 720px; line-height: 1.55; }
+        .tabs { max-width: 1120px; margin: 22px auto 18px; display: flex; gap: 6px; flex-wrap: wrap;
+          border-bottom: 1px solid ${C.line}; }
+        .tab { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; color: ${C.dim};
+          background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 12px; cursor: pointer; }
+        .tab:hover { color: ${C.text}; }
+        .tab.on { color: ${C.amber}; border-bottom-color: ${C.amber}; }
+        .tab:focus-visible, button:focus-visible { outline: 2px solid ${C.blue}; outline-offset: 2px; }
+        .wrap { max-width: 1120px; margin: 0 auto; }
+        .card { background: ${C.panel}; border: 1px solid ${C.line}; border-radius: 8px; padding: 20px 22px; margin-bottom: 16px; }
+        .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+        @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+        .eyebrow { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: ${C.dim}; margin-bottom: 10px; }
+        .h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 10px; }
+        .h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+        .body { font-size: 14.5px; line-height: 1.62; color: #C7D1E2; }
+        .phaseNav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 6px 0 14px; }
+        @media (max-width: 700px) { .phaseNav { grid-template-columns: repeat(2, 1fr); } }
+        .phaseBtn { background: ${C.panel2}; border: 1px solid ${C.line}; border-radius: 6px; padding: 10px;
+          cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: 3px; }
+        .phaseBtn .pb-era { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: ${C.dim}; }
+        .phaseBtn .pb-win { font-size: 13px; color: ${C.text}; font-weight: 500; }
+        .phaseBtn.on { border-color: ${C.amber}; background: ${C.amberDim}; }
+        .phaseBtn.on .pb-era { color: ${C.amber}; }
+        .statGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+        @media (max-width: 520px) { .statGrid { grid-template-columns: 1fr; } }
+        .stat { background: ${C.panel2}; border: 1px solid ${C.line}; border-radius: 6px; padding: 12px; }
+        .statL { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: ${C.dim}; margin-bottom: 6px; }
+        .statV { font-size: 14px; font-weight: 500; line-height: 1.4; }
+        .meter { height: 4px; background: ${C.line}; border-radius: 2px; margin-top: 10px; overflow: hidden; }
+        .meter.big { height: 8px; margin-top: 6px; }
+        .meterFill { height: 100%; background: ${C.amber}; border-radius: 2px; transition: width 600ms cubic-bezier(.4,0,.2,1); }
+        .evt { padding: 11px 0; border-bottom: 1px solid ${C.line}; }
+        .evt:last-child { border-bottom: none; }
+        .evtHead { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 4px; }
+        .evtDate { font-family: var(--mono); font-size: 11.5px; color: ${C.amber}; }
+        .evtBody { font-size: 13.5px; line-height: 1.55; color: #C7D1E2; }
+        .gate { font-size: 13.5px; line-height: 1.55; color: #C7D1E2; padding: 8px 0 8px 14px; position: relative; }
+        .gate::before { content: "▸"; position: absolute; left: 0; color: ${C.red}; }
+        .bandDetail { margin-top: 14px; padding: 12px 16px; background: ${C.panel2}; border-radius: 6px; }
+        .bandFreq { font-family: var(--mono); font-size: 14px; color: ${C.text}; margin-bottom: 8px; }
+        .bandOwn { font-size: 11.5px; color: ${C.dim}; }
+        .tallyRow { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid ${C.line};
+          font-size: 14px; color: #C7D1E2; }
+        .bbGrid { display: flex; flex-direction: column; }
+        .bbRow { display: grid; grid-template-columns: 110px 170px 1fr; gap: 12px; padding: 11px 0; border-bottom: 1px solid ${C.line}; }
+        .bbRow:last-child { border-bottom: none; }
+        @media (max-width: 700px) { .bbRow { grid-template-columns: 1fr; gap: 4px; } }
+        .bbBand { font-weight: 600; font-size: 13.5px; }
+        .bbFreq { font-family: var(--mono); font-size: 11.5px; color: ${C.amber}; line-height: 1.5; }
+        .bbRole { font-size: 13px; color: #C7D1E2; line-height: 1.55; }
+        .barHead { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 12px; color: ${C.dim}; gap: 10px; }
+        .tglRow { display: flex; gap: 8px; flex-wrap: wrap; }
+        .genBtn, .envBtn, .yearBtn, .scenBtn { font-family: var(--mono); font-size: 11.5px; background: ${C.panel2}; color: ${C.dim};
+          border: 1px solid ${C.line}; border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+        .genBtn.on, .yearBtn.on { color: ${C.amber}; border-color: ${C.amber}; }
+        .envBtn.on { color: ${C.blue}; border-color: ${C.blue}; background: ${C.blueDim}; }
+        .scenBtn.on { color: ${C.green}; border-color: ${C.green}; background: rgba(107,219,143,0.10); }
+        .capOut { display: flex; gap: 34px; flex-wrap: wrap; margin: 8px 0 14px; }
+        .capNum { font-family: var(--mono); font-size: 38px; font-weight: 500; line-height: 1; }
+        .capUnit { font-size: 15px; color: ${C.dim}; }
+        .capL { font-size: 12px; color: ${C.dim}; margin-top: 6px; font-family: var(--mono); }
+        .sliderL { display: block; font-size: 13px; color: #C7D1E2; }
+        .sliderL input { width: 100%; margin-top: 8px; accent-color: ${C.amber}; }
+        .indoorNote { margin-top: 14px; padding: 11px 14px; background: ${C.panel2}; border-left: 2px solid;
+          border-radius: 0 6px 6px 0; font-size: 13px; line-height: 1.55; color: #C7D1E2; }
+        .zoneGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+        @media (max-width: 780px) { .zoneGrid { grid-template-columns: 1fr; } }
+        .zone { background: ${C.panel2}; border: 1px solid ${C.line}; border-top: 2px solid; border-radius: 6px; padding: 14px; }
+        .zoneHead { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; margin-bottom: 10px; }
+        .zoneNums { display: flex; gap: 30px; flex-wrap: wrap; }
+        .zN { font-family: var(--mono); font-size: 32px; font-weight: 500; }
+        .zU { font-size: 13px; color: ${C.dim}; margin-left: 5px; }
+        .zM { font-family: var(--mono); font-size: 11px; color: ${C.dim}; margin-top: 3px; }
+        .labNotes { margin-top: 12px; }
+        .labNote { font-family: var(--mono); font-size: 11.5px; color: ${C.dim}; line-height: 1.7; }
+        .mswGrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 16px; }
+        @media (max-width: 860px) { .mswGrid { grid-template-columns: 1fr; } }
+        .mswNote { background: ${C.panel2}; border: 1px solid ${C.line}; border-top: 2px solid; border-radius: 6px;
+          padding: 12px 14px; font-size: 12.5px; line-height: 1.6; color: #C7D1E2; }
+        .ledger { border: 1px solid ${C.line}; border-radius: 6px; overflow: hidden; }
+        .ledgerRow { display: grid; grid-template-columns: 150px 1fr 1fr; gap: 10px; padding: 10px 14px;
+          border-bottom: 1px solid ${C.line}; font-size: 12.5px; line-height: 1.5; color: #C7D1E2; align-items: center; }
+        .ledgerRow:last-child { border-bottom: none; }
+        .ledgerRow.head { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase;
+          color: ${C.dim}; background: ${C.panel2}; }
+        .ledgerRow.hot { background: ${C.amberDim}; }
+        .ledgerRow.hot .ledgerF { color: ${C.amber}; font-weight: 600; }
+        .ledgerF { font-family: var(--mono); font-size: 12px; }
+        @media (max-width: 700px) { .ledgerRow { grid-template-columns: 1fr; gap: 4px; } }
+        .dir { display: inline-block; width: 14px; font-family: var(--mono); }
+        .dir[data-d="up"]::before { content: "↑"; color: ${C.amber}; }
+        .dir[data-d="down"]::before { content: "↓"; color: ${C.blue}; }
+        .dir[data-d="off"]::before { content: "·"; color: ${C.dim}; }
+        .yearRow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+        .readGrid { border: 1px solid ${C.line}; border-radius: 6px; overflow: hidden; }
+        .readRow { display: grid; grid-template-columns: 1fr 90px 90px 90px; gap: 8px; padding: 10px 14px; width: 100%;
+          border: none; border-bottom: 1px solid ${C.line}; background: transparent; color: #C7D1E2; text-align: left;
+          font-size: 13px; cursor: pointer; align-items: center; }
+        .readRow:last-child { border-bottom: none; }
+        .readRow.head { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase;
+          color: ${C.dim}; background: ${C.panel2}; cursor: default; }
+        .readRow.sel { background: rgba(255,255,255,0.035); }
+        .readBand { font-weight: 500; }
+        @media (max-width: 640px) { .readRow { grid-template-columns: 1fr 50px 50px 50px; font-size: 12px; } }
+        .readNote { margin-top: 12px; padding: 11px 14px; background: ${C.panel2}; border-radius: 6px;
+          font-size: 13px; line-height: 1.6; color: #C7D1E2; }
+        .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: ${C.dim}; }
+        .legend span { display: flex; gap: 5px; align-items: center; }
+        .stack { display: flex; flex-direction: column; gap: 8px; }
+        .layer { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+          background: ${C.panel2}; border: 1px solid ${C.line}; border-left: 3px solid var(--tone);
+          border-radius: 6px; padding: 14px; cursor: pointer; color: ${C.text}; text-align: left; }
+        .layer.on { background: rgba(255,255,255,0.03); border-color: var(--tone); }
+        .layerName { font-size: 14px; font-weight: 600; }
+        .layerTag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; color: var(--tone); }
+        .freqChips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+        .chip { font-family: var(--mono); font-size: 10.5px; color: ${C.dim}; border: 1px solid ${C.line};
+          border-radius: 4px; padding: 3px 8px; }
+        .hop { display: flex; gap: 12px; align-items: baseline; font-size: 13.5px; line-height: 1.55; color: #C7D1E2;
+          padding: 8px 0; border-bottom: 1px solid ${C.line}; }
+        .hop:last-child { border-bottom: none; }
+        .hopN { font-family: var(--mono); font-size: 11px; color: ${C.amber}; border: 1px solid ${C.line};
+          border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center;
+          justify-content: center; flex: none; }
+        .quote { padding: 12px 0; border-bottom: 1px solid ${C.line}; }
+        .quote:last-child { border-bottom: none; }
+        .quote p { font-size: 14px; line-height: 1.6; color: #C7D1E2; }
+        .quoteWho { font-family: var(--mono); font-size: 11px; color: ${C.dim}; margin-top: 7px; }
+        .genGrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+        @media (max-width: 900px) { .genGrid { grid-template-columns: 1fr; } }
+        .specRow { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0;
+          border-bottom: 1px solid ${C.line}; font-size: 12.5px; }
+        .specRow:last-of-type { border-bottom: none; }
+        .specL { color: ${C.dim}; font-family: var(--mono); font-size: 11px; flex: none; padding-top: 1px; }
+        .specV { color: #C7D1E2; text-align: right; line-height: 1.45; }
+        .benchGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 700px) { .benchGrid { grid-template-columns: 1fr; } }
+        .bench { background: ${C.panel2}; border: 1px solid ${C.line}; border-radius: 6px; padding: 13px; }
+        .benchT { font-size: 13.5px; font-weight: 600; margin-bottom: 5px; }
+        .benchW { font-size: 12.5px; color: ${C.dim}; line-height: 1.55; }
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+      `}</style>
+
+      <header className="hdr">
+        <div className="kicker">Starlink Mobile · Interactive Roadmap · Data as of Aug 2026</div>
+        <h1 className="title">From texts in a field to a <em>fourth carrier</em></h1>
+        <p className="sub">
+          How SpaceX plans to turn 65 MHz of EchoStar spectrum, a 5G constellation, and millions of rooftop dishes
+          into a phone service — phase by phase, with the physics, the mode-switch, the configuration lab, and the
+          skeptics included.
+        </p>
+      </header>
+
+      <nav className="tabs wrap" role="tablist">
+        {TABS.map((t) => (
+          <button key={t.id} role="tab" aria-selected={tab === t.id}
+            className={"tab" + (tab === t.id ? " on" : "")} onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      <main className="wrap">
+        {tab === "story" && <StoryTab phase={phase} setPhase={setPhase} />}
+        {tab === "spectrum" && <SpectrumTab cfg={cfg} setCfg={setCfg} />}
+        {tab === "physics" && <PhysicsTab cfg={cfg} setCfg={setCfg} />}
+        {tab === "tech" && <TechTab />}
+        {tab === "network" && <NetworkTab />}
+        {tab === "reg" && <RegTab />}
+        {tab === "verdict" && <VerdictTab />}
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<StarlinkMobileRoadmap />);
+</script>
+</body>
+</html>
