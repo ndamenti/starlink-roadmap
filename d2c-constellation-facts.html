@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Dedicated Starlink D2C Constellation — Sourced Factsheet (Aug 2026)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  :root {
+    --ink: #070B14; --panel: #0D1424; --panel2: #101A30; --line: #1C2A42;
+    --text: #E8EDF6; --body: #C7D1E2; --dim: #8A98B0;
+    --amber: #FFB454; --blue: #5BA8FF; --red: #FF6B6B;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --disp: "Space Grotesk", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(255,180,84,0.05), transparent),
+      radial-gradient(900px 400px at 10% 110%, rgba(91,168,255,0.05), transparent),
+      var(--ink);
+    color: var(--text); font-family: var(--disp);
+    padding: 40px clamp(16px, 5vw, 60px) 80px; line-height: 1.65;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; }
+  .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; color: var(--amber); text-transform: uppercase; margin-bottom: 12px; }
+  h1 { font-size: clamp(26px, 4.4vw, 40px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 10px; }
+  .sub { color: var(--dim); font-size: 14px; margin-bottom: 36px; font-family: var(--mono); }
+  h2 { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; margin: 40px 0 14px;
+       padding-top: 24px; border-top: 1px solid var(--line); }
+  p { font-size: 15.5px; color: var(--body); margin-bottom: 16px; }
+  strong { color: var(--text); }
+  em { color: var(--body); }
+  a { color: var(--amber); text-decoration: none; border-bottom: 1px solid rgba(255,180,84,0.35); }
+  a:hover { border-bottom-color: var(--amber); }
+  sup { font-family: var(--mono); font-size: 11px; color: var(--amber); }
+  .correction { background: var(--panel2); border-left: 2px solid var(--red); border-radius: 0 6px 6px 0;
+    padding: 14px 18px; font-size: 13.5px; color: var(--body); margin: 24px 0; }
+  .correction strong { color: var(--red); }
+  .refs { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
+  .refs h2 { border: none; padding-top: 0; margin-top: 0; }
+  .ref { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid var(--line); font-size: 13.5px; color: var(--body); }
+  .ref:last-of-type { border-bottom: none; }
+  .refN { font-family: var(--mono); color: var(--amber); font-size: 12px; padding-top: 2px; }
+  .refT strong { display: block; margin-bottom: 2px; }
+  .refT a { font-family: var(--mono); font-size: 11.5px; word-break: break-all; }
+  .note { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 16px 20px; font-size: 13px; color: var(--dim); margin-top: 28px; }
+  .primary { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: #C79BFF; background: rgba(199,155,255,0.12); padding: 2px 7px; border-radius: 3px; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">Starlink Mobile Research · Sourced Factsheet · August 2026</div>
+  <h1>The Dedicated Starlink D2C Constellation: Fleet Size, Geography, and Antennas</h1>
+  <div class="sub">Companion to the interactive roadmap — every load-bearing number cited below.</div>
+
+  <div class="correction">
+    <strong>Correction vs. earlier drafts:</strong> the FCC's own public notice specifies the dedicated D2C constellation at
+    <strong>326–335 km</strong> — not the 226–435 km figure carried in earlier synthesis. Primary source wins; the physics story
+    only sharpens (deeper drag regime, cleaner ~5 km beam derivation, and the 5-year replacement treadmill is baked into the
+    orbit choice, not assumed).
+  </div>
+
+  <h2>Is 15,000 satellites real?</h2>
+  <p>
+    Yes, as a pending authorization request. On September 16, 2025, SpaceX filed FCC application
+    <strong>SAT-LOA-20250916-00282</strong> (Call Sign S00735) seeking authority for a new constellation of up to
+    <strong>15,000 NGSO satellites dedicated to direct-to-cell service</strong>, separate from and in addition to its Gen2
+    broadband authorization<sup>[1][2]</sup>. SpaceX amended the application on November 25, 2025 (SAT-AMD-20251125-00339),
+    and the FCC placed it on public notice in <strong>GN Docket No. 25-340</strong><sup>[1]</sup>. The FCC's notice describes
+    an MSS system of up to 15,000 satellites operating at <strong>326–335 km</strong><sup>[1]</sup> — deliberately low, trading
+    continuous drag compensation and ~5-year satellite lifetimes for link-budget margin, smaller beam footprints, and
+    sub-50&nbsp;ms latency. The application proposes SCS operations in the United States on the PCS G-block, the H-block, and
+    the unpaired AWS-3 block, plus MSS operations on the AWS-4 (2&nbsp;GHz) spectrum acquired from EchoStar<sup>[1][3]</sup>.
+  </p>
+  <p>
+    Two cautions. First, 15,000 is a requested <strong>ceiling</strong>, not a delivered plan: at SpaceX's target Starship
+    cadence the full fleet is a roughly-2030s proposition, and sustaining it requires replacing ~3,000 satellites per year
+    indefinitely given ~5-year orbital lifetimes. Second, parts of the application remain contested: the FCC's April 23, 2026
+    MSS order (DA 26-398) reaffirmed that the 1.6/2.4&nbsp;GHz "Big LEO" bands SpaceX also requested are
+    <strong>not available</strong> for an additional MSS system, while confirming exclusive 2&nbsp;GHz rights flow through the
+    EchoStar transaction<sup>[3]</sup>.
+  </p>
+  <p>
+    For context on the current fleet: the first-generation D2C constellation is fully deployed at roughly
+    <strong>650 satellites</strong> — V2 Mini-class buses carrying an added D2C payload — out of a much larger broadband
+    constellation whose satellites cannot serve phones at all<sup>[4][5]</sup>.
+  </p>
+
+  <h2>Will all 15,000 serve the continental US?</h2>
+  <p>
+    No — and orbital mechanics make a US-only constellation impossible. The FCC application itself proposes service
+    <strong>"in the United States and outside of the United States"</strong><sup>[3]</sup>. Satellites in low-Earth orbit at
+    ~53°-class inclinations circle the entire planet roughly every 90 minutes; any individual spacecraft spends only a small
+    percentage of its time over the continental US. That is precisely <em>why</em> the constellation must be so large: to keep
+    hundreds of satellites usefully positioned over any given market at every moment, you need many thousands distributed
+    globally. At a full 15,000-satellite fleet, the number over CONUS at any instant would be on the order of several hundred,
+    with the remainder simultaneously serving SpaceX's international carrier partners — Kyivstar (Ukraine), Optus/Telstra
+    (Australia), KDDI (Japan), Airtel Africa, Virgin Media O2 (UK), Deutsche Telekom (Europe), and others — plus oceans and
+    unserved territory<sup>[4][6]</sup>.
+  </p>
+  <p>
+    The regulatory and spectrum layers, however, are country-specific. In the US, SpaceX will operate on spectrum it owns
+    outright (AWS-4, H-block, AWS-3) plus the leased T-Mobile G-block<sup>[1][3]</sup>. Abroad, the same satellites operate on
+    each partner carrier's licensed spectrum under each country's rules — supplemented going forward by the globally
+    harmonized 2&nbsp;GHz S-band rights acquired from EchoStar, which SpaceX says carry priority ITU rights allowing consistent
+    international scaling subject to national approvals<sup>[6]</sup>. The practical consequence: the US is the only market
+    where SpaceX controls the full spectrum stack, which is why the fourth-carrier ambition is a US story while international
+    markets remain a partnership and wholesale play.
+  </p>
+
+  <h2>How large is the D2C antenna array?</h2>
+  <p>
+    The current-generation D2C payload (flying on V2 Mini buses) carries a phased array of approximately
+    <strong>25&nbsp;m²</strong> dedicated to cellular communication<sup>[5]</sup>. For the next-generation dedicated
+    satellites, SpaceX's SVP of Starlink Michael Nicolls stated at MWC 2026 that they carry a phased array
+    <strong>five times the size of the first-generation hardware</strong> — implying roughly a
+    <strong>125&nbsp;m²-class aperture</strong> — delivering four times the bandwidth per beam and about 20× the link
+    performance, supporting over 100&nbsp;Gbps of downlink and 50&nbsp;Gbps of uplink per satellite, 20×20&nbsp;MHz beams,
+    MIMO, and the 3GPP Release-19 NR-NTN standard, with claimed user speeds up to 150&nbsp;Mbps and commercial launch targeted
+    for mid-2027<sup>[4][6][7]</sup>. SpaceX's own materials describe the next-generation satellites as supporting
+    <strong>"thousands of spatial beams"</strong><sup>[8]</sup>. Exact antenna dimensions and element counts are not
+    published; SpaceX discloses power and emissions envelopes to the FCC, not antenna blueprints, so the ~125&nbsp;m² figure
+    is a derived estimate from the stated 5× ratio.
+  </p>
+  <p>
+    For calibration against the competing architecture: AST SpaceMobile's first-generation BlueBirds (1–5) carry
+    <strong>~64&nbsp;m²</strong> (693&nbsp;sq&nbsp;ft) arrays, and its Block 2 BlueBirds unfold to approximately
+    <strong>223&nbsp;m²</strong> (2,400&nbsp;sq&nbsp;ft) — the largest commercial phased arrays ever deployed in LEO —
+    supporting up to 10&nbsp;GHz of processing bandwidth across ~2,000 coverage cells per satellite<sup>[9][10][11]</sup>.
+    AST buys tighter beams with a monolithic giant antenna and pays in satellite mass (~6,100&nbsp;kg for BlueBird 6, versus
+    ~800&nbsp;kg for a D2C-capable V2 Mini) and per-unit complexity<sup>[5][10]</sup>; SpaceX buys capacity with a mid-sized
+    aperture multiplied by fleet count and launch cadence. Same link-budget physics, opposite industrial bets.
+  </p>
+
+  <div class="refs">
+    <h2>Sources</h2>
+    <div class="ref"><div class="refN">[1]</div><div class="refT"><strong>FCC, Public Notice DA 25-1018 (Dec. 5, 2025)<span class="primary">primary</span></strong>
+      Acceptance of SpaceX's D2C application, GN Docket 25-340; ICFS File Nos. SAT-LOA-20250916-00282 and SAT-AMD-20251125-00339; 15,000 satellites at 326–335 km; SCS on PCS-G, H-block, unpaired AWS-3.
+      <a href="https://docs.fcc.gov/public/attachments/DA-25-1018A1.pdf">docs.fcc.gov/public/attachments/DA-25-1018A1.pdf</a></div></div>
+    <div class="ref"><div class="refN">[2]</div><div class="refT"><strong>NextBigFuture (Sept. 2025)</strong>
+      "SpaceX 15,000 V3 Starlink Direct to Cellphone Satellites" — filing overview.
+      <a href="https://www.nextbigfuture.com/2025/09/spacex-15000-v3-starlink-direct-to-cellphone-satellites.html">nextbigfuture.com/2025/09/spacex-15000-v3-starlink-direct-to-cellphone-satellites.html</a></div></div>
+    <div class="ref"><div class="refN">[3]</div><div class="refT"><strong>FCC, Order DA 26-398 (Apr. 23, 2026)<span class="primary">primary</span></strong>
+      MSS spectrum order: D2C application proposes US and international service; 1.6/2.4 GHz unavailable for an additional MSS system; 2 GHz exclusivity.
+      <a href="https://docs.fcc.gov/public/attachments/DA-26-398A1.pdf">docs.fcc.gov/public/attachments/DA-26-398A1.pdf</a></div></div>
+    <div class="ref"><div class="refN">[4]</div><div class="refT"><strong>SDxCentral (Mar. 2026)</strong>
+      Nicolls MWC keynote: 650-satellite first-gen constellation fully deployed; 5× array; 4× bandwidth/beam; 20× link performance; 150 Mbps; 5G NR NTN.
+      <a href="https://www.sdxcentral.com/news/starlink-targets-25m-users-by-year-end-as-gen2-satellite-plan-promises-100x-data-density/">sdxcentral.com/news/starlink-targets-25m-users-by-year-end…</a></div></div>
+    <div class="ref"><div class="refN">[5]</div><div class="refT"><strong>KeepTrack — "Starlink Direct to Cell Status 2026"</strong>
+      ~25 m² D2C phased array; ~800 kg V2 Mini-class buses; ~650 operational.
+      <a href="https://keeptrack.space/deep-dive/starlink-direct-to-cell">keeptrack.space/deep-dive/starlink-direct-to-cell</a></div></div>
+    <div class="ref"><div class="refN">[6]</div><div class="refT"><strong>RCR Wireless (Mar. 2026)</strong>
+      Nicolls quotes: 5× array, 4× bandwidth per beam, 20×20 MHz beams, MIMO, Rel-19 NR-NTN, globally harmonized S-band with priority ITU rights, mid-2027 launch.
+      <a href="https://rcrwireless.com/20260304/5g/spacex-starlink-mobile">rcrwireless.com/20260304/5g/spacex-starlink-mobile</a></div></div>
+    <div class="ref"><div class="refN">[7]</div><div class="refT"><strong>Light Reading (Mar. 2026)</strong>
+      "At MWC, SpaceX execs tout Starlink V2" — &gt;100 Gbps down / &gt;50 Gbps up per satellite; 5× array.
+      <a href="https://www.lightreading.com/satellite/at-mwc-spacex-execs-tout-starlink-v2-and-a-key-carrier-partner-for-it">lightreading.com/satellite/at-mwc-spacex-execs-tout-starlink-v2…</a></div></div>
+    <div class="ref"><div class="refN">[8]</div><div class="refT"><strong>Fierce Network (Mar. 2026)</strong>
+      "MWC 2026: Starlink Mobile unveils plans for V2 satellites" — "thousands of spatial beams," custom silicon, ~20× throughput, mid-2027 US launch.
+      <a href="https://www.fierce-network.com/wireless/mwc-starlink-mobile-unveils-plans-v2-satellites-and-more">fierce-network.com/wireless/mwc-starlink-mobile-unveils-plans…</a></div></div>
+    <div class="ref"><div class="refN">[9]</div><div class="refT"><strong>AST SpaceMobile — "Next-Generation BlueBird"</strong>
+      ~2,400 sq ft Block 2 arrays vs. 693 sq ft first generation; AST5000 ASIC; 10 GHz processing bandwidth.
+      <a href="https://ast-science.com/next-gen-bluebird/">ast-science.com/next-gen-bluebird/</a></div></div>
+    <div class="ref"><div class="refN">[10]</div><div class="refT"><strong>SpaceNews (Dec. 2025)</strong>
+      "Indian rocket launches AST SpaceMobile's next-gen BlueBird 6 satellite" — ~223 m² array; ~6,100 kg.
+      <a href="https://spacenews.com/indian-rocket-launches-ast-spacemobiles-next-gen-bluebird-6-satellite/">spacenews.com/indian-rocket-launches-ast-spacemobiles-next-gen-bluebird-6…</a></div></div>
+    <div class="ref"><div class="refN">[11]</div><div class="refT"><strong>SatNews (Jul. 2026)</strong>
+      "AST SpaceMobile Finalizes Assembly of Next-Generation BlueBirds" — ~223 m² arrays; 2,000 coverage cells; up to 200 Mbps peak.
+      <a href="https://satnews.com/2026/07/01/ast-spacemobile-finalizes-assembly-of-next-generation-bluebirds-for-august-spacex-launch/">satnews.com/2026/07/01/ast-spacemobile-finalizes-assembly…</a></div></div>
+  </div>
+
+  <div class="note">
+    Note on figures: SpaceX performance numbers (150 Mbps per phone, 100 Gbps per satellite, 20× link performance) are company
+    claims from MWC 2026 keynote statements, not independently verified measurements. The ~125 m² next-generation array size is
+    a derived estimate from the stated 5× ratio applied to the ~25 m² current-generation array, not a published specification.
+  </div>
+</div>
+</body>
+</html>

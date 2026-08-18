@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sources &amp; Citations — Starlink Mobile Interactive Roadmap</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  :root {
+    --ink: #070B14; --panel: #0D1424; --panel2: #101A30; --line: #1C2A42;
+    --text: #E8EDF6; --body: #C7D1E2; --dim: #8A98B0;
+    --amber: #FFB454; --blue: #5BA8FF; --red: #FF6B6B; --green: #6BDB8F;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --disp: "Space Grotesk", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(255,180,84,0.05), transparent),
+      radial-gradient(900px 400px at 10% 110%, rgba(91,168,255,0.05), transparent),
+      var(--ink);
+    color: var(--text); font-family: var(--disp);
+    padding: 40px clamp(14px, 4vw, 50px) 80px; line-height: 1.6;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; color: var(--amber); text-transform: uppercase; margin-bottom: 12px; }
+  h1 { font-size: clamp(24px, 4vw, 38px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 10px; }
+  .sub { color: var(--dim); font-size: 14px; max-width: 780px; margin-bottom: 20px; }
+  .nav { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 30px; }
+  .nav a { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.08em; color: var(--amber);
+    text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; }
+  .nav a:hover { border-color: var(--amber); }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  thead th { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--dim); background: var(--panel2); text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  tbody td { padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 13px; color: var(--body); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.topic { width: 22%; font-weight: 600; color: var(--text); font-size: 13.5px; }
+  td.claims { width: 36%; }
+  td.src { width: 42%; }
+  .s { display: block; margin-bottom: 7px; line-height: 1.5; }
+  .s:last-child { margin-bottom: 0; }
+  .s a { color: var(--amber); text-decoration: none; border-bottom: 1px solid rgba(255,180,84,0.3); }
+  .s a:hover { border-bottom-color: var(--amber); }
+  .s .who { color: var(--body); }
+  .unlinked { color: var(--dim); }
+  .badge { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 1px 6px; border-radius: 3px; margin-left: 5px; white-space: nowrap; }
+  .primary { color: #C79BFF; background: rgba(199,155,255,0.12); }
+  .claim { color: var(--amber); background: rgba(255,180,84,0.12); }
+  .derived { color: var(--blue); background: rgba(91,168,255,0.12); }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 14px 2px 22px; font-size: 12px; color: var(--dim); align-items: center; }
+  .note { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 16px 20px; font-size: 13px; color: var(--dim); margin-top: 24px; line-height: 1.6; }
+  @media (max-width: 800px) {
+    table, thead, tbody, tr, td, th { display: block; }
+    thead { display: none; }
+    tbody td { border-bottom: none; padding: 6px 16px; }
+    td.topic { padding-top: 16px; border-top: 1px solid var(--line); width: auto; }
+    td.src { padding-bottom: 16px; width: auto; }
+    td.claims { width: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">Starlink Mobile · Interactive Roadmap · Provenance</div>
+  <h1>Sources &amp; Citations</h1>
+  <p class="sub">
+    Every data domain in the roadmap, mapped to its sources. FCC and company documents are tagged
+    <span class="badge primary">primary</span>; unverified company statements are tagged
+    <span class="badge claim">company claim</span>; numbers computed in the tool itself are tagged
+    <span class="badge derived">derived</span> with their method noted. Data current to August 2026.
+  </p>
+  <div class="nav">
+    <a href="index.html">← Back to the roadmap</a>
+    <a href="d2c-constellation-facts.html">D2C constellation deep-dive factsheet →</a>
+  </div>
+
+  <table>
+    <thead><tr><th>Topic area</th><th>Key data covered in the site</th><th>Sources</th></tr></thead>
+    <tbody>
+
+      <tr>
+        <td class="topic">EchoStar spectrum acquisition &amp; FCC approval</td>
+        <td class="claims">~$19.6B total (AWS-4 + H-block ~$17B; unpaired AWS-3 ~$2.6B); 65 MHz across all BEAs except PR/USVI; two-step trust assignment; waivers; Nov 30, 2027 consummation deadline; $2.4B vendor escrow.</td>
+        <td class="src">
+          <span class="s"><a href="https://docs.fcc.gov/public/attachments/DA-26-471A1.pdf">FCC Order DA 26-471 (May 12, 2026)</a><span class="badge primary">primary</span></span>
+          <span class="s"><a href="https://docs.fcc.gov/public/attachments/DA-25-917A1.pdf">FCC Public Notice DA 25-917 (Sept 30, 2025)</a><span class="badge primary">primary</span></span>
+          <span class="s"><a href="https://ir.echostar.com/static-files/57bf0a65-59a3-4f0e-8b6d-f2d7cbb9d454">EchoStar Form 8-K (Nov 6, 2025)</a><span class="badge primary">primary</span></span>
+          <span class="s"><a href="https://www.pbs.org/newshour/amp/nation/spacex-pays-17-billion-to-acquire-spectrum-licenses-from-echostar">PBS NewsHour</a> · <a href="https://www.nasdaq.com/articles/echostar-sell-spectrum-licenses-spacex-17-bln">Nasdaq/Reuters</a></span>
+          <span class="s"><a href="https://spacedaily.com/sd-n-the-fcc-just-handed-spacex-a-massive-spectrum-win-but-the-2-4-billion-strings-attached-reveal-how-regulators-are-quietly-rewriting-the-rules-for-every-future-telecom-acquisition/">Space Daily — escrow analysis</a></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">Buildout conditions &amp; milestones</td>
+        <td class="claims">Appendix C geographic performance metrics over 90% of each BEA: SINR/availability (5 dB@70% in 2 yrs → 10 dB@90% in 9 yrs); uplink ≥100→300 kbps/MHz; spectral efficiency 300/100 → 600/200 kbps/MHz/beam; acceleration and automatic-termination ladder.</td>
+        <td class="src">
+          <span class="s"><a href="https://docs.fcc.gov/public/attachments/DA-26-471A1.pdf">FCC Order DA 26-471, Appendix C</a><span class="badge primary">primary</span></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">SCS framework &amp; G-block grants</td>
+        <td class="claims">T-Mobile PCS G-block lease (1910–1915 / 1990–1995 MHz, Band 25); SMS-only conditional grant (Nov 2024); Mar 2025 waiver adding 9.4 dB OOBE headroom (~3.1 dB power) over AT&amp;T/Verizon/EchoStar objections; −110.6 dBW/m²/MHz PFD.</td>
+        <td class="src">
+          <span class="s"><a href="https://broadbandbreakfast.com/fcc-backs-spacexs-direct-to-cell-service-at-higher-power-levels/">Broadband Breakfast — DA 25-197 waiver</a></span>
+          <span class="s"><a href="https://www.phonearena.com/news/T-Mobile-finally-confirms-what-we-have-been-fearing-about-its-Starlink-powered-service_id162890">PhoneArena — OOBE limit history</a></span>
+          <span class="s unlinked">FCC DA 24-1193 (Nov 2024) — SMS-only SCS grant; document at docs.fcc.gov<span class="badge primary">primary</span></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">Gen2 broadband constellation authority</td>
+        <td class="claims">Dec 2022 grant of 7,500 satellites; Jan 9, 2026 grant of 7,500 more (total 15,000 broadband); lower shells; Ku/Ka/V/E/W-band for FSS+MSS; overlapping-beam restriction waived; E-band gateways (Mar 2024); OOBE relaxation −120 → −110.6 dBW/m²/MHz.</td>
+        <td class="src">
+          <span class="s unlinked">FCC DA 26-36 (adopted Jan 9, 2026) — Gen2 modification grant; document at docs.fcc.gov<span class="badge primary">primary</span></span>
+          <span class="s"><a href="https://keeptrack.space/deep-dive/starlink-direct-to-cell">KeepTrack — constellation status &amp; Jan 2026 grant</a></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">Dedicated D2C constellation application</td>
+        <td class="claims">Up to 15,000 D2C satellites at <strong>326–335 km</strong>; filed Sept 16, 2025, amended Nov 25, 2025; GN Docket 25-340; SCS on PCS-G/H-block/unpaired AWS-3 + MSS on AWS-4; US and international service.</td>
+        <td class="src">
+          <span class="s"><a href="https://docs.fcc.gov/public/attachments/DA-25-1018A1.pdf">FCC Public Notice DA 25-1018 (Dec 5, 2025)</a><span class="badge primary">primary</span></span>
+          <span class="s"><a href="https://docs.fcc.gov/public/attachments/DA-26-398A1.pdf">FCC Order DA 26-398 (Apr 23, 2026)</a><span class="badge primary">primary</span></span>
+          <span class="s"><a href="https://www.nextbigfuture.com/2025/09/spacex-15000-v3-starlink-direct-to-cellphone-satellites.html">NextBigFuture — filing overview</a></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">MSS bands &amp; denied requests</td>
+        <td class="claims">1.6/2.4 GHz "Big LEO" bands unavailable for an additional MSS system (Globalstar/Iridium incumbency); exclusive AWS-4/2 GHz terrestrial + MSS rights confirmed; 2024 dismissal of SpaceX's Gen2 MSS modification.</td>
+        <td class="src">
+          <span class="s"><a href="https://docs.fcc.gov/public/attachments/DA-26-398A1.pdf">FCC Order DA 26-398 (Apr 23, 2026)</a><span class="badge primary">primary</span></span>
+          <span class="s unlinked">FCC DA 24-300 (Mar 2024) — dismissal of 1.6/2.4 &amp; 2 GHz MSS requests; document at docs.fcc.gov<span class="badge primary">primary</span></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">Current D2C fleet &amp; satellite hardware</td>
+        <td class="claims">~650 D2C-capable V2 Mini-class satellites (fully deployed first-gen constellation); ~800 kg; ~25 m² D2C phased array; ~20–23 per Falcon 9; adapted-LTE eNodeB payloads; largest 4G provider by geography.</td>
+        <td class="src">
+          <span class="s"><a href="https://keeptrack.space/deep-dive/starlink-direct-to-cell">KeepTrack — fleet status &amp; hardware</a></span>
+          <span class="s"><a href="https://www.sdxcentral.com/news/starlink-targets-25m-users-by-year-end-as-gen2-satellite-plan-promises-100x-data-density/">SDxCentral — Nicolls MWC keynote (650 deployed)</a></span>
+          <span class="s"><a href="https://axis-intelligence.com/starlink-direct-to-cell-2026-mobile-sat/">Axis Intelligence — D2C architecture</a></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">Next-gen D2C satellite claims</td>
+        <td class="claims">5× larger phased array (→ ~125 m² derived); 4× bandwidth/beam; 20× link performance; &gt;100 Gbps DL / &gt;50 Gbps UL per satellite; up to 150 Mbps per phone; 20×20 MHz beams; MIMO; Rel-19 NR-NTN; "thousands of spatial beams"; mid-2027 commercial launch.</td>
+        <td class="src">
+          <span class="s"><a href="https://www.lightreading.com/satellite/at-mwc-spacex-execs-tout-starlink-v2-and-a-key-carrier-partner-for-it">Light Reading — MWC 2026</a><span class="badge claim">company claim</span></span>
+          <span class="s"><a href="https://rcrwireless.com/20260304/5g/spacex-starlink-mobile">RCR Wireless — Nicolls quotes</a><span class="badge claim">company claim</span></span>
+          <span class="s"><a href="https://www.sdxcentral.com/news/starlink-targets-25m-users-by-year-end-as-gen2-satellite-plan-promises-100x-data-density/">SDxCentral</a> · <a href="https://www.fierce-network.com/wireless/mwc-starlink-mobile-unveils-plans-v2-satellites-and-more">Fierce Network</a> · <a href="https://www.thelec.net/news/articleView.html?idxno=5617">The Elec</a></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">V3 broadband satellite</td>
+        <td class="claims">1 Tbps DL / 160–200 Gbps UL per satellite; ~4 Tbps combined backhaul; E-band feeder links; ~2,000 kg Starship-class; up to 60 per launch (~60 Tbps/launch); no phone radio as publicly specced.</td>
+        <td class="src">
+          <span class="s"><a href="https://www.szedup.com/starlink/SpaceXTeases1TbpsofDownloadBandwidthonV3StarlinkSatellites.html">EDUP — V3 1 Tbps teaser coverage</a><span class="badge claim">company claim</span></span>
+          <span class="s"><a href="https://cheatsheets.davidveksler.com/starlink-satellite-anatomy.html">Veksler — V1→V3 engineering cheat sheet</a></span>
+          <span class="s"><a href="https://www.nextbigfuture.com/2025/09/spacex-15000-v3-starlink-direct-to-cellphone-satellites.html">NextBigFuture — V3/D2C context</a></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">Measured D2C performance</td>
+        <td class="claims">~3.1 Mbps per beam on 2×5 MHz G-block (≈0.62 Mbps/MHz/beam); scaling projections with H-block and AWS-4 aggregation (~6.2 → ~15.5–18.6 Mbps/beam); RSRP −121 vs −97 dBm; SINR 0 vs 5 dB; n252-not-in-chipsets finding.</td>
+        <td class="src">
+          <span class="s"><a href="https://arxiv.org/html/2506.00283v8">Garcia-Cabeza et al. (UPM), arXiv 2506.00283 — crowdsourced measurement study</a><span class="badge primary">primary</span></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">Terrestrial / femtocell strategy</td>
+        <td class="claims">Aug 4, 2026 earnings call: terrestrial buildout confirmed; "little femtocells" on rooftop dish mounts, deployed "as you need it"; "100 times better"; service "end of next year"; targeting Big Three's ~$600B/yr revenue; Musk on small-station bandwidth.</td>
+        <td class="src">
+          <span class="s"><a href="https://www.fierce-network.com/wireless/spacex-lays-out-plan-compete-big-3-wireless-carriers">Fierce Network — earnings call report</a><span class="badge claim">company claim</span></span>
+          <span class="s"><a href="https://qz.com/spacex-starlink-mobile-network-att-verizon-tmobile-080526">Quartz</a> · <a href="https://glitchwire.com/news/spacex-reveals-plans-for-starlink-mobile-carrier-service-directly-challenging-ve/">Glitchwire</a></span>
+          <span class="s"><a href="https://wirelessestimator.com/articles/2026/spacex-wants-to-be-a-fourth-major-network-but-its-building-around-towers-not-on-them/">Wireless Estimator — building around towers</a></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">Analyst &amp; incumbent skepticism</td>
+        <td class="claims">Moffett: competitive D2C service "extraordinarily challenging to imagine" within 5 yrs; femtocells "work best where it matters least"; Evans: steel-and-concrete urban wall, "what's the algebra?"; Barden: 65 MHz vs ~1,000 MHz over three decades; Gopalan: "I struggle to see which consumer problems they would solve."</td>
+        <td class="src">
+          <span class="s"><a href="https://mlq.ai/news/spacexs-mobile-plan-targets-us-carriers-but-the-network-still-faces-a-long-buildout/">MLQ — buildout skepticism roundup</a></span>
+          <span class="s unlinked">Craig Moffett (MoffettNathanson) research commentary; Benedict Evans, Threads posts (Aug 2026); David Barden (New Street) via Reuters; Srini Gopalan, Financial Times interview (Aug 2026) — as reported in trade press</span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">International carrier partnerships</td>
+        <td class="claims">T-Mobile, Rogers, Optus/Telstra, One NZ/Spark, KDDI, Salt, Entel, Kyivstar (Veon), Beeline, Airtel Africa, Globe, Virgin Media O2, MasOrange; Deutsche Telekom V2 launch planned early 2028; T-Mobile US exclusivity expiry; US Mobile first MVNO.</td>
+        <td class="src">
+          <span class="s"><a href="https://www.telekom.com/en/media/media-information/archive/telekom-and-starlink-satellite-to-mobile-for-europe-1103000">Deutsche Telekom press release</a><span class="badge primary">primary</span></span>
+          <span class="s"><a href="https://in.marketscreener.com/news/starlink-signs-landmark-global-direct-to-cell-deal-with-veon-as-satellite-to-phone-race-heats-up-ce7d5cd3db8bf424">MarketScreener — Veon/Kyivstar deal</a></span>
+          <span class="s"><a href="https://spaceinafrica.com/2026/05/22/airtel-uganda-joins-a-growing-global-wave-as-it-begins-testing-starlinks-direct-to-cell-service/">Space in Africa — Airtel testing</a></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">Spectrum auctions</td>
+        <td class="claims">AWS-3 Auction 113 (closed Jun 23, 2026): $3.57B total; Verizon $3.16B; SpaceX ~$8.5M for 2 licenses (Cincinnati Band 70 gap-fill + Gulf); Upper C-band: rules adopted Jul 22, 2026, 160 MHz (3.98–4.14 GHz) to auction by Jul 2027; satellite carve-out rejected.</td>
+        <td class="src">
+          <span class="s"><a href="https://www.mobileworldlive.com/verizon/analysis-aws-3-auction-turned-on-echostar-bidding-strategy/">Mobile World Live — Auction 113 analysis</a></span>
+          <span class="s unlinked">FCC Upper C-band Report &amp; Order (adopted Jul 22, 2026); document at docs.fcc.gov<span class="badge primary">primary</span></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">Competitors</td>
+        <td class="claims">AST SpaceMobile: 64 m² Block 1 arrays → ~223 m² Block 2 (largest commercial LEO arrays); ~6,100 kg BlueBird 6; ~2,000 coverage cells; 45–60 satellites by end-2026. Amazon Leo/Kuiper: acquiring Globalstar; 5,105-satellite D2D filing on 1.6/2.4 GHz, deployment from 2028.</td>
+        <td class="src">
+          <span class="s"><a href="https://ast-science.com/next-gen-bluebird/">AST SpaceMobile — Next-Gen BlueBird</a><span class="badge primary">primary</span></span>
+          <span class="s"><a href="https://spacenews.com/indian-rocket-launches-ast-spacemobiles-next-gen-bluebird-6-satellite/">SpaceNews — BlueBird 6</a> · <a href="https://satnews.com/2026/07/01/ast-spacemobile-finalizes-assembly-of-next-generation-bluebirds-for-august-spacex-launch/">SatNews — Block 2</a></span>
+          <span class="s"><a href="https://www.cnbc.com/2026/07/27/amazon-satellite-internet-network.html">CNBC — Amazon 5,105-satellite D2D filing</a></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">Device ecosystem &amp; standards</td>
+        <td class="claims">3GPP Rel-17 NTN baseline (ephemeris, HARQ, RACH); Rel-19 NR-NTN for Starlink Mobile; Qualcomm X105 first modem with native support; n252 not in shipping handsets; n70 in recent flagships (Dish legacy); H-block/n70 not yet NTN bands.</td>
+        <td class="src">
+          <span class="s"><a href="https://www.notebookcheck.net/SpaceX-launches-Starlink-Mobile-5G-cell-phone-carrier-service-to-rival-T-Mobile-directly.1239371.0.html">Notebookcheck — X105 / Starlink Mobile 5G</a></span>
+          <span class="s"><a href="https://rcrwireless.com/20260304/5g/spacex-starlink-mobile">RCR Wireless — Rel-19 NR-NTN</a></span>
+          <span class="s"><a href="https://arxiv.org/html/2506.00283v8">UPM study — n252 chipset gap, band readiness</a></span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">Subscribers, revenue &amp; pricing</td>
+        <td class="claims">25M active users targeted by end-2026; 10M monthly actives / 16M+ unique users via partners; Starlink Mobile revenue $632M (S-1); T-Satellite $10/mo; US Mobile bundle from $47/mo; independent estimate ~3M US subscribers (TMF, early 2026).</td>
+        <td class="src">
+          <span class="s"><a href="https://www.sdxcentral.com/news/starlink-targets-25m-users-by-year-end-as-gen2-satellite-plan-promises-100x-data-density/">SDxCentral — user targets</a><span class="badge claim">company claim</span></span>
+          <span class="s"><a href="https://gearmusk.com/2026/03/04/starlink-mobile-gen-2/">GearMusk — subscriber figures</a></span>
+          <span class="s unlinked">SpaceX S-1 (Jun 2026); TMF Associates estimates via PCMag (Jan 2026)</span>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="topic">Derived figures computed in this site</td>
+        <td class="claims">Beam footprints (~20–50 km current; ~5–10 km next-gen); ~125 m² next-gen array; simultaneous-beam estimates (~hundreds); per-beam capacity model (0.62 Mbps/MHz anchor × configuration); deployment clock (launches, years-to-fleet, sustainment tempo); femtocell throughput (bps/Hz × MHz); capacity-density comparison.</td>
+        <td class="src">
+          <span class="s"><span class="badge derived">derived</span> <span class="who">Computed from cited anchors: λ/D beamwidth physics; the UPM 0.62 Mbps/MHz/beam measurement; FCC Appendix C spectral-efficiency milestones; MWC-stated ratios (5× array, 4× BW/beam, 16× beams); ~55 satellites/launch from SpaceX's ~1,200-in-six-months deployment statement; 5-yr lifetime from the 326–335 km drag regime. Estimates, not published specifications — flagged as such wherever they appear in the tool.</span></span>
+        </td>
+      </tr>
+
+    </tbody>
+  </table>
+
+  <div class="note">
+    Editorial method: FCC orders, public notices, SEC/company filings, and peer-submitted measurement research are treated as
+    primary and override trade-press figures where they conflict (e.g., the D2C constellation altitude of 326–335 km per
+    DA 25-1018 corrects earlier syntheses). Performance figures announced at MWC 2026 and on earnings calls are company
+    claims, reported here as claims. Entries without hyperlinks reference documents identified by docket/release number that
+    can be retrieved at docs.fcc.gov or the named outlet. Data current to August 2026; the interactive tool and this page are
+    maintained together.
+  </div>
+
+  <div class="nav" style="margin-top: 24px;">
+    <a href="index.html">← Back to the roadmap</a>
+  </div>
+</div>
+</body>
+</html>

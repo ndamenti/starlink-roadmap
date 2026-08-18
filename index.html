@@ -127,7 +127,7 @@ const PHASES = [
     tierPct: 88,
     beamCap: "V3: 1 Tbps DL per satellite (claim)",
     spectrum: "65 MHz + possible Upper C-band wins",
-    sats: "Up to 15,000 D2C sats authorized (226–435 km)",
+    sats: "Up to 15,000 D2C sats authorized (326–335 km)",
     orbit: 0.9,
     summary:
       "Everything converges on one variable: Starship. V3 broadband satellites (1 Tbps down, 160–200 Gbps up, ~4 Tbps backhaul each) fly ~60 per Starship — roughly 60 Tbps of capacity per launch — but only at a cadence (~4 launches/month) not yet demonstrated. If it happens, the real prize may not be phones at all: Musk frames the endgame as bandwidth for \u201cbillions of AI-powered devices\u201d — robotaxis, Optimus, drones — an outdoor market that plays to satellite's strengths.",
@@ -993,7 +993,7 @@ const LAYERS = [
     id: "sat", tone: "space", name: "Space layer — D2C satellites",
     head: "Coverage everywhere, capacity somewhere",
     freq: ["n252: 2000–2020 ↑ / 2180–2200 ↓", "G-block (leased, SCS)", "H-block & n70 pending NTN standardization"],
-    body: "Up to 15,000 authorized D2C satellites (226–435 km) beam 5G NR NTN straight to unmodified phones. Kills every dead zone outdoors; continuous global coverage targeted end-2028. Laser ISLs route traffic between satellites to reach a gateway. Runs the n252 personality of the 2 GHz block — satellite uplink where terrestrial n70 isn't deployed.",
+    body: "Up to 15,000 authorized D2C satellites (326–335 km) beam 5G NR NTN straight to unmodified phones. Kills every dead zone outdoors; continuous global coverage targeted end-2028. Laser ISLs route traffic between satellites to reach a gateway. Runs the n252 personality of the 2 GHz block — satellite uplink where terrestrial n70 isn't deployed.",
   },
   {
     id: "bb", tone: "space", name: "Broadband constellation — the backhaul",
@@ -1175,7 +1175,7 @@ function DeployClock({ compact }) {
       </div>
       {!compact && (
         <p className="body" style={{ marginBottom: 12 }}>
-          The 15,000-satellite authorization is a ceiling, not a fleet. Satellites at 226–435 km live ~5 years in measurable
+          The 15,000-satellite authorization is a ceiling, not a fleet. Satellites at 326–335 km live ~5 years in measurable
           atmosphere, so the constellation is a treadmill: every cadence below buys both a buildout speed <em>and</em> a maximum
           sustainable fleet. Set a launch tempo and read the consequences.
         </p>
@@ -1218,7 +1218,7 @@ function DeployClock({ compact }) {
       </div>
       {!compact && (
         <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 10 }}>
-          Assumptions on the label: ~55/launch echoes the ~1,200-in-six-months filing math; 5-year life reflects 226–435 km
+          Assumptions on the label: ~55/launch echoes the ~1,200-in-six-months filing math; 5-year life reflects 326–335 km
           drag and deorbit-compliance rules; ~2,000 for continuous coverage is an illustrative service threshold (the
           end-2028 target needs the low thousands, not 15k). Attrition, failed launches, and mixed manifests all push these
           numbers the wrong way. This is why every capacity claim in this tool carries the same footnote: Starship cadence.
@@ -1310,7 +1310,7 @@ function TechTab() {
         <p className="body">
           Of the ~8,000-satellite active Starlink fleet, only the <strong style={{ color: C.amber }}>~650+ V2 Minis carrying the
           D2C payload</strong> can talk to a phone at all — the rest are broadband-only. The dedicated D2C line (middle column
-          below) is authorized for up to <strong style={{ color: C.amber }}>15,000 satellites</strong> at 226–435 km; how fast that
+          below) is authorized for up to <strong style={{ color: C.amber }}>15,000 satellites</strong> at 326–335 km; how fast that
           fleet can exist is a launch-cadence problem, modeled in the deployment clock at the bottom of this tab.
         </p>
       </div>
@@ -1395,7 +1395,7 @@ function TechTab() {
           At ~2 GHz the wavelength is ~15 cm, and today's ~25 m² array (~5 m across) yields a ~2° beam — a footprint of
           roughly <strong>20–50 km</strong> on the ground from 550 km, wider toward the edges of coverage. The 2027 dedicated D2C
           satellites shrink that two ways at once: arrays ~5× the area (~2.2× wider, so a ~2.2× narrower beam) flying at
-          lower altitude (226–435 km), landing footprints around <strong style={{ color: C.amber }}>5–10 km at nadir</strong> — a ~25×
+          lower altitude (326–335 km), landing footprints around <strong style={{ color: C.amber }}>5–10 km at nadir</strong> — a ~25×
           smaller patch of ground per beam. That shrink <em>is</em> the capacity gain: ~25× fewer people share each 20 MHz
           channel, and 16× more beams can tile the same region re-using the same 65 MHz. (These are physics-derived
           estimates, not published specs — and the λ/D rule is also why nobody gets sub-km phone beams at 2 GHz from
@@ -1538,6 +1538,10 @@ function StarlinkMobileRoadmap() {
         .title { font-size: clamp(26px, 4.4vw, 44px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.06; margin: 10px 0 8px; }
         .title em { font-style: normal; color: ${C.amber}; }
         .sub { color: ${C.dim}; font-size: 14px; max-width: 720px; line-height: 1.55; }
+        .srcA { display: inline-block; margin-top: 12px; font-family: var(--mono); font-size: 11.5px;
+          letter-spacing: 0.08em; color: ${C.amber}; text-decoration: none;
+          border: 1px solid ${C.line}; border-radius: 6px; padding: 7px 12px; }
+        .srcA:hover { border-color: ${C.amber}; }
         .tabs { max-width: 1120px; margin: 22px auto 18px; display: flex; gap: 6px; flex-wrap: wrap;
           border-bottom: 1px solid ${C.line}; }
         .tab { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; color: ${C.dim};
@@ -1689,6 +1693,7 @@ function StarlinkMobileRoadmap() {
           into a phone service — phase by phase, with the physics, the mode-switch, the configuration lab, and the
           skeptics included.
         </p>
+        <a className="srcA" href="sources.html">Sources &amp; citations →</a>
       </header>
 
       <nav className="tabs wrap" role="tablist">
