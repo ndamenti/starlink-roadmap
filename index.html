@@ -1252,6 +1252,7 @@ const GENS = [
       ["Radio", "Native 5G NR NTN (Rel-17→19), MIMO"],
       ["Phased array", "~5× larger"],
       ["Beams", "16× more, individually smaller"],
+      ["Simultaneous beams", "~hundreds (derived); thousands of hop positions"],
       ["Beam bandwidth", "4× — 20×20 MHz beams"],
       ["Beam footprint", "~5–10 km at nadir (derived)"],
       ["Per-beam DL", "~50 Mbps class (claim-anchored)"],
@@ -1290,8 +1291,8 @@ function TechTab() {
   const W = 900, H = 300;
   const CONFS = {
     gen1: { grid: 2, r: 88, per: 3.1, label: "~3.1 Mbps / beam (measured)", stroke: C.dim, fill: "rgba(138,152,176,0.10)", listens: "phones" },
-    v2: { grid: 4, r: 37, per: 49.6, label: "~50 Mbps class / beam (claim)", stroke: C.amber, fill: C.amberDim, listens: "phones" },
-    v3: { grid: 8, r: 15, per: 15600, label: "multi-Gbps Ku beams to dishes (claim)", stroke: C.blue, fill: C.blueDim, listens: "dishes" },
+    v2: { grid: 8, r: 13, per: 12.4, label: "20 MHz beams @ measured efficiency ≈ 12.4 Mbps", stroke: C.amber, fill: C.amberDim, listens: "phones" },
+    v3: { grid: 12, r: 8, per: 6900, label: "multi-Gbps Ku beams to dishes (claim)", stroke: C.blue, fill: C.blueDim, listens: "dishes" },
   };
   const conf = CONFS[bg];
   const total = conf.grid * conf.grid * conf.per;
@@ -1301,6 +1302,7 @@ function TechTab() {
   const pad = 60;
   const step = (W - 2 * pad) / conf.grid;
   const stepY = (H - 70) / conf.grid;
+  const rad = Math.min(step, stepY) * 0.46; // radius from spacing: clean tiling, no overlap
   return (
     <div>
       <div className="card" style={{ marginBottom: 16 }}>
@@ -1325,11 +1327,13 @@ function TechTab() {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
-        <div className="eyebrow">Spot-beam evolution — the same service area, two generations</div>
+        <div className="eyebrow">Spot-beam evolution — the same window of ground, three generations</div>
         <p className="body" style={{ marginBottom: 12 }}>
           Capacity from orbit scales by shrinking and multiplying beams: every additional beam re-uses the same MHz over a
           smaller patch of ground, so fewer users share each one. Toggle generations and watch the reuse math — then notice
-          what changes when the listener changes.
+          what changes when the listener changes. <em style={{ color: C.dim }}>The circles are an illustrative window showing
+          ratios, not the satellite's beam inventory: the real 2027 satellites serve a footprint hundreds of km across with
+          ~hundreds of simultaneous beams hopping across thousands of positions (derived, not disclosed).</em>
         </p>
         <div className="tglRow" style={{ marginBottom: 10 }}>
           <button className={"genBtn" + (bg === "gen1" ? " on" : "")} onClick={() => setBg("gen1")}>D2C payload v1 · 4 wide beams</button>
@@ -1343,7 +1347,7 @@ function TechTab() {
             <circle key={bg + k}
               cx={pad + step * i + step / 2}
               cy={40 + stepY * j + stepY / 2 - 10}
-              r={conf.r}
+              r={rad}
               fill={conf.fill}
               stroke={conf.stroke} strokeWidth="1.2"
               style={{ transition: "all 400ms" }} />
@@ -1367,7 +1371,7 @@ function TechTab() {
             <div className="capNum" style={{ color: C.blue }}>{bg === "gen1" ? "1×" : bg === "v2" ? "~64×" : "~80,000×*"}</div>
             <div className="capL">
               {bg === "gen1" && "baseline"}
-              {bg === "v2" && "from beam count × bandwidth alone — link/MIMO gains carry the rest of the ~100× density claim"}
+              {bg === "v2" && "16× beams × 4× bandwidth at measured efficiency — link/MIMO gains lift per-beam toward the ~50 Mbps class and the total toward the ~100× density claim"}
               {bg === "v3" && "* apples-to-oranges on purpose: these beams close links to dish antennas with real gain, not 0.25 W phones"}
             </div>
           </div>
@@ -1396,6 +1400,9 @@ function TechTab() {
           channel, and 16× more beams can tile the same region re-using the same 65 MHz. (These are physics-derived
           estimates, not published specs — and the λ/D rule is also why nobody gets sub-km phone beams at 2 GHz from
           orbit without a hundred-meter antenna. AST's ~223 m² arrays buy beams only ~2× tighter than SpaceX's next-gen.)
+          One more layer: digital arrays don't hold fixed beams — they <strong>hop</strong>, re-pointing hundreds of simultaneous
+          beams among thousands of possible positions so capacity dwells where phones actually are and skips empty land.
+          Beam counts you see quoted anywhere are derived assumptions; SpaceX discloses power envelopes, not beam inventories.
         </p>
       </div>
 
