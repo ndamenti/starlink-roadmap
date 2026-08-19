@@ -452,6 +452,19 @@ function ConfigLab({ cfg, setCfg, compact }) {
           not predictive — the point is the shape of the trade, not the third decimal.
         </p>
       )}
+      {!compact && (
+        <Info label="how to read this lab (for non-engineers)">
+          Think of SpaceX's spectrum as five separately-deeded plots of land (the blocks across the top). For each plot you
+          choose what to build: <strong>SAT</strong> assigns it to the satellite network (serving the wide-open countryside),
+          <strong> TERR</strong> assigns it to rooftop femtocells (serving dense neighborhoods), <strong>SPLIT</strong> does
+          both — satellite mode in rural zones, terrestrial in urban ones, which is legal here only because SpaceX owns both
+          configurations. The two panels below then show the consequence of your choices for each zone: how many MHz each
+          network gets, and roughly what that means in Mbps for a phone. The presets are strategies analysts actually
+          debate — try "everything satellite" vs "urban split" and watch the trade: MHz given to femtocells multiply speeds
+          in cities but come straight out of the satellite network's rural budget, and vice versa. There is no free
+          configuration; that's the point of the lab.
+        </Info>
+      )}
     </div>
   );
 }
@@ -580,6 +593,23 @@ function StoryTab({ phase, setPhase }) {
   const p = PHASES[phase];
   return (
     <div>
+      <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
+        <div className="eyebrow" style={{ color: C.green }}>Start here — the 60-second orientation</div>
+        <p className="body">
+          The premise: SpaceX wants to be America's fourth mobile carrier — without building cell towers. Instead, the
+          "towers" are ~15,000 satellites overhead plus millions of coffee-cup-sized radios bolted to customers' existing
+          rooftop Starlink dishes. To pull that off it bought its own radio spectrum (the $19.6B EchoStar deal — think of
+          spectrum as owning exclusive lanes of an invisible highway), and it's building satellites that impersonate cell
+          towers so convincingly that an ordinary, unmodified phone can't tell the difference. This site walks that plan:
+          <strong> The Story</strong> (this tab) gives the phases; <strong>Spectrum</strong> shows the lanes it bought and the
+          clever trick of using one lane differently in cities vs. countryside; <strong>Physics &amp; Capacity</strong> and
+          <strong> Coverage</strong> explain why talking to a phone from space is brutally hard and how it works anyway;
+          <strong> Technology</strong> covers the satellites themselves; the rest covers the network design, the regulatory
+          scoreboard, and both sides of the investment debate. Everything is labeled: <em>measured</em> numbers,
+          <em> company claims</em>, and <em>our derived estimates</em> are flagged as such throughout — and the ⓘ buttons
+          expand plain-language explainers wherever the engineering gets thick.
+        </p>
+      </div>
       <div className="card" style={{ paddingBottom: 4 }}>
         <Trajectory phase={phase} setPhase={setPhase} />
         <div className="phaseNav">
@@ -735,6 +765,18 @@ function ModeSwitch() {
           </div>
         ))}
       </div>
+      <Info label="the mode switch in plain language — one lane, two opposite jobs">
+        Radio lanes have a direction convention: some carry phone-to-network traffic (uplink — the phone talks), others
+        network-to-phone (downlink — the network talks). Here's the oddity SpaceX inherited: the 2000–2020 MHz lane was
+        originally defined for satellites, with phones <em>talking up</em> to space on it. Dish Network later won permission
+        to flip it — using the same lane terrestrially with towers <em>talking down</em> to phones. SpaceX bought both
+        rights. So in Montana, that lane carries whispers going up to satellites; in Manhattan, the same lane carries
+        femtocells shouting down at phones. Both at once, in the same city block? Impossible — a phone transmitting up is
+        deafening noise beside a femtocell transmitting down. The resolution is geography: satellite mode where people are
+        sparse, terrestrial mode where they're dense, with engineered buffer zones between. It works only because one
+        company owns both configurations exclusively — the boundary is an internal engineering problem, not a lawsuit. No
+        other US carrier has a lane that can do this.
+      </Info>
     </div>
   );
 }
@@ -781,6 +823,18 @@ function Readiness() {
         <span><Dot s="no" /> blocked</span><span><Dot s="pend" /> awaiting deal close</span>
         <span style={{ color: C.dim }}>* = projection, not confirmed</span>
       </div>
+      <Info label="why owning spectrum isn't the same as using it">
+        Three independent gates stand between a purchased license and a working phone call, and each moves on its own
+        clock. <strong>Gate 1 — the license:</strong> regulatory permission to transmit (mostly cleared, pending the deal's
+        formal close). <strong>Gate 2 — the standard:</strong> the global 3GPP rulebook must define how phones use that lane
+        <em> via satellite</em> — chipmakers build only what's in the book, and adding a satellite configuration for a band
+        takes a release cycle (~2 years). <strong>Gate 3 — the handsets:</strong> even once standardized, the feature ships
+        only in new chips, and phones turn over slowly — a feature added in 2026 silicon reaches half of pockets around
+        2029–30. This grid tracks all three gates per band per year. The strategic reading: SpaceX's satellite service must
+        launch on the narrow slices that clear all three gates early (the G-block lease, then AWS-4 with Rel-19 phones),
+        while the full 65 MHz arsenal comes online in waves for years afterward. When you hear "SpaceX owns 65 MHz,"
+        the follow-up question is always: <em>usable by which phones, from orbit, starting when?</em>
+      </Info>
     </div>
   );
 }
@@ -837,6 +891,17 @@ function SpectrumTab({ cfg, setCfg }) {
           </div>
           <p className="body" style={{ fontSize: 13.5 }}>{band.note}</p>
         </div>
+        <Info label="what is 'spectrum,' and why did SpaceX pay $19.6B for it?">
+          Radio signals travel on frequencies — think of them as lanes of an invisible highway that every wireless device
+          shares. Two transmitters using the same lane in the same place garble each other, so the government (the FCC in
+          the US) licenses lanes exclusively: buy a license and you're the only one allowed to transmit there, nationwide.
+          That's the entire asset. The catch is that phones are built in factories years in advance to work on a fixed menu
+          of lanes (the "bands" — n70, n25 and so on are just menu numbers), so a lane is only valuable if phones already
+          speak it — which is exactly why SpaceX paid a premium for EchoStar's lanes, which sit inside Band 70 and are
+          already supported in recent iPhones and Androids, rather than buying cheaper lanes no phone can hear. 65 MHz is
+          the total width SpaceX now owns; the Big Three each control hundreds. The bet is that reuse — thousands of beams
+          and femtocells re-using the same lanes over and over geographically — substitutes for width.
+        </Info>
       </div>
 
       <ModeSwitch />
@@ -927,6 +992,18 @@ function PhysicsTab({ cfg, setCfg }) {
             and dropping shells to 340–360 km for ~2.5 dB back. Physics you can't fix: steel and concrete — measured median
             RSRP −121 dBm vs −97 dBm terrestrial, and indoors the satellite simply isn't there. That's the femtocell's job.
           </p>
+          <Info label="what's a dB, and how bad is 50–60 dB really?">
+            Decibels are how radio engineers write enormous ratios without drowning in zeros — it's a logarithmic scale where
+            every +10 dB means <em>10× more</em>. So 20 dB is 100×, 30 dB is 1,000×, and the 50–60 dB gap between a cell
+            tower's signal and a satellite's means the satellite's signal arrives <strong>100,000 to 1,000,000 times
+            weaker</strong>. That's the honest size of the problem. How is the link possible at all? Every fix claws back
+            dB: a 25 m² antenna instead of a tower panel (~+20–25 dB of focusing gain), sensitive receivers, slower data
+            rates (accepting fewer bits per second is itself worth many dB), and flying lower (each halving of distance buys
+            +6 dB). Stack them and the ledger barely balances — which is why every single dB in this story is fought over:
+            a 3 dB regulatory power waiver (2× power) was worth a year of FCC litigation, and the 5× bigger 2027 antenna
+            (~+7 dB) headlines a keynote. When you see "dB" anywhere on this site, read it as "orders of magnitude,
+            compressed."
+          </Info>
         </div>
 
         <div className="card">
@@ -979,6 +1056,18 @@ function PhysicsTab({ cfg, setCfg }) {
           bet is satellites + dish-mounted femtocells approximate it without the tower capex. The V2 150 Mbps headline is a
           peak, single-user, best-case claim.
         </p>
+        <Info label="why everyone under a beam shares one pipe — and what Mbps/km² means">
+          A satellite beam is one radio channel painted over a patch of ground — like one Wi-Fi router asked to serve an
+          entire county. Its Mbps figure is the <em>total</em> for everyone inside: two active users each get roughly half,
+          twenty get a twentieth. That's why raw per-beam speed matters less than <strong>capacity density</strong> —
+          Mbps per square kilometer — which asks the question that actually decides whether a network works: how much
+          traffic can this patch of map carry at once? The chart above shows why the hybrid exists: a satellite beam
+          spreads its Mbps over ~2,000 km² (a big number divided by a huge area = a tiny density), while a femtocell pours
+          its Mbps into a ~50-meter circle (a modest number over a tiny area = enormous density). Cities need density;
+          wilderness needs presence. No single technology delivers both — which is the one-sentence justification for the
+          entire two-layer architecture, and the reason "150 Mbps from space" and "satellite can't serve cities" are both
+          true at the same time.
+        </Info>
       </div>
 
       <DeployClock compact />
@@ -1356,6 +1445,7 @@ function BeamMap() {
   const [playing, setPlaying] = useState(true);
   const [beams, setBeams] = useState(24);
   const [reuse, setReuse] = useState("reuse3");
+  const [view, setView] = useState("beams");
   const [t, setT] = useState(0);
   const [active, setActive] = useState([]);
 
@@ -1398,6 +1488,13 @@ function BeamMap() {
   }, [slot, beams, reuse]);
 
   const FCOLORS = [C.amber, C.blue, "#C79BFF"];
+  const SATC = ["#6BDB8F", "#4DD0E1", "#FF9ECF"];
+  const servingOf = (cl) => {
+    const f = inFootOf(cl);
+    if (!f.length) return -1;
+    const s = [...f].sort((a, b) => Math.hypot(cl.x - a.x, cl.y - cy) - Math.hypot(cl.x - b.x, cl.y - cy))[0];
+    return sats.indexOf(s);
+  };
   const phoneCell = cells[5 * cols + 12];
   const phoneSats = inFootOf(phoneCell).sort((a, b) => Math.hypot(phoneCell.x - a.x, phoneCell.y - cy) - Math.hypot(phoneCell.x - b.x, phoneCell.y - cy));
   const serving = phoneSats[0];
@@ -1408,16 +1505,20 @@ function BeamMap() {
       <p className="body" style={{ marginBottom: 10 }}>
         The grid never moves: those are <strong>Earth-fixed cells</strong>, virtual towers nailed to geography. Satellites
         sweep across at 7.5 km/s (a ~3-minute pass, compressed), and the constellation is sized so footprints
-        <em> always overlap</em> — no cell is ever outside every footprint. Within a footprint, beams hop: an unlit cell
-        isn't dead, it's <em>between visits</em> — the schedule returns to every cell often enough to broadcast system
-        information and hit paging windows (phones sleep between paging occasions anyway, via DRX/eDRX), and dwells longest
-        where phones are active (the ⌂ towns). Watch the marked 📱 cell's serving satellite hand from SAT to SAT with no
-        gap and no phone-side handoff.
+        <em> always overlap</em> — no cell is ever outside every footprint. Two views of the same system:
+        <strong> Beam activity</strong> shows illumination — where beams are dwelling <em>right now</em> (for user data,
+        broadcast, or paging alike; lit ≠ specifically paging), which is inherently intermittent because an unlit cell is
+        just <em>between visits</em>. <strong>Coverage assignment</strong> shows the other truth: every covered cell's
+        <em> border</em> is colored by the satellite responsible for it at this instant — continuous and gapless even
+        while illumination hops, with handoffs visible as a border-color wave sweeping the static grid. Watch the marked
+        📱 cell in either view: served without interruption, no phone-side handoff.
       </p>
       <div className="tglRow" style={{ marginBottom: 8, alignItems: "center" }}>
         <button className="genBtn on" onClick={() => setPlaying(!playing)}>{playing ? "⏸ pause" : "▶ play"}</button>
-        <button className={"genBtn" + (reuse === "reuse3" ? " on" : "")} onClick={() => setReuse("reuse3")}>Reuse-3 · interference-safe</button>
-        <button className={"genBtn" + (reuse === "reuse1" ? " on" : "")} onClick={() => setReuse("reuse1")}>Reuse-1 · aggressive</button>
+        <button className={"genBtn" + (view === "beams" ? " on" : "")} onClick={() => setView("beams")}>Beam activity view</button>
+        <button className={"genBtn" + (view === "coverage" ? " on" : "")} onClick={() => setView("coverage")}>Coverage-assignment view</button>
+        <button className={"genBtn" + (reuse === "reuse3" ? " on" : "")} onClick={() => setReuse("reuse3")}>Reuse-3</button>
+        <button className={"genBtn" + (reuse === "reuse1" ? " on" : "")} onClick={() => setReuse("reuse1")}>Reuse-1</button>
         <label className="sliderL" style={{ flex: 1, minWidth: 200, fontSize: 12 }}>
           Beams in this window: <strong>{beams}</strong> <span style={{ color: C.dim }}>(scale model — the grid is a small window of a real footprint; the 2027 satellite runs ~hundreds of beams over thousands of positions, 16× Gen1)</span>
           <input type="range" min="8" max="64" value={beams} onChange={(e) => setBeams(+e.target.value)} />
@@ -1446,8 +1547,17 @@ function BeamMap() {
         {/* cells */}
         {cells.map((cl) => {
           const on = active.includes(cl.id);
-          const inF = inFootOf(cl).length > 0;
+          const sIdx = servingOf(cl);
+          const inF = sIdx >= 0;
           const col = reuse === "reuse3" ? FCOLORS[cl.f] : C.amber;
+          if (view === "coverage") {
+            return (
+              <circle key={cl.id} cx={cl.x} cy={cl.y} r={on ? 11 : 9}
+                fill={inF ? col : "transparent"} fillOpacity={on ? 0.6 : inF ? 0.16 : 0}
+                stroke={inF ? SATC[sIdx] : C.line} strokeWidth={inF ? 1.8 : 0.7}
+                strokeOpacity={inF ? 1 : 0.35} />
+            );
+          }
           return (
             <circle key={cl.id} cx={cl.x} cy={cl.y} r={on ? 11 : 8}
               fill={on ? col : "transparent"} fillOpacity={on ? 0.55 : 0}
@@ -1463,7 +1573,15 @@ function BeamMap() {
         </text>
       </svg>
       <div className="tglRow" style={{ marginTop: 8, alignItems: "center", gap: 16 }}>
-        {reuse === "reuse3" ? (
+        {view === "coverage" && (
+          <>
+            <span className="legendF"><i style={{ background: "transparent", border: `2px solid ${SATC[0]}` }} /> SAT-A serves</span>
+            <span className="legendF"><i style={{ background: "transparent", border: `2px solid ${SATC[1]}` }} /> SAT-B serves</span>
+            <span className="legendF"><i style={{ background: "transparent", border: `2px solid ${SATC[2]}` }} /> SAT-C serves</span>
+            <span style={{ fontSize: 12, color: C.dim }}>Border = the satellite currently responsible for the cell (continuous, gapless); interior tint = the cell's frequency channel; bright fill = a beam is dwelling there this instant.</span>
+          </>
+        )}
+        {view === "beams" && (reuse === "reuse3" ? (
           <>
             <span className="legendF"><i style={{ background: FCOLORS[0] }} /> F1</span>
             <span className="legendF"><i style={{ background: FCOLORS[1] }} /> F2</span>
@@ -1472,7 +1590,7 @@ function BeamMap() {
           </>
         ) : (
           <span style={{ fontSize: 12, color: C.red }}>Reuse-1: every beam uses the full DL allocation. Maximum capacity per beam — but only beams with enough spatial separation can be co-scheduled, or they jam each other. The scheduler must keep same-channel beams apart; with 16× more, smaller beams (2027 hardware), isolation improves and reuse-1 gets more viable.</span>
-        )}
+        ))}
       </div>
       <Info label="what exactly is an Earth-fixed cell? (the core trick, slowly)">
         In a normal network your phone talks to a tower that never moves; the "cell" is just that tower's neighborhood.
