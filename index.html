@@ -1552,8 +1552,8 @@ function BeamMap() {
           const col = reuse === "reuse3" ? FCOLORS[cl.f] : C.amber;
           if (view === "coverage") {
             return (
-              <circle key={cl.id} cx={cl.x} cy={cl.y} r={on ? 11 : 9}
-                fill={inF ? col : "transparent"} fillOpacity={on ? 0.6 : inF ? 0.16 : 0}
+              <circle key={cl.id} cx={cl.x} cy={cl.y} r={9}
+                fill={inF ? col : "transparent"} fillOpacity={inF ? 0.16 : 0}
                 stroke={inF ? SATC[sIdx] : C.line} strokeWidth={inF ? 1.8 : 0.7}
                 strokeOpacity={inF ? 1 : 0.35} />
             );
@@ -1578,7 +1578,7 @@ function BeamMap() {
             <span className="legendF"><i style={{ background: "transparent", border: `2px solid ${SATC[0]}` }} /> SAT-A serves</span>
             <span className="legendF"><i style={{ background: "transparent", border: `2px solid ${SATC[1]}` }} /> SAT-B serves</span>
             <span className="legendF"><i style={{ background: "transparent", border: `2px solid ${SATC[2]}` }} /> SAT-C serves</span>
-            <span style={{ fontSize: 12, color: C.dim }}>Border = the satellite currently responsible for the cell (continuous, gapless); interior tint = the cell's frequency channel; bright fill = a beam is dwelling there this instant.</span>
+            <span style={{ fontSize: 12, color: C.dim }}>Border = the satellite currently responsible for the cell (continuous, gapless); interior tint = the cell's frequency channel. Beam activity is deliberately hidden in this view — flip back to see illumination hopping within these assignments.</span>
           </>
         )}
         {view === "beams" && (reuse === "reuse3" ? (
@@ -1606,13 +1606,17 @@ function BeamMap() {
       <Info label="if my cell is dark right now, how does a call reach me?">
         Phones don't listen continuously — that would drain the battery in hours. An idle phone sleeps and wakes only at
         scheduled instants (every 1.28 or 2.56 seconds in LTE, and NTN allows much longer) to check for a "page": the
-        network's knock announcing an incoming call or text. This is called DRX — discontinuous reception. The satellite's
-        beam-hopping schedule is built around it: a beam revisits each cell often enough to be present at the moments
-        phones there wake up and listen. So a cell that looks dark 80% of the time in the animation can still deliver
-        every incoming call — because the 20% of illumination is aimed at exactly the instants that matter. Missed timing,
-        not missing beams, is what would break paging — which is why the whole system runs on a shared, precise schedule.
-        (Active data sessions are different: those cells get dwell time proportional to demand, which is what the ⌂ town
-        weighting shows.)
+        network's knock announcing an incoming call or text. This is called DRX — discontinuous reception. And the
+        coincidence isn't luck — it's a <strong>shared appointment calendar</strong>: when a phone camps on a cell it reads
+        the cell's broadcast paging configuration, then both sides run the same formula — the phone's identity number,
+        hashed against the paging cycle, yields the exact instants <em>this specific phone</em> will listen. The network
+        knows every camped phone's appointments and queues pages for them; the hashing also spreads millions of phones
+        across different instants so paging never bottlenecks on one moment. The satellite's beam-hopping schedule is then
+        built around that calendar: a beam revisits each cell so it's present at the appointments of the phones camped
+        there. So a cell that looks dark 80% of the time still delivers every incoming call — the 20% of illumination is
+        aimed at exactly the instants that matter, and pages repeat across a few occasions so one missed dwell costs
+        latency, not the call. (Active data sessions are different: those cells get dwell time proportional to demand,
+        which is what the ⌂ town weighting shows.)
       </Info>
       <Info label="frequency reuse, for people who don't plan cell networks">
         SpaceX owns a limited slice of radio spectrum — think of it as three lanes of highway. Two beams pointed at
@@ -1623,6 +1627,21 @@ function BeamMap() {
         beams far enough that they can't hear each other. That's maximum capacity but a hard scheduling puzzle. The 2027
         satellites' smaller, more numerous beams make the distance trick work better (tighter beams bleed less energy
         sideways), which is one of the quiet reasons beam-shrinking multiplies capacity by more than the beam count alone.
+      </Info>
+      <Info label="aren't low-elevation beams stretched into ellipses? (yes)">
+        The circles in this animation are <em>cells</em>, not beam projections — and real beam projections at low elevation
+        are indeed ellipses, significantly so. A conical beam hitting the ground at 25° elevation smears along the look
+        direction by roughly 1/sin(25°) ≈ 2.4×, and the slant distance at that angle is about double the straight-down
+        distance, widening the beam in both axes before the stretch — so an edge-of-footprint beam can paint ~2× wider and
+        ~5× longer than the same beam at nadir. Phased arrays make it worse at the edges, not better: steering far
+        off-center shrinks the antenna's effective area (you're seeing the panel edge-on — "scan loss"), widening the beam
+        and costing signal exactly where the path is already longest. Beam shaping can partially compensate; geometry
+        always wins. The system's real answers: <strong>prefer steep looks</strong> — with overlapping footprints, the
+        scheduler hands each cell to whichever satellite sees it most steeply (one more quiet reason to overbuild past 1×
+        coverage); <strong>decouple cells from beams</strong> — the Earth-fixed cell stays a neat fixed patch, and an
+        oversized elliptical beam merely has to cover it, wasting some energy and leaking more interference but keeping
+        the phone's world clean; and <strong>accept degraded edges</strong> — edge-of-footprint service is genuinely
+        worse, which is why minimum elevation is the master variable of this whole architecture (Panel 1).
       </Info>
     </div>
   );
