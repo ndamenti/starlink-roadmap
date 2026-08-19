@@ -740,7 +740,10 @@ function ModeSwitch() {
         <div className="mswNote" style={{ borderColor: C.blue }}>
           <strong style={{ color: C.blue }}>Why urban gets n70:</strong> downlink demand concentrates where people are, n70 is
           already in handsets (Dish's legacy), and femtocells on dish mounts put the 2000–2020 MHz to work as capacity
-          instead of coverage. 2180–2200 rides along as n66 supplemental downlink.
+          instead of coverage. 2180–2200 stays downlink here too — but transmitted by the <em>femtocell</em> (bonded on as
+          n66 supplemental downlink) rather than the satellite. Satellite DL is deliberately absent from urban zones:
+          cities are the terrestrial layer's job, and every beam not spent on a city is capacity redirected to rural land
+          where it's the only option.
         </div>
         <div className="mswNote" style={{ borderColor: C.red }}>
           <strong style={{ color: C.red }}>The boundary problem:</strong> a phone transmitting up at 2010 MHz is raw noise to a
@@ -1647,6 +1650,124 @@ function BeamMap() {
   );
 }
 
+function AdaptiveReusePanel() {
+  const [devKm, setDevKm] = useState(120);
+  const h = 330;
+  const eps = Math.min(90, (Math.atan(h / Math.max(devKm, 0.001)) * 180) / Math.PI);
+  const sinE = Math.sin((eps * Math.PI) / 180);
+  const stretch = 1 / sinE;
+  const slant = h / sinE;
+  const regime = eps >= 60 ? "reuse1" : eps >= 42 ? "mix" : "reuse3";
+  const mhz = regime === "reuse1" ? 60 : regime === "mix" ? 40 : 20;
+  const FC = [C.amber, C.blue, "#C79BFF"];
+  const gx = 140, gy = 296, satY = 56;
+  const X = (km) => gx + km * 0.78;
+  const beams = [];
+  for (let i = 0; i < 10; i++) {
+    const lo = h * Math.tan((6 * i * Math.PI) / 180);
+    const hi = h * Math.tan((6 * (i + 1) * Math.PI) / 180);
+    const e = 90 - (6 * i + 3);
+    beams.push({ i, lo, hi, e });
+  }
+  return (
+    <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
+      <div className="eyebrow" style={{ color: C.green }}>Panel 3 · Adaptive frequency reuse — full menu at nadir, rationing toward the horizon</div>
+      <p className="body" style={{ marginBottom: 10 }}>
+        <strong>Nadir</strong> is the point directly beneath the satellite (if you stand there, it's straight overhead —
+        90° elevation). Beams aimed near nadir land short, square-on, and crisply circular: geometry isolates them from
+        their neighbors for free, so every cell can use the <em>full</em> spectrum (reuse-1 — all three lanes). Beams
+        aimed toward the horizon land long, slanted, and smeared into ellipses that slather energy past their own cells —
+        so there the spectrum is rationed (reuse-3 — one lane per cell) to keep neighbors off each other's channel. Each
+        ground patch below is one beam's landing zone; its colored stripes are the lanes it may use. Drag the phone.
+      </p>
+      <svg viewBox="0 0 900 400" style={{ width: "100%", display: "block" }} role="img" aria-label="Side view of satellite beams landing from nadir to horizon with adaptive frequency reuse">
+        {/* satellite */}
+        <g transform={`translate(${gx}, ${satY})`}>
+          <rect x="-11" y="-7" width="22" height="14" fill={C.amber} rx="2" />
+          <rect x="-33" y="-4" width="18" height="8" fill="none" stroke={C.amber} strokeWidth="1" />
+          <rect x="15" y="-4" width="18" height="8" fill="none" stroke={C.amber} strokeWidth="1" />
+          <text x="0" y="-16" textAnchor="middle" fill={C.dim} fontSize="10" fontFamily="var(--mono)">SATELLITE · 330 km</text>
+        </g>
+        {/* nadir line */}
+        <line x1={gx} y1={satY + 12} x2={gx} y2={gy} stroke={C.line} strokeDasharray="3 4" />
+        <text x={gx} y={gy + 34} textAnchor="middle" fill={C.green} fontSize="10" fontFamily="var(--mono)">NADIR</text>
+        <text x={gx} y={gy + 46} textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">(satellite straight overhead)</text>
+        {/* ground */}
+        <line x1="60" y1={gy} x2="880" y2={gy} stroke={C.text} strokeWidth="1" opacity="0.5" />
+        <text x="878" y={gy + 34} textAnchor="end" fill={C.dim} fontSize="10" fontFamily="var(--mono)">toward horizon →</text>
+        {/* beam cones + landing patches */}
+        {beams.map((bm) => {
+          const x1 = X(bm.lo), x2 = X(bm.hi);
+          const stripes = bm.e >= 60 ? [0, 1, 2] : bm.e >= 42 ? (bm.i % 2 ? [0, 1] : [1, 2]) : [[0, 1, 2][bm.i % 3]];
+          const sh = 15 / stripes.length;
+          return (
+            <g key={bm.i}>
+              <line x1={gx} y1={satY + 12} x2={x1} y2={gy} stroke={C.line} opacity="0.3" />
+              <line x1={gx} y1={satY + 12} x2={x2} y2={gy} stroke={C.line} opacity="0.3" />
+              {stripes.map((f, j) => (
+                <rect key={j} x={x1 + 1} y={gy + 4 + j * sh} width={Math.max(x2 - x1 - 2, 5)} height={sh - 1.5} rx="2" fill={FC[f]} opacity="0.8" />
+              ))}
+            </g>
+          );
+        })}
+        {/* zone boundaries */}
+        <line x1={X(190)} y1={gy - 96} x2={X(190)} y2={gy + 24} stroke={C.dim} strokeDasharray="4 4" opacity="0.6" />
+        <line x1={X(366)} y1={gy - 96} x2={X(366)} y2={gy + 24} stroke={C.dim} strokeDasharray="4 4" opacity="0.6" />
+        <text x={X(95)} y={gy - 104} textAnchor="middle" fill={C.green} fontSize="10" fontFamily="var(--mono)">REUSE-1 · full menu</text>
+        <text x={X(95)} y={gy - 92} textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">elevation ≥ ~60°</text>
+        <text x={X(278)} y={gy - 104} textAnchor="middle" fill={C.amber} fontSize="10" fontFamily="var(--mono)">TRANSITION</text>
+        <text x={X(470)} y={gy - 104} textAnchor="middle" fill="#C79BFF" fontSize="10" fontFamily="var(--mono)">REUSE-3 · rationed</text>
+        <text x={X(470)} y={gy - 92} textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">elevation ≤ ~40° · smeared ellipses</text>
+        {/* device link + marker */}
+        <line x1={gx} y1={satY + 12} x2={X(devKm)} y2={gy - 8} stroke={C.green} strokeWidth="1.5" opacity="0.85" />
+        <text x={X(devKm)} y={gy - 14} textAnchor="middle" fontSize="14">📱</text>
+      </svg>
+      <label className="sliderL" style={{ marginTop: 6 }}>
+        Phone's ground distance from nadir: <strong>{devKm} km</strong> — satellite appears at <strong>{eps.toFixed(0)}°</strong> elevation
+        <input type="range" min="0" max="560" value={devKm} onChange={(e) => setDevKm(+e.target.value)} />
+      </label>
+      <div className="statGrid" style={{ marginTop: 12 }}>
+        <div className="stat"><div className="statL">Slant path</div><div className="statV">~{Math.round(slant)} km <span style={{ color: C.dim, fontSize: 11 }}>({(slant / h).toFixed(1)}× nadir)</span></div></div>
+        <div className="stat"><div className="statL">Beam footprint stretch</div><div className="statV">~{stretch.toFixed(1)}× along look direction</div></div>
+        <div className="stat"><div className="statL">Reuse regime at your cell</div>
+          <div className="statV" style={{ color: regime === "reuse1" ? C.green : regime === "mix" ? C.amber : "#C79BFF" }}>
+            {regime === "reuse1" ? "Reuse-1 · all lanes" : regime === "mix" ? "Transitional · most lanes" : "Reuse-3 · one lane"}
+          </div></div>
+        <div className="stat"><div className="statL">Spectrum available in your cell</div>
+          <div className="statV">{mhz} of 60 MHz
+            <span style={{ marginLeft: 8 }}>
+              {[0, 1, 2].map((f) => (
+                <span key={f} style={{ display: "inline-block", width: 16, height: 9, borderRadius: 2, marginRight: 3, background: FC[f], opacity: (regime === "reuse1" || (regime === "mix" && f > 0) || (regime === "reuse3" && f === 1)) ? 0.95 : 0.15 }} />
+              ))}
+            </span>
+          </div></div>
+      </div>
+      <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
+        Zone thresholds (~60°/~40°) and the three-lane split are illustrative — real systems schedule reuse dynamically,
+        per beam, per moment. Flat-ground geometry; curvature ignored below ~600 km. The structural point stands: spectrum
+        efficiency is highest under the satellite and rationed toward the edges, which is why the scheduler prefers
+        assigning each cell to whichever overhead satellite sees it most steeply.
+      </p>
+      <Info label="walk me through this panel slowly">
+        Imagine standing outdoors with one satellite overhead. If you're at <strong>nadir</strong> — directly beneath it —
+        its beam reaches you by the shortest possible path and lands as a small, sharp circle. Your cell's beam and its
+        neighbors' beams barely spill onto each other, so there's no interference to manage: every cell can use all of
+        SpaceX's spectrum at once (the three stacked color stripes — the "full menu"). Now walk away from nadir. From your
+        new position the satellite hangs lower in the sky; its beam reaches you along a longer slanted path and smears into
+        a stretched ellipse (drag the slider and watch the patches widen). Smeared beams slop energy onto their neighbors,
+        so cells out here can't all shout on the same frequencies — the network rations: adjacent cells split the spectrum
+        (single stripes, alternating colors) so each one's channel stays clean, at the cost of only a third of the lanes.
+        The satellite also has two finer tools not drawn here: it can aim <em>silence</em> in specific directions (a
+        "beamforming null" — shaping the antenna pattern so a particular same-channel cell hears almost nothing) and turn
+        each beam's volume up or down depending on how close its channel-mates are. And because footprints overlap, the
+        network's simplest trick is the best one: hand every cell to whichever satellite is most nearly overhead — keeping
+        as much of the map as possible in the full-menu zone. That preference for steep looks is one more quiet reason the
+        constellation keeps growing past "coverage complete."
+      </Info>
+    </div>
+  );
+}
+
 function NtnPanel() {
   const [ntn, setNtn] = useState(false);
   const [pos, setPos] = useState(62); // percent of beam half-width, -100..100
@@ -1658,7 +1779,7 @@ function NtnPanel() {
   const Y = (k) => 130 - (k / 3.2) * 92;  // kHz → px
   return (
     <div className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
-      <div className="eyebrow" style={{ color: C.blue }}>Panel 3 · What Rel-17 / Rel-19 NTN phones change</div>
+      <div className="eyebrow" style={{ color: C.blue }}>Panel 4 · What Rel-17 / Rel-19 NTN phones change</div>
       <p className="body" style={{ marginBottom: 10 }}>
         Today the satellite pre-corrects Doppler and delay so a satellite-unaware phone thinks the tower is stationary — but
         the correction is exact only at the <em>beam center</em>. Off-center phones see residual frequency error, and the
@@ -1767,6 +1888,7 @@ function CoverageTab() {
       </div>
       <FootprintPanel />
       <BeamMap />
+      <AdaptiveReusePanel />
       <NtnPanel />
     </div>
   );
