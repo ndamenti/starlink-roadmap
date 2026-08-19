@@ -1263,10 +1263,18 @@ function FootprintPanel() {
     <div className="card">
       <div className="eyebrow">Panel 1 · One satellite's reach — footprint geometry, and the satellite-count ladder</div>
       <p className="body" style={{ marginBottom: 12 }}>
-        A satellite's <em>visible</em> footprint is set by the minimum elevation angle phones need for a clean line of sight —
-        below ~25–45° the signal arrives shallow enough that terrain, trees and the user's own body block it. Slide the
-        requirement and watch the footprint collapse; the satellite count for continuous single coverage scales inversely.
+        A satellite's <em>visible</em> footprint is set by the minimum elevation angle phones need for a clean line of sight.
+        There is no single "correct" angle — it's an <strong>environment statistic</strong>: open terrain works near 25°,
+        while trees and buildings beside the user push the requirement toward straight-up. The FCC milestones encode exactly
+        this: they specify <em>availability</em> (5 dB SINR ≥70→90% of the time), the statistical fingerprint of "how often
+        is a satellite above your surroundings' mask." Pick an environment or slide freely.
       </p>
+      <div className="tglRow" style={{ marginBottom: 10 }}>
+        <button className={"envBtn" + (elev === 25 ? " on" : "")} onClick={() => setElev(25)}>Open plains / water · 25°</button>
+        <button className={"envBtn" + (elev === 37 ? " on" : "")} onClick={() => setElev(37)}>Rolling terrain, scattered trees · 37°</button>
+        <button className={"envBtn" + (elev === 47 ? " on" : "")} onClick={() => setElev(47)}>Suburban, mature trees · 47°</button>
+        <button className={"envBtn" + (elev === 57 ? " on" : "")} onClick={() => setElev(57)}>Urban canyon / forest · 57°</button>
+      </div>
       <div className="tglRow" style={{ marginBottom: 10 }}>
         <button className={"genBtn" + (alt === 530 ? " on" : "")} onClick={() => setAlt(530)}>Today's fleet · ~530 km</button>
         <button className={"genBtn" + (alt === 330 ? " on" : "")} onClick={() => setAlt(330)}>2027 dedicated D2C · ~330 km</button>
@@ -1328,9 +1336,13 @@ function BeamMap() {
     for (let c = 0; c < cols; c++)
       cells.push({ id: r * cols + c, x: x0 + c * dx + (r % 2 ? dx / 2 : 0), y: y0 + r * dy, f: (c + 2 * r) % 3 });
   const W = 900, H = 440, cy = y0 + ((rows - 1) * dy) / 2;
-  const period = 22000, span = 1250, R = 205;
+  const period = 24000, span = 1250, R = 218;
   const satX = (off) => -170 + (((t + off) % period) / period) * span;
-  const sats = [{ id: "SAT-A", x: satX(0) }, { id: "SAT-B", x: satX(period / 2) }];
+  const sats = [
+    { id: "SAT-A", x: satX(0) },
+    { id: "SAT-B", x: satX(period / 3) },
+    { id: "SAT-C", x: satX((2 * period) / 3) },
+  ];
   const hot = [{ x: x0 + 6 * dx, y: y0 + 3 * dy }, { x: x0 + 15 * dx, y: y0 + 7 * dy }, { x: x0 + 23 * dx, y: y0 + 4 * dy }];
   const isHot = (cl) => hot.some((h) => Math.hypot(cl.x - h.x, cl.y - h.y) < 58);
   const inFootOf = (cl) => sats.filter((s) => Math.hypot(cl.x - s.x, cl.y - cy) < R);
@@ -1359,19 +1371,21 @@ function BeamMap() {
     <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
       <div className="eyebrow" style={{ color: C.amber }}>Panel 2 · Earth-fixed cells, hopping beams, frequency reuse — the animation</div>
       <p className="body" style={{ marginBottom: 10 }}>
-        The grid never moves: those are <strong>Earth-fixed cells</strong>, virtual towers nailed to geography. The satellites
-        sweep across at 7.5 km/s (a pass lasts ~3 minutes — compressed here), each illuminating only a few dozen cells at a
-        time with hopping spot beams that dwell where phones are (the ⌂ towns) and skip empty land. When one satellite
-        exits, the next is already recreating the same cells — watch the marked 📱 cell's serving satellite flip with no
+        The grid never moves: those are <strong>Earth-fixed cells</strong>, virtual towers nailed to geography. Satellites
+        sweep across at 7.5 km/s (a ~3-minute pass, compressed), and the constellation is sized so footprints
+        <em> always overlap</em> — no cell is ever outside every footprint. Within a footprint, beams hop: an unlit cell
+        isn't dead, it's <em>between visits</em> — the schedule returns to every cell often enough to broadcast system
+        information and hit paging windows (phones sleep between paging occasions anyway, via DRX/eDRX), and dwells longest
+        where phones are active (the ⌂ towns). Watch the marked 📱 cell's serving satellite hand from SAT to SAT with no
         gap and no phone-side handoff.
       </p>
       <div className="tglRow" style={{ marginBottom: 8, alignItems: "center" }}>
         <button className="genBtn on" onClick={() => setPlaying(!playing)}>{playing ? "⏸ pause" : "▶ play"}</button>
         <button className={"genBtn" + (reuse === "reuse3" ? " on" : "")} onClick={() => setReuse("reuse3")}>Reuse-3 · interference-safe</button>
         <button className={"genBtn" + (reuse === "reuse1" ? " on" : "")} onClick={() => setReuse("reuse1")}>Reuse-1 · aggressive</button>
-        <label className="sliderL" style={{ flex: 1, minWidth: 180, fontSize: 12 }}>
-          Simultaneous beams: <strong>{beams}</strong>
-          <input type="range" min="8" max="48" value={beams} onChange={(e) => setBeams(+e.target.value)} />
+        <label className="sliderL" style={{ flex: 1, minWidth: 200, fontSize: 12 }}>
+          Beams in this window: <strong>{beams}</strong> <span style={{ color: C.dim }}>(scale model — the grid is a small window of a real footprint; the 2027 satellite runs ~hundreds of beams over thousands of positions, 16× Gen1)</span>
+          <input type="range" min="8" max="64" value={beams} onChange={(e) => setBeams(+e.target.value)} />
         </label>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block" }} role="img" aria-label="Animated map of Earth-fixed cells served by hopping satellite beams">
