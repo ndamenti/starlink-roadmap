@@ -905,6 +905,19 @@ function SpectrumTab({ cfg, setCfg }) {
           the total width SpaceX now owns; the Big Three each control hundreds. The bet is that reuse — thousands of beams
           and femtocells re-using the same lanes over and over geographically — substitutes for width.
         </Info>
+        <Info label="is it 65 MHz or 75 MHz? owned vs borrowed">
+          You'll see both numbers, and the difference matters. SpaceX <strong>owns 65 MHz</strong> — the EchoStar
+          purchase (AWS-4's 40, the H-block's 10, AWS-3's unpaired 15), where SpaceX becomes the FCC licensee outright
+          once the deal formally closes. It also <strong>operates across ~10 MHz more</strong> — the PCS G-block — but
+          that spectrum is T-Mobile's: the FCC's SCS rules are a landlord-tenant structure where the satellite operator
+          transmits only under a lease from the terrestrial licensee, and SpaceX's authority there evaporates if the
+          T-Mobile agreement ends. Nor could SpaceX build its own competing carrier on it — legally the use flows through
+          T-Mobile's license, and commercially the lease exists to power T-Mobile's product (T-Satellite), not to arm a
+          rival. That's the strategic logic of the $19.6B purchase in one line: it converted SpaceX from tenant to owner.
+          Today's live texting service runs on the borrowed G-block as T-Mobile's partner; the fourth-carrier ambition —
+          Starlink Mobile, femtocells, the 2027 satellites — is built entirely on the owned 65. When comparing against
+          the Big Three's holdings, 65 is the honest number.
+        </Info>
       </div>
 
       <ModeSwitch />
