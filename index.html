@@ -12,7 +12,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
-const { useState } = React;
+const { useState, useEffect } = React;
 
 /* ============================================================
    STARLINK MOBILE: FROM TEXTS IN A FIELD TO A FOURTH CARRIER
@@ -1228,6 +1228,289 @@ function DeployClock({ compact }) {
   );
 }
 
+/* ------------------------- COVERAGE TAB ------------------------- */
+/* The phone is omnidirectional and satellite-unaware; the satellite does
+   everything. These panels model footprint geometry, Earth-fixed-cell
+   beam hopping with frequency reuse, and the Rel-17/19 NTN handset gain. */
+
+function footprintGeom(hKm, elevDeg) {
+  const Re = 6371;
+  const e = (elevDeg * Math.PI) / 180;
+  const lam = Math.acos((Re / (Re + hKm)) * Math.cos(e)) - e;
+  const rKm = Re * lam;
+  const area = 2 * Math.PI * Re * Re * (1 - Math.cos(lam));
+  const cap = (1 - Math.cos(lam)) / 2;
+  const N = Math.round(3.3 / cap); // Walker-overlap factor calibrated to ~650 @ 25°/530 km
+  return { rKm, area, N };
+}
+
+function mulberry(seed) {
+  let a = seed + 0x6d2b79f5;
+  return function () {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function FootprintPanel() {
+  const [alt, setAlt] = useState(330);
+  const [elev, setElev] = useState(35);
+  const f = footprintGeom(alt, elev);
+  const rPx = Math.min(f.rKm * 0.19, 195);
+  return (
+    <div className="card">
+      <div className="eyebrow">Panel 1 · One satellite's reach — footprint geometry, and the satellite-count ladder</div>
+      <p className="body" style={{ marginBottom: 12 }}>
+        A satellite's <em>visible</em> footprint is set by the minimum elevation angle phones need for a clean line of sight —
+        below ~25–45° the signal arrives shallow enough that terrain, trees and the user's own body block it. Slide the
+        requirement and watch the footprint collapse; the satellite count for continuous single coverage scales inversely.
+      </p>
+      <div className="tglRow" style={{ marginBottom: 10 }}>
+        <button className={"genBtn" + (alt === 530 ? " on" : "")} onClick={() => setAlt(530)}>Today's fleet · ~530 km</button>
+        <button className={"genBtn" + (alt === 330 ? " on" : "")} onClick={() => setAlt(330)}>2027 dedicated D2C · ~330 km</button>
+      </div>
+      <div className="split" style={{ alignItems: "center" }}>
+        <svg viewBox="0 0 440 440" style={{ width: "100%", display: "block" }} role="img" aria-label="Satellite footprint circle scaled by elevation angle">
+          <circle cx="220" cy="220" r="200" fill="none" stroke={C.line} strokeDasharray="3 4" />
+          <text x="220" y="34" textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">25° ELEVATION FOOTPRINT SCALE</text>
+          <circle cx="220" cy="220" r={rPx} fill={C.amberDim} stroke={C.amber} strokeWidth="1.5" style={{ transition: "r 300ms" }} />
+          <rect x="215" y="215" width="10" height="7" fill={C.amber} rx="1" />
+          <rect x="203" y="217" width="9" height="4" fill="none" stroke={C.amber} strokeWidth="1" />
+          <rect x="228" y="217" width="9" height="4" fill="none" stroke={C.amber} strokeWidth="1" />
+          <text x="220" y={224 + rPx + 16} textAnchor="middle" fill={C.amber} fontSize="11" fontFamily="var(--mono)">
+            r ≈ {Math.round(f.rKm)} km
+          </text>
+        </svg>
+        <div>
+          <label className="sliderL">Minimum elevation angle phones require: <strong>{elev}°</strong>
+            <input type="range" min="25" max="60" value={elev} onChange={(e) => setElev(+e.target.value)} />
+          </label>
+          <div className="statGrid" style={{ marginTop: 14 }}>
+            <div className="stat"><div className="statL">Usable footprint</div>
+              <div className="statV">~{Math.round(f.rKm)} km radius · ~{(f.area / 1000).toFixed(0)}k km²</div></div>
+            <div className="stat"><div className="statL">Satellites for continuous 1× coverage</div>
+              <div className="statV" style={{ color: C.amber }}>~{f.N.toLocaleString()} <span style={{ color: C.dim, fontSize: 11 }}>(geometry est.)</span></div></div>
+          </div>
+          <div className="ladder">
+            <div className="rung"><span className="rungN">~650</span><span className="rungT">a bar of signal everywhere — today's fleet ≈ continuous coverage at ~25° elevation (texting works)</span></div>
+            <div className="rung"><span className="rungN">~2–6k</span><span className="rungT">a <em>reliable</em> bar — continuous coverage at 45°+, the statistic the FCC milestones actually measure</span></div>
+            <div className="rung"><span className="rungN">15,000</span><span className="rungT">enough bars for a business — extra satellites buy beams-per-km², not coverage</span></div>
+          </div>
+        </div>
+      </div>
+      <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 10 }}>
+        Model: spherical-cap geometry with a ~3.3× Walker-constellation overlap factor calibrated to the real fleet
+        (~650 satellites ≈ continuous 25° coverage from 530 km). Estimates ignore latitude structure — 53°-inclined orbits
+        crowd satellites near ±53° and thin them toward the equator, so coverage quality carries a latitude asterisk.
+      </p>
+    </div>
+  );
+}
+
+function BeamMap() {
+  const [playing, setPlaying] = useState(true);
+  const [beams, setBeams] = useState(24);
+  const [reuse, setReuse] = useState("reuse3");
+  const [t, setT] = useState(0);
+  const [active, setActive] = useState([]);
+
+  useEffect(() => {
+    if (!playing) return;
+    const id = setInterval(() => setT((x) => x + 120), 120);
+    return () => clearInterval(id);
+  }, [playing]);
+
+  const cols = 30, rows = 11, dx = 28, dy = 27, x0 = 34, y0 = 90;
+  const cells = [];
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      cells.push({ id: r * cols + c, x: x0 + c * dx + (r % 2 ? dx / 2 : 0), y: y0 + r * dy, f: (c + 2 * r) % 3 });
+  const W = 900, H = 440, cy = y0 + ((rows - 1) * dy) / 2;
+  const period = 22000, span = 1250, R = 205;
+  const satX = (off) => -170 + (((t + off) % period) / period) * span;
+  const sats = [{ id: "SAT-A", x: satX(0) }, { id: "SAT-B", x: satX(period / 2) }];
+  const hot = [{ x: x0 + 6 * dx, y: y0 + 3 * dy }, { x: x0 + 15 * dx, y: y0 + 7 * dy }, { x: x0 + 23 * dx, y: y0 + 4 * dy }];
+  const isHot = (cl) => hot.some((h) => Math.hypot(cl.x - h.x, cl.y - h.y) < 58);
+  const inFootOf = (cl) => sats.filter((s) => Math.hypot(cl.x - s.x, cl.y - cy) < R);
+
+  const slot = Math.floor(t / 480);
+  useEffect(() => {
+    const inFoot = cells.filter((cl) => inFootOf(cl).length > 0);
+    if (inFoot.length === 0) { setActive([]); return; }
+    const pool = [];
+    inFoot.forEach((cl) => { pool.push(cl); if (isHot(cl)) { pool.push(cl); pool.push(cl); pool.push(cl); } });
+    const rand = mulberry(slot * 7919 + beams);
+    const chosen = new Set();
+    let guard = 0;
+    while (chosen.size < Math.min(beams, inFoot.length) && guard++ < 2000)
+      chosen.add(pool[Math.floor(rand() * pool.length)].id);
+    setActive([...chosen]);
+    // eslint-disable-next-line
+  }, [slot, beams, reuse]);
+
+  const FCOLORS = [C.amber, C.blue, "#C79BFF"];
+  const phoneCell = cells[5 * cols + 12];
+  const phoneSats = inFootOf(phoneCell).sort((a, b) => Math.hypot(phoneCell.x - a.x, phoneCell.y - cy) - Math.hypot(phoneCell.x - b.x, phoneCell.y - cy));
+  const serving = phoneSats[0];
+
+  return (
+    <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
+      <div className="eyebrow" style={{ color: C.amber }}>Panel 2 · Earth-fixed cells, hopping beams, frequency reuse — the animation</div>
+      <p className="body" style={{ marginBottom: 10 }}>
+        The grid never moves: those are <strong>Earth-fixed cells</strong>, virtual towers nailed to geography. The satellites
+        sweep across at 7.5 km/s (a pass lasts ~3 minutes — compressed here), each illuminating only a few dozen cells at a
+        time with hopping spot beams that dwell where phones are (the ⌂ towns) and skip empty land. When one satellite
+        exits, the next is already recreating the same cells — watch the marked 📱 cell's serving satellite flip with no
+        gap and no phone-side handoff.
+      </p>
+      <div className="tglRow" style={{ marginBottom: 8, alignItems: "center" }}>
+        <button className="genBtn on" onClick={() => setPlaying(!playing)}>{playing ? "⏸ pause" : "▶ play"}</button>
+        <button className={"genBtn" + (reuse === "reuse3" ? " on" : "")} onClick={() => setReuse("reuse3")}>Reuse-3 · interference-safe</button>
+        <button className={"genBtn" + (reuse === "reuse1" ? " on" : "")} onClick={() => setReuse("reuse1")}>Reuse-1 · aggressive</button>
+        <label className="sliderL" style={{ flex: 1, minWidth: 180, fontSize: 12 }}>
+          Simultaneous beams: <strong>{beams}</strong>
+          <input type="range" min="8" max="48" value={beams} onChange={(e) => setBeams(+e.target.value)} />
+        </label>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block" }} role="img" aria-label="Animated map of Earth-fixed cells served by hopping satellite beams">
+        {/* satellites + footprints */}
+        {sats.map((s) => (
+          <g key={s.id}>
+            <circle cx={s.x} cy={cy} r={R} fill="none" stroke={C.line} strokeDasharray="4 5" />
+            <g transform={`translate(${s.x}, 34)`}>
+              <rect x="-10" y="-6" width="20" height="12" fill={C.amber} rx="2" />
+              <rect x="-30" y="-3" width="16" height="6" fill="none" stroke={C.amber} strokeWidth="1" />
+              <rect x="14" y="-3" width="16" height="6" fill="none" stroke={C.amber} strokeWidth="1" />
+              <text x="0" y="-14" textAnchor="middle" fill={C.dim} fontSize="10" fontFamily="var(--mono)">{s.id}</text>
+            </g>
+            <line x1={s.x} y1="46" x2={s.x} y2={cy - R} stroke={C.line} strokeWidth="1" />
+          </g>
+        ))}
+        <text x="12" y="20" fill={C.dim} fontSize="10" fontFamily="var(--mono)">→ satellites sweep at 7.5 km/s · pass ≈ 3 min (compressed)</text>
+        <text x={W - 12} y={H - 10} textAnchor="end" fill={C.dim} fontSize="10" fontFamily="var(--mono)">EARTH-FIXED CELL GRID (static)</text>
+        {/* towns */}
+        {hot.map((h, i) => (
+          <text key={i} x={h.x} y={h.y - 20} textAnchor="middle" fill={C.green} fontSize="13">⌂</text>
+        ))}
+        {/* cells */}
+        {cells.map((cl) => {
+          const on = active.includes(cl.id);
+          const inF = inFootOf(cl).length > 0;
+          const col = reuse === "reuse3" ? FCOLORS[cl.f] : C.amber;
+          return (
+            <circle key={cl.id} cx={cl.x} cy={cl.y} r={on ? 11 : 8}
+              fill={on ? col : "transparent"} fillOpacity={on ? 0.55 : 0}
+              stroke={on ? col : inF ? C.dim : C.line} strokeWidth={on ? 1.5 : 0.7}
+              strokeOpacity={on ? 1 : inF ? 0.7 : 0.35} />
+          );
+        })}
+        {/* phone cell */}
+        <text x={phoneCell.x} y={phoneCell.y - 16} textAnchor="middle" fontSize="12">📱</text>
+        <circle cx={phoneCell.x} cy={phoneCell.y} r="14" fill="none" stroke={C.green} strokeWidth="1.2" />
+        <text x={phoneCell.x} y={phoneCell.y + 32} textAnchor="middle" fill={C.green} fontSize="9.5" fontFamily="var(--mono)">
+          {serving ? `cell #162 ← ${serving.id}` : "cell #162: awaiting next satellite"}
+        </text>
+      </svg>
+      <div className="tglRow" style={{ marginTop: 8, alignItems: "center", gap: 16 }}>
+        {reuse === "reuse3" ? (
+          <>
+            <span className="legendF"><i style={{ background: FCOLORS[0] }} /> F1</span>
+            <span className="legendF"><i style={{ background: FCOLORS[1] }} /> F2</span>
+            <span className="legendF"><i style={{ background: FCOLORS[2] }} /> F3</span>
+            <span style={{ fontSize: 12, color: C.dim }}>Classic reuse-3: neighboring cells use different channels (~⅓ of the DL MHz each), buying interference isolation with spectrum — 1980s cellular planning, recomputed every few seconds from orbit.</span>
+          </>
+        ) : (
+          <span style={{ fontSize: 12, color: C.red }}>Reuse-1: every beam uses the full DL allocation. Maximum capacity per beam — but only beams with enough spatial separation can be co-scheduled, or they jam each other. The scheduler must keep same-channel beams apart; with 16× more, smaller beams (2027 hardware), isolation improves and reuse-1 gets more viable.</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NtnPanel() {
+  const [ntn, setNtn] = useState(false);
+  const [pos, setPos] = useState(62); // percent of beam half-width, -100..100
+  const maxRes = 2.6, tol = 1.0; // kHz, illustrative
+  const res = ntn ? (pos / 100) * 0.12 : (pos / 100) * maxRes;
+  const ok = Math.abs(res) <= tol;
+  const usableHalf = ntn ? 1 : tol / maxRes;
+  const X = (p) => 450 + (p / 100) * 380; // -100..100 → 70..830
+  const Y = (k) => 130 - (k / 3.2) * 92;  // kHz → px
+  return (
+    <div className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
+      <div className="eyebrow" style={{ color: C.blue }}>Panel 3 · What Rel-17 / Rel-19 NTN phones change</div>
+      <p className="body" style={{ marginBottom: 10 }}>
+        Today the satellite pre-corrects Doppler and delay so a satellite-unaware phone thinks the tower is stationary — but
+        the correction is exact only at the <em>beam center</em>. Off-center phones see residual frequency error, and the
+        waveform tolerates only so much: the beam's usable width is capped by physics. An NTN phone (Rel-17+, Rel-19 /
+        X105-class) reads the satellite's ephemeris, knows its own position, and cancels its own residual — the whole beam
+        becomes usable. Toggle the handset and drag the phone across the beam.
+      </p>
+      <div className="tglRow" style={{ marginBottom: 8 }}>
+        <button className={"genBtn" + (!ntn ? " on" : "")} onClick={() => setNtn(false)}>Standard LTE phone · satellite-unaware</button>
+        <button className={"genBtn" + (ntn ? " on" : "")} onClick={() => setNtn(true)}>NTN phone · Rel-17+/Rel-19</button>
+      </div>
+      <svg viewBox="0 0 900 200" style={{ width: "100%", display: "block" }} role="img" aria-label="Residual Doppler across the beam for legacy versus NTN handsets">
+        {/* usable region */}
+        <rect x={X(-usableHalf * 100)} y="24" width={X(usableHalf * 100) - X(-usableHalf * 100)} height="150"
+          fill={ntn ? "rgba(91,168,255,0.10)" : "rgba(255,180,84,0.10)"} style={{ transition: "all 400ms" }} />
+        {/* tolerance band */}
+        <rect x="70" y={Y(tol)} width="760" height={Y(-tol) - Y(tol)} fill="rgba(107,219,143,0.08)" />
+        <line x1="70" y1={Y(tol)} x2="830" y2={Y(tol)} stroke={C.green} strokeWidth="0.8" strokeDasharray="4 4" />
+        <line x1="70" y1={Y(-tol)} x2="830" y2={Y(-tol)} stroke={C.green} strokeWidth="0.8" strokeDasharray="4 4" />
+        <text x="76" y={Y(tol) - 5} fill={C.green} fontSize="9.5" fontFamily="var(--mono)">waveform tolerance ±{tol} kHz (illustrative)</text>
+        {/* residual line */}
+        <line x1={X(-100)} y1={Y(ntn ? -0.12 : -maxRes)} x2={X(100)} y2={Y(ntn ? 0.12 : maxRes)}
+          stroke={ntn ? C.blue : C.amber} strokeWidth="2" style={{ transition: "all 400ms" }} />
+        {/* axis */}
+        <line x1="70" y1="130" x2="830" y2="130" stroke={C.line} />
+        <text x="70" y="192" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">beam edge</text>
+        <text x="450" y="192" textAnchor="middle" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">beam center (correction exact here)</text>
+        <text x="830" y="192" textAnchor="end" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">beam edge</text>
+        {/* phone marker */}
+        <circle cx={X(pos)} cy={Y(res)} r="7" fill={ok ? C.green : C.red} />
+        <text x={X(pos)} y={Y(res) - 12} textAnchor="middle" fill={ok ? C.green : C.red} fontSize="10" fontFamily="var(--mono)">
+          {res.toFixed(2)} kHz {ok ? "· in spec" : "· degraded/dropped"}
+        </text>
+      </svg>
+      <label className="sliderL" style={{ marginTop: 6 }}>Phone position across the beam: <strong>{pos}%</strong> of half-width
+        <input type="range" min="-100" max="100" value={pos} onChange={(e) => setPos(+e.target.value)} />
+      </label>
+      <div className="benchGrid" style={{ marginTop: 14 }}>
+        <div className="bench"><div className="benchT">Full-beam usability</div><div className="benchW">Beam-edge users work at full rate instead of degrading — effectively more capacity from identical satellites, and freedom to run larger beams or tighter waveforms.</div></div>
+        <div className="bench"><div className="benchT">The phone shares the burden</div><div className="benchW">Ephemeris broadcast in system information + GNSS position lets the handset pre-compensate its own uplink timing and Doppler — the satellite stops carrying the whole problem alone.</div></div>
+        <div className="bench"><div className="benchT">Rel-19 unlocks the owned spectrum</div><div className="benchW">Native 5G NR NTN with n252 support (Qualcomm X105-class) is what finally puts SpaceX's 40 MHz of AWS-4 within reach of a consumer device from orbit.</div></div>
+        <div className="bench"><div className="benchT">Efficiency everywhere</div><div className="benchW">Fewer blind retransmissions (NTN HARQ), scheduled uplink that assumes correct timing, better link adaptation — quietly one of the biggest capacity unlocks in the next-gen system.</div></div>
+      </div>
+      <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>kHz values are illustrative — chosen to show the mechanism, not measured figures. The structural point is real: legacy beams are usability-capped at the edges; NTN handsets remove the cap.</p>
+    </div>
+  );
+}
+
+function CoverageTab() {
+  return (
+    <div>
+      <div className="card">
+        <div className="eyebrow">The inversion that makes D2C possible</div>
+        <p className="body">
+          A Starlink dish tracks satellites with its own phased array. A phone has a fingernail-sized omnidirectional antenna
+          and no idea satellites exist — it cannot point, seek, or track. So the entire spatial problem moves to the
+          satellite: it forms the beams, chases the geography, pre-corrects Doppler at 7.5 km/s and ~2 ms of delay, and
+          impersonates an ordinary (slightly weak, rural) cell tower. Omnidirectionality is why it works — no pointing means
+          no pointing failure — and what it costs is gain: the phone contributes nothing to closing the link, which is why
+          uplink is forever the starved direction. The three panels below: how much ground one satellite covers, how a
+          moving constellation fakes a stationary network, and what changes when phones finally learn satellites exist.
+        </p>
+      </div>
+      <FootprintPanel />
+      <BeamMap />
+      <NtnPanel />
+    </div>
+  );
+}
+
 /* ------------------------- TECHNOLOGY TAB ------------------------- */
 
 const GENS = [
@@ -1511,6 +1794,7 @@ const TABS = [
   { id: "story", label: "The Story" },
   { id: "spectrum", label: "Spectrum" },
   { id: "physics", label: "Physics & Capacity" },
+  { id: "coverage", label: "Coverage" },
   { id: "tech", label: "Technology" },
   { id: "network", label: "The Hybrid Network" },
   { id: "reg", label: "Regulatory & Standards" },
@@ -1671,6 +1955,13 @@ function StarlinkMobileRoadmap() {
         .quote p { font-size: 14px; line-height: 1.6; color: #C7D1E2; }
         .quoteWho { font-family: var(--mono); font-size: 11px; color: ${C.dim}; margin-top: 7px; }
         .genGrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+        .ladder { margin-top: 14px; }
+        .rung { display: flex; gap: 12px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid ${C.line}; }
+        .rung:last-child { border-bottom: none; }
+        .rungN { font-family: var(--mono); font-size: 16px; color: ${C.amber}; flex: none; width: 64px; }
+        .rungT { font-size: 12.5px; color: #C7D1E2; line-height: 1.5; }
+        .legendF { display: inline-flex; gap: 6px; align-items: center; font-family: var(--mono); font-size: 11px; color: ${C.dim}; }
+        .legendF i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
         @media (max-width: 900px) { .genGrid { grid-template-columns: 1fr; } }
         .specRow { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0;
           border-bottom: 1px solid ${C.line}; font-size: 12.5px; }
@@ -1709,6 +2000,7 @@ function StarlinkMobileRoadmap() {
         {tab === "story" && <StoryTab phase={phase} setPhase={setPhase} />}
         {tab === "spectrum" && <SpectrumTab cfg={cfg} setCfg={setCfg} />}
         {tab === "physics" && <PhysicsTab cfg={cfg} setCfg={setCfg} />}
+        {tab === "coverage" && <CoverageTab />}
         {tab === "tech" && <TechTab />}
         {tab === "network" && <NetworkTab />}
         {tab === "reg" && <RegTab />}
