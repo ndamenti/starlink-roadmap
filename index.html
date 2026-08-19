@@ -1254,6 +1254,19 @@ function mulberry(seed) {
   };
 }
 
+/* Click-to-expand plain-language explainer */
+function Info({ label, children }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="infoWrap">
+      <button className={"infoBtn" + (open ? " on" : "")} onClick={() => setOpen(!open)}>
+        {open ? "ⓘ hide explainer" : "ⓘ " + label}
+      </button>
+      {open && <div className="infoBox">{children}</div>}
+    </div>
+  );
+}
+
 function FootprintPanel() {
   const [alt, setAlt] = useState(330);
   const [elev, setElev] = useState(35);
@@ -1313,6 +1326,28 @@ function FootprintPanel() {
         (~650 satellites ≈ continuous 25° coverage from 530 km). Estimates ignore latitude structure — 53°-inclined orbits
         crowd satellites near ±53° and thin them toward the equator, so coverage quality carries a latitude asterisk.
       </p>
+      <Info label="walk me through elevation angle — why it decides everything">
+        Stand outside and point at a satellite. If it's 25° above the horizon, your arm is nearly level — and the signal
+        path between you skims across everything around you: every tree line, rooftop, hill, and even your own body when
+        you're turned the wrong way. If it's 60° up, you're pointing well overhead and the path clears most obstacles.
+        A phone can't do anything about blockage — so the only fix is <em>waiting for (or having) a satellite high enough
+        in the sky for your surroundings</em>. That's why the "right" angle depends on where you're standing: a Kansas
+        wheat field is served fine by a satellite crawling along the horizon; a Manhattan sidewalk needs one nearly
+        overhead. And satellites near overhead are rare — the sky directly above you is a small target — so demanding a
+        high angle everywhere multiplies the number of satellites the constellation needs. The FCC understood this, which
+        is why its rules don't say "cover at 45°"; they say "deliver a usable signal ≥70% (later 90%) of the time" —
+        letting statistics over the whole sky do the talking.
+      </Info>
+      <Info label="how the satellite-count estimate is computed">
+        Each satellite covers a circular cap of Earth's surface (the amber circle). Basic geometry gives that cap's size
+        from altitude and elevation angle. Dividing Earth's surface by the cap area gives a theoretical minimum satellite
+        count — but real constellations can't tile the sphere perfectly: orbits bunch coverage at some latitudes and
+        satellites' circles must overlap to leave no gaps. We apply a ~3.3× "overlap inefficiency" factor, chosen so the
+        model reproduces reality — SpaceX's actual ~650-satellite first-generation fleet delivering continuous ~25°
+        coverage from 530 km. With the model anchored to a known truth, the other slider positions become credible
+        extrapolations rather than guesses. It remains an estimate: real constellation design juggles inclinations,
+        planes, and phasing that no single factor captures.
+      </Info>
     </div>
   );
 }
@@ -1439,6 +1474,38 @@ function BeamMap() {
           <span style={{ fontSize: 12, color: C.red }}>Reuse-1: every beam uses the full DL allocation. Maximum capacity per beam — but only beams with enough spatial separation can be co-scheduled, or they jam each other. The scheduler must keep same-channel beams apart; with 16× more, smaller beams (2027 hardware), isolation improves and reuse-1 gets more viable.</span>
         )}
       </div>
+      <Info label="what exactly is an Earth-fixed cell? (the core trick, slowly)">
+        In a normal network your phone talks to a tower that never moves; the "cell" is just that tower's neighborhood.
+        Starlink's towers move at 27,000 km/h — so instead of letting cells follow satellites, the network defines a map
+        of virtual cells <em>glued to the ground</em>, each with a permanent identity, like postal codes. A satellite
+        passing overhead is assigned to "be" cell #162 for the few minutes it can see it: it steers a beam to hold that
+        exact patch of ground, continuously adjusting as it flies. Before it loses the angle, the network — which knows
+        every satellite's position seconds and minutes into the future — orders the next satellite to take over the same
+        cell: same identity, same frequency, seamlessly. Your phone, which only knows "I'm connected to cell #162," never
+        notices anything happened. All the motion, all the handoffs, all the complexity is hidden on the space side of the
+        link. It's a relay race where the baton is a cell tower and the runners are invisible.
+      </Info>
+      <Info label="if my cell is dark right now, how does a call reach me?">
+        Phones don't listen continuously — that would drain the battery in hours. An idle phone sleeps and wakes only at
+        scheduled instants (every 1.28 or 2.56 seconds in LTE, and NTN allows much longer) to check for a "page": the
+        network's knock announcing an incoming call or text. This is called DRX — discontinuous reception. The satellite's
+        beam-hopping schedule is built around it: a beam revisits each cell often enough to be present at the moments
+        phones there wake up and listen. So a cell that looks dark 80% of the time in the animation can still deliver
+        every incoming call — because the 20% of illumination is aimed at exactly the instants that matter. Missed timing,
+        not missing beams, is what would break paging — which is why the whole system runs on a shared, precise schedule.
+        (Active data sessions are different: those cells get dwell time proportional to demand, which is what the ⌂ town
+        weighting shows.)
+      </Info>
+      <Info label="frequency reuse, for people who don't plan cell networks">
+        SpaceX owns a limited slice of radio spectrum — think of it as three lanes of highway. Two beams pointed at
+        neighboring patches of ground can't both shout on the same lane at full power: phones near the border would hear
+        both and understand neither. Solution one (reuse-3): assign neighbors different lanes — F1, F2, F3 in a repeating
+        pattern — so no two adjacent cells share one. Cost: each cell only gets a third of the total spectrum. Solution
+        two (reuse-1): give every beam all three lanes and rely on <em>distance</em> — physically separate same-lane
+        beams far enough that they can't hear each other. That's maximum capacity but a hard scheduling puzzle. The 2027
+        satellites' smaller, more numerous beams make the distance trick work better (tighter beams bleed less energy
+        sideways), which is one of the quiet reasons beam-shrinking multiplies capacity by more than the beam count alone.
+      </Info>
     </div>
   );
 }
@@ -1498,7 +1565,50 @@ function NtnPanel() {
         <div className="bench"><div className="benchT">Rel-19 unlocks the owned spectrum</div><div className="benchW">Native 5G NR NTN with n252 support (Qualcomm X105-class) is what finally puts SpaceX's 40 MHz of AWS-4 within reach of a consumer device from orbit.</div></div>
         <div className="bench"><div className="benchT">Efficiency everywhere</div><div className="benchW">Fewer blind retransmissions (NTN HARQ), scheduled uplink that assumes correct timing, better link adaptation — quietly one of the biggest capacity unlocks in the next-gen system.</div></div>
       </div>
-      <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>kHz values are illustrative — chosen to show the mechanism, not measured figures. The structural point is real: legacy beams are usability-capped at the edges; NTN handsets remove the cap.</p>
+      <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>kHz values are illustrative — chosen to show the mechanism, not measured figures (the real uplink requirement is far stricter: ±0.1 ppm ≈ ±200 Hz at 2 GHz). The structural point is real: legacy beams are usability-capped at the edges; NTN handsets remove the cap.</p>
+      <Info label="Rel-17 vs Rel-18 vs Rel-19 — are they the same thing?">
+        No — they're successive versions of the global cellular standard (3GPP numbers its releases like software), each
+        frozen roughly two years apart, and they do different jobs here. <strong>Rel-17 (2022) is the foundation:</strong>
+        the first release where phones learn satellites exist at all. It puts the satellite's orbital position (ephemeris)
+        into the broadcast channel, lets a GPS-equipped phone pre-correct its own timing and Doppler, stretches protocol
+        timers to survive orbital delays, and adapts the connection procedures. Everything the flat blue line above shows
+        is Rel-17 machinery. <strong>Rel-18 (2024) refines:</strong> smoother handover between satellite and ground
+        networks, network-verified device location, coverage tweaks. <strong>Rel-19 (2025–26) is the maturity release
+        SpaceX built its 5G system around:</strong> support for regenerative payloads (the base station lives on the
+        satellite — Starlink's architecture), uplink capacity enhancements aimed at exactly the starved direction, and the
+        band/feature package that makes n252 practical in a consumer modem. Qualcomm's X105 is the first Rel-19 NTN
+        modem — which is why that part number keeps appearing. Shorthand: Rel-17 makes the phone satellite-aware;
+        Rel-19 makes satellite service worth building a business on.
+      </Info>
+      <Info label="what actually goes wrong past the tolerance line?">
+        Modern cellular carries data on hundreds of narrow sub-channels spaced 15 kHz apart, packed so tightly they only
+        avoid interfering because each is read at the exact instant its neighbors cancel to zero — a property that exists
+        only at precisely the right frequency. Drift off, and failure arrives as a ladder. <em>Small offset:</em> the
+        sub-channels leak into each other, raising the noise floor; the link quietly downshifts to slower, more protected
+        transmission — throughput sags before anything visibly breaks. <em>Larger offset:</em> the phone's channel
+        tracking loses lock, errors spike, and the airtime fills with retransmissions — a trickle of repeats instead of
+        data. <em>The uplink catastrophe:</em> many phones share each received uplink symbol, so one off-frequency phone
+        smears across its <strong>neighbors'</strong> sub-channels — it degrades everyone in the beam, not just itself.
+        That's why the standard demands a phone transmit within ±0.1 ppm of the downlink it hears (~±200 Hz at 2 GHz) —
+        and the cruel twist for satellites: the phone <em>copies</em> its transmit frequency from what it receives, so any
+        residual Doppler the satellite didn't cancel gets inherited by the uplink and then Doppler-shifted again on the
+        way up, roughly doubling. <em>Beyond sync range:</em> the phone's connection attempts miss their detection windows
+        entirely — bars on screen, no service. Timing has a parallel ladder: each symbol carries only ~4.7 µs of guard
+        time; residual delay error beyond it makes symbols smear into each other with the same collapse.
+      </Info>
+      <Info label="unpack 'efficiency' — where does the capacity actually come from?">
+        Serving satellite-unaware phones forces the network into permanent defensive posture, and every defense costs
+        capacity. <em>Retransmission stalls:</em> LTE expects acknowledgment of each packet within ~4 ms; the orbital
+        round trip is several times that, so the pipeline stalls — or the network resorts to blind repetition,
+        transmitting everything 2–4× preemptively, which is pure spectral waste. NTN phones support stretched scheduling
+        and more parallel processes, keeping the pipeline full without insurance copies. <em>Access waste:</em> a phone
+        with unknown timing misses the connection window and retries at escalating power — battery drain, interference,
+        delay; an NTN phone using GPS + ephemeris nails it first try. <em>Permanent margins:</em> when the scheduler can't
+        trust each phone's frequency and timing, it pads guard periods and backs off data rates for the entire cell, all
+        the time; removing the residuals lets it run near the channel's true limit. Add those up across a beam and
+        "efficiency" stops being abstract: the same satellite, same spectrum, same power carries meaningfully more
+        traffic — because the endpoints stopped requiring insurance.
+      </Info>
     </div>
   );
 }
@@ -1976,6 +2086,14 @@ function StarlinkMobileRoadmap() {
         .rungT { font-size: 12.5px; color: #C7D1E2; line-height: 1.5; }
         .legendF { display: inline-flex; gap: 6px; align-items: center; font-family: var(--mono); font-size: 11px; color: ${C.dim}; }
         .legendF i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+        .infoWrap { margin-top: 10px; }
+        .infoBtn { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; color: ${C.blue};
+          background: none; border: none; border-bottom: 1px dashed rgba(91,168,255,0.5); padding: 2px 0; cursor: pointer; }
+        .infoBtn:hover { border-bottom-style: solid; }
+        .infoBtn.on { color: ${C.dim}; }
+        .infoBox { display: block; margin-top: 8px; background: ${C.panel2}; border-left: 2px solid ${C.blue};
+          border-radius: 0 6px 6px 0; padding: 12px 16px; font-size: 13px; line-height: 1.65; color: #C7D1E2; }
+        .infoBox strong { color: ${C.text}; }
         @media (max-width: 900px) { .genGrid { grid-template-columns: 1fr; } }
         .specRow { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0;
           border-bottom: 1px solid ${C.line}; font-size: 12.5px; }
