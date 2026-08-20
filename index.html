@@ -261,11 +261,11 @@ const READINESS = {
    G-block is satellite-only (lease). Sat use of H/AWS-3 is standards-gated. */
 
 const BLOCKS = [
-  { id: "aws3", label: "1695–1710", sub: "AWS-3 · UL only · 15 MHz", ulMHz: 15, dlMHz: 0, allowed: ["terr", "sat", "split", "off"], satGate: "satellite SUL pending 3GPP NTN + FCC Earth-to-space treatment" },
-  { id: "g", label: "G-block", sub: "1910/1990 · 2×5 · leased (T-Mobile)", ulMHz: 5, dlMHz: 5, allowed: ["sat", "off"], satGate: "T-Mobile license, revocable SCS lease — partner-channel only; cannot underwrite a competing carrier" },
-  { id: "h", label: "H-block", sub: "1915/1995 · 2×5 · owned", ulMHz: 5, dlMHz: 5, allowed: ["terr", "sat", "split", "off"], satGate: "satellite use pending 3GPP NTN standardization" },
-  { id: "a4main", label: "2000–2020", sub: "AWS-4 · the switch-hitter · 20 MHz", ulMHz: 20, dlMHz: 20, allowed: ["sat", "terr", "split", "off"], satGate: null, switcher: true },
-  { id: "a4dl", label: "2180–2200", sub: "AWS-4 DL / n66 SDL · 20 MHz", ulMHz: 0, dlMHz: 20, allowed: ["sat", "terr", "split", "off"], satGate: null },
+  { id: "aws3", label: "1695–1710", sub: "UL only · 15 MHz", ulMHz: 15, dlMHz: 0, allowed: ["terr", "sat", "split", "off"], satGate: "satellite SUL pending 3GPP NTN + FCC Earth-to-space treatment" },
+  { id: "g", label: "G-block", sub: "2×5 · leased*", ulMHz: 5, dlMHz: 5, allowed: ["sat", "off"], satGate: "T-Mobile license, revocable SCS lease — partner-channel only; cannot underwrite a competing carrier" },
+  { id: "h", label: "H-block", sub: "2×5 · owned", ulMHz: 5, dlMHz: 5, allowed: ["terr", "sat", "split", "off"], satGate: "satellite use pending 3GPP NTN standardization" },
+  { id: "a4main", label: "2000–2020", sub: "switch-hitter · 20 MHz", ulMHz: 20, dlMHz: 20, allowed: ["sat", "terr", "split", "off"], satGate: null, switcher: true },
+  { id: "a4dl", label: "2180–2200", sub: "DL / n66 SDL · 20 MHz", ulMHz: 0, dlMHz: 20, allowed: ["sat", "terr", "split", "off"], satGate: null },
 ];
 
 /* Spectral efficiency anchors (Mbps per MHz):
@@ -330,7 +330,7 @@ function feasibility(cfg) {
   return { year, gates };
 }
 
-function clampCfgToYear(cfg, year) {
+function clampCfgToYear(cfg, year, gLease) {
   const c = { ...cfg };
   const changes = [];
   const chg = (id, from, to, why) => { c[id] = to; changes.push(`${id === "a4main" ? "2000\u20132020" : id === "a4dl" ? "2180\u20132200" : id.toUpperCase()}: ${from.toUpperCase()} \u2192 ${to.toUpperCase()} — ${why}`); };
@@ -349,6 +349,10 @@ function clampCfgToYear(cfg, year) {
     }
   }
   if (cfg.gen === "v2" && year < 2027) { c.gen = "gen1"; changes.push("Satellites: V2 \u2192 Gen1 — dedicated D2C satellites fly from mid-2027"); }
+  if (cfg.g === "sat" && year >= 2028 && !gLease) {
+    c.g = "off";
+    changes.push("G-BLOCK: SAT \u2192 OFF — competing-carrier era: T-Mobile's revocable lease can't be presumed once Starlink Mobile is a rival (toggle 'assume lease persists' to model continued partnership)");
+  }
   return { cfg: c, changes };
 }
 
@@ -390,7 +394,8 @@ const ASSIGN_COLOR = { sat: C.amber, terr: C.blue, split: "url(#splitGrad)", off
 
 function ConfigLab({ cfg, setCfg, compact }) {
   const [year, setYear] = useState(2032);
-  const { cfg: cfgEff, changes } = clampCfgToYear(cfg, year);
+  const [gLease, setGLease] = useState(false);
+  const { cfg: cfgEff, changes } = clampCfgToYear(cfg, year, gLease);
   const z = calcZones(cfgEff);
   const activeScen = SCENARIOS.find((s) =>
     Object.entries(s.cfg).every(([k, v]) => cfg[k] === v)
@@ -433,9 +438,15 @@ function ConfigLab({ cfg, setCfg, compact }) {
         Model year: <strong>{year}</strong>{year >= 2032 ? " — all gates assumed cleared" : " — assignments auto-adjusted to what's available"}
         <input type="range" min="2026" max="2032" value={year} onChange={(e) => setYear(+e.target.value)} />
       </label>
+      {year >= 2028 && (
+        <div className="tglRow" style={{ marginBottom: 8 }}>
+          <button className={"genBtn" + (!gLease ? " on" : "")} onClick={() => setGLease(false)}>G-block lease lapses in competing era (default)</button>
+          <button className={"genBtn" + (gLease ? " on" : "")} onClick={() => setGLease(true)}>Assume T-Mobile lease persists</button>
+        </div>
+      )}
       {changes.length > 0 && (
         <div className="feasBox" style={{ borderLeftColor: C.amber }}>
-          <span className="feasYear" style={{ color: C.amber }}>\u26A0 Auto-adjusted for {year}:</span>
+          <span className="feasYear" style={{ color: C.amber }}>⚠ Auto-adjusted for {year}:</span>
           {changes.map((c2, i) => <span key={i} className="feasGate">{c2}</span>)}
         </div>
       )}
@@ -2255,10 +2266,16 @@ function SawtoothPanel() {
         <text x="40" y="16" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">SERVING SATELLITE ELEVATION (best in view)</text>
         <line x1="40" y1={Ye(mask)} x2="870" y2={Ye(mask)} stroke={C.red} strokeWidth="0.8" strokeDasharray="4 4" />
         <text x="874" y={Ye(mask) + 3} fill={C.red} fontSize="8.5" fontFamily="var(--mono)">mask {mask}°</text>
+        {[30, 60, 90].map((e) => (
+          <text key={e} x="34" y={Ye(e) + 3} textAnchor="end" fill={C.dim} fontSize="8.5" fontFamily="var(--mono)">{e}°</text>
+        ))}
         <line x1="40" y1={Ye(60)} x2="870" y2={Ye(60)} stroke={C.green} strokeWidth="0.8" strokeDasharray="4 4" />
         <text x="874" y={Ye(60) + 3} fill={C.green} fontSize="8.5" fontFamily="var(--mono)">reuse-1 ≥60°</text>
         <path d={line(elev, Ye)} fill="none" stroke={C.green} strokeWidth="1.3" />
-        <text x="40" y="168" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">PER-CELL DL THROUGHPUT (Panel 3 model: MHz by reuse regime × 2.48 × sin ε)</text>
+        <text x="40" y="168" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">PER-CELL DL THROUGHPUT · Mbps (Panel 3 model: MHz by reuse regime × 2.48 × sin ε)</text>
+        {[0, 0.5, 1].map((f2) => (
+          <text key={f2} x="34" y={Yt(maxT * f2) + 3} textAnchor="end" fill={C.dim} fontSize="8.5" fontFamily="var(--mono)">{Math.round(maxT * f2)}</text>
+        ))}
         <line x1="40" y1={Yt(0)} x2="870" y2={Yt(0)} stroke={C.line} />
         <line x1="40" y1={Yt(maxT)} x2="870" y2={Yt(maxT)} stroke={C.line} strokeDasharray="3 4" opacity="0.6" />
         <text x="874" y={Yt(maxT) + 3} fill={C.dim} fontSize="8.5" fontFamily="var(--mono)">{maxT.toFixed(0)} Mbps ceiling</text>
@@ -2271,6 +2288,20 @@ function SawtoothPanel() {
         <div className="stat"><div className="statL">Time in reuse-1 (≥60°)</div><div className="statV" style={{ color: C.green }}>{r1pct.toFixed(0)}%</div></div>
         <div className="stat"><div className="statL">Coverage gaps (no sat ≥{mask}°)</div><div className="statV" style={{ color: outage > 0.5 ? C.red : C.dim }}>{outage.toFixed(1)}% of time</div></div>
       </div>
+      <Info label="how to read these two charts">
+        The green trace is the elevation (in degrees, left axis) of the <em>best</em> satellite in your sky. Each hump is
+        one satellite's pass — rising from the 30° mask, peaking, receding — and the kinks are <strong>handovers</strong>:
+        the instant a rising satellite overtakes the receding one as your best option. The amber trace is that elevation
+        pushed through Panel 3's throughput model, and its jagged shape is the real lesson: it is <em>not</em> a smooth
+        copy of the green line, because frequency reuse is a <strong>staircase</strong>. When your best satellite crosses
+        60°, your cell snaps from ~⅔ to the full spectrum menu (the flat plateaus hugging the ceiling are reuse-1
+        stretches); when it sinks through ~42°, you snap down to one lane of three (the deep square troughs); within each
+        stair, the gentle slope is the sin ε link penalty. So: cliffs = reuse thresholds, slopes = geometry, flat tops =
+        the spectrum ceiling, zero-drops = moments with no satellite above the mask at all. Now drag the fleet slider up
+        and watch the staircase collapse into a plateau — with many satellites in view, the best one is almost always
+        above 60°, so the network lives in reuse-1, the troughs vanish, and the p10–p90 swing collapses. Same spectrum,
+        same satellites, same physics: consistency is purely a fleet-count product.
+      </Info>
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
         Model (derived, schematic): satellites-in-view ≈ fleet × visible-cap fraction at 330 km; passes rise
         mask → random peak → mask; the phone is served by the highest satellite in view; throughput uses Panel 3's exact
@@ -2938,7 +2969,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v28 · leased-split + year slider + sawtooth</span>
+        <span className="buildTag">build v29 · lease-lapse toggle + sawtooth axes</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
