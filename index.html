@@ -1384,6 +1384,9 @@ function Info({ label, children }) {
 function FootprintPanel() {
   const [alt, setAlt] = useState(330);
   const [elev, setElev] = useState(35);
+  const [satElev, setSatElev] = useState(40);
+  const se = (satElev * Math.PI) / 180;
+  const bStretch = 1 / Math.sin(se);
   const f = footprintGeom(alt, elev);
   const rPx = Math.min(f.rKm * 0.19, 195);
   return (
@@ -1411,22 +1414,6 @@ function FootprintPanel() {
           <circle cx="220" cy="220" r="200" fill="none" stroke={C.line} strokeDasharray="3 4" />
           <text x="220" y="34" textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">25° ELEVATION FOOTPRINT SCALE</text>
           <circle cx="220" cy="220" r={rPx} fill={C.amberDim} stroke={C.amber} strokeWidth="1.5" style={{ transition: "r 300ms" }} />
-          {/* sample beam footprints along the horizontal radial: circular at nadir, elliptical toward the edge */}
-          {[0.22, 0.55, 0.88].map((fr, i) => {
-            const Re = 6371, dKm = fr * f.rKm;
-            const lamD = dKm / Re;
-            const eLoc = Math.atan2(Math.cos(lamD) - Re / (Re + alt), Math.sin(lamD));
-            const stretch = Math.min(1 / Math.max(Math.sin(eLoc), 0.28), 3.4);
-            const rm = Math.max(3.5, rPx * 0.055);
-            return (
-              <ellipse key={i} cx={220 + fr * rPx} cy={220} rx={rm * stretch} ry={rm}
-                fill="rgba(91,168,255,0.25)" stroke={C.blue} strokeWidth="1"
-                style={{ transition: "all 300ms" }} />
-            );
-          })}
-          <text x="220" y="50" textAnchor="middle" fill={C.blue} fontSize="8.5" fontFamily="var(--mono)">
-            blue: sample beams — circles at nadir → ellipses near the edge (~1/sin elev)
-          </text>
           <rect x="215" y="215" width="10" height="7" fill={C.amber} rx="1" />
           <rect x="203" y="217" width="9" height="4" fill="none" stroke={C.amber} strokeWidth="1" />
           <rect x="228" y="217" width="9" height="4" fill="none" stroke={C.amber} strokeWidth="1" />
@@ -1451,7 +1438,54 @@ function FootprintPanel() {
           </div>
         </div>
       </div>
-      <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 10 }}>
+      <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
+        <div className="eyebrow" style={{ marginBottom: 6 }}>One beam's footprint shape — where the satellite sits in your sky decides it</div>
+        <p className="body" style={{ fontSize: 13, marginBottom: 10 }}>
+          Slide the satellite along its sky arc. Overhead (nadir pass), its beam lands square-on: a circle. Low toward the
+          horizon, the same beam lands at a slant and smears into an ellipse stretched ~1/sin(elevation) along the look
+          direction — the same beam, just projected obliquely.
+        </p>
+        <svg viewBox="0 0 880 260" style={{ width: "100%", display: "block" }} role="img" aria-label="Side view of satellite position in the sky and top-down view of the beam footprint morphing between circle and ellipse">
+          {/* ---- side view: sky arc ---- */}
+          <text x="190" y="26" textAnchor="middle" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">SIDE VIEW: the satellite in your sky</text>
+          <line x1="20" y1="210" x2="365" y2="210" stroke={C.text} strokeWidth="1" opacity="0.4" />
+          <path d="M 340 210 A 150 150 0 0 0 190 60" fill="none" stroke={C.line} strokeDasharray="3 4" />
+          <line x1="190" y1="210" x2={190 + 150 * Math.cos(se)} y2={210 - 150 * Math.sin(se)} stroke={C.green} strokeWidth="1.5" />
+          <g transform={`translate(${190 + 150 * Math.cos(se)}, ${210 - 150 * Math.sin(se)})`}>
+            <rect x="-9" y="-6" width="18" height="12" fill={C.amber} rx="2" />
+            <rect x="-26" y="-3" width="14" height="6" fill="none" stroke={C.amber} strokeWidth="1" />
+            <rect x="12" y="-3" width="14" height="6" fill="none" stroke={C.amber} strokeWidth="1" />
+          </g>
+          <circle cx="190" cy="210" r="4" fill={C.green} />
+          <text x="190" y="234" textAnchor="middle" fill={C.green} fontSize="10" fontFamily="var(--mono)">your cell</text>
+          <text x="348" y="234" textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">horizon</text>
+          <text x="186" y="52" textAnchor="end" fill={C.dim} fontSize="9" fontFamily="var(--mono)">overhead</text>
+          <text x={196 + 62 * Math.cos(se / 2)} y={206 - 62 * Math.sin(se / 2)} fill={C.green} fontSize="10.5" fontFamily="var(--mono)">{satElev}°</text>
+          <line x1="400" y1="24" x2="400" y2="240" stroke={C.line} opacity="0.5" />
+          {/* ---- top-down: footprint morph ---- */}
+          <text x="645" y="26" textAnchor="middle" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">TOP-DOWN: that beam's footprint on the ground</text>
+          <circle cx="645" cy="130" r="42" fill="none" stroke={C.dim} strokeDasharray="3 4" opacity="0.6" />
+          <ellipse cx="645" cy="130" rx={42 * bStretch} ry="42"
+            fill="rgba(91,168,255,0.22)" stroke={C.blue} strokeWidth="1.5"
+            style={{ transition: "rx 150ms" }} />
+          <line x1={645 - 42 * bStretch} y1="130" x2={645 + 42 * bStretch} y2="130" stroke={C.blue} strokeWidth="0.8" strokeDasharray="2 3" opacity="0.7" />
+          <text x="645" y="206" textAnchor="middle" fill={C.blue} fontSize="10.5" fontFamily="var(--mono)">
+            stretch ~{bStretch.toFixed(2)}× along the look direction
+          </text>
+          <text x="645" y="222" textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">dashed circle: the same beam's shape when the satellite is straight overhead</text>
+        </svg>
+        <label className="sliderL" style={{ marginTop: 4 }}>
+          Satellite elevation as seen from your cell: <strong>{satElev}°</strong>
+          {satElev >= 85 ? " — straight overhead: a circle" : satElev <= 30 ? " — low in the sky: strongly elliptical" : ""}
+          <input type="range" min="25" max="90" value={satElev} onChange={(e) => setSatElev(+e.target.value)} />
+        </label>
+        <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 8 }}>
+          This is why the big footprint's edge cells are served by ellipses while its center gets circles (Panel 3), and why
+          the scheduler hands every cell to whichever overhead satellite sees it most steeply. (The slant range also grows
+          toward the horizon, enlarging the beam in both axes — the ellipse shown isolates the shape effect alone.)
+        </p>
+      </div>
+      <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 12 }}>
         Model: spherical-cap geometry with a ~3.3× Walker-constellation overlap factor calibrated to the real fleet
         (~650 satellites ≈ continuous 25° coverage from 530 km). Estimates ignore latitude structure — 53°-inclined orbits
         crowd satellites near ±53° and thin them toward the equator, so coverage quality carries a latitude asterisk.
