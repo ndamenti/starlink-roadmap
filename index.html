@@ -1404,8 +1404,9 @@ const SRC = {
   ],
   standards: [
     { t: "Keysight — first live NR-NTN in n252 (Rel-19)", u: "https://www.businesswire.com/news/home/20260108204481/en/Keysight-Achieves-Industry-Leading-Live-NR-NTN-Connectivity-in-n252-S-Band-Including-Satellite-to-Satellite-Mobility-in-Collaboration-with-Samsung", k: "primary" },
-    { t: "RCR Wireless — n252 as Rel-19 band", u: "https://www.rcrwireless.com/20260112/test-measurement/keysight-samsung-demonstrate-nr-ntn-link-in-n252-band-as-the-industry-pushes-for-direct-to-cell-connectivity", k: "claim" },
-    { t: "UPM study — band readiness", u: "https://arxiv.org/html/2506.00283v8", k: "primary" },
+    { t: "RCR Wireless — n252 as Rel-19 band; Rel-19 NR-NTN for Starlink Mobile", u: "https://www.rcrwireless.com/20260112/test-measurement/keysight-samsung-demonstrate-nr-ntn-link-in-n252-band-as-the-industry-pushes-for-direct-to-cell-connectivity", k: "claim" },
+    { t: "Notebookcheck — Qualcomm X105, first Rel-19 NTN modem", u: "https://www.notebookcheck.net/SpaceX-launches-Starlink-Mobile-5G-cell-phone-carrier-service-to-rival-T-Mobile-directly.1239371.0.html", k: "claim" },
+    { t: "UPM study — band readiness, n252 chipset gap, H-block usable as IMT", u: "https://arxiv.org/html/2506.00283v8", k: "primary" },
   ],
   femto: [
     { t: "Fierce Network — Aug 2026 earnings call", u: "https://www.fierce-network.com/wireless/spacex-lays-out-plan-compete-big-3-wireless-carriers", k: "claim" },
@@ -2522,7 +2523,7 @@ function RegTab() {
           ))}
         </div>
         <div className="card" style={{ borderLeft: `2px solid ${C.blue}` }}>
-          <div className="eyebrow" style={{ color: C.blue }}>The standards pipeline — 3GPP & the device ecosystem</div>
+          <div className="eyebrow" style={{ color: C.blue }}>The standards pipeline — 3GPP &amp; the device ecosystem <Src k="standards" topic="standards" /></div>
           {STD_PIPE.map((r, i) => (
             <div key={i} className="evt">
               <div className="evtBody"><Dot s={r.s} /> <strong style={{ color: C.text }}>{r.t}.</strong> {r.d}</div>
