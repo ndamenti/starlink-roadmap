@@ -1183,7 +1183,7 @@ function NetworkTab() {
 
       <div className="split">
         <div className="card">
-          <div className="eyebrow">Follow a packet</div>
+          <div className="eyebrow">Follow a packet <Src k="nextgen" topic="nextgen" /></div>
           <div className="tglRow" style={{ marginBottom: 12 }}>
             <button className={"envBtn" + (path === "rural" ? " on" : "")} onClick={() => setPath("rural")}>Rural: satellite-direct</button>
             <button className={"envBtn" + (path === "urban" ? " on" : "")} onClick={() => setPath("urban")}>Urban: femtocell + backhaul</button>
@@ -1194,7 +1194,7 @@ function NetworkTab() {
         </div>
         <div>
           <div className="card">
-            <div className="eyebrow">The backhaul budget — the femtocell's hidden cost</div>
+            <div className="eyebrow">The backhaul budget — the femtocell's hidden cost <Src k="v3" topic="v3" /></div>
             <p className="body">
               Every femtocell rides its host dish's Ku link, and today a residential dish delivers on the order of 100–300 Mbps
               shared with the household. A busy femtocell competes with the family's own traffic — Paul Rhodes' core critique.
@@ -1204,7 +1204,7 @@ function NetworkTab() {
             </p>
           </div>
           <div className="card" style={{ borderLeft: `2px solid ${C.red}` }}>
-            <div className="eyebrow" style={{ color: C.red }}>Interference — a fight SpaceX has only with itself</div>
+            <div className="eyebrow" style={{ color: C.red }}>Interference — a fight SpaceX has only with itself <Src k="scs" topic="scs" /></div>
             <p className="body" style={{ fontSize: 13.5 }}>
               Three coordination problems, all internal or managed: (1) n252 satellite uplink vs n70 femtocell downlink on the
               shared 2000–2020 MHz — solved by geographic partitioning, beam steering and scheduling, possible only because
