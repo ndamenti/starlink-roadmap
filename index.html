@@ -1592,7 +1592,8 @@ function BeamSizeLab() {
   const PRESETS = [
     { n: "V2-Mini D2C (today)", D: 5.0, f: 2.0, h: 530 },
     { n: "Dedicated D2C 2027", D: 11.2, f: 2.0, h: 330 },
-    { n: "AST BlueBird Block 2", D: 14.9, f: 0.85, h: 520 },
+    { n: "AST BB2 · 850 MHz low-band", D: 14.9, f: 0.85, h: 520 },
+    { n: "AST BB2 · same panel @ 2 GHz", D: 14.9, f: 2.0, h: 520 },
   ];
   const isPre = (p) => Math.abs(D - p.D) < 0.15 && Math.abs(f - p.f) < 0.03 && Math.abs(h - p.h) < 6;
   const k = Math.min(360 / Math.max(along, 0.001), 46); // px per km, capped
@@ -1659,8 +1660,9 @@ function BeamSizeLab() {
         Model: beamwidth ≈ λ/D (half-power convention varies by taper; treat sizes as ±30% estimates); spot at elevation ε
         widens by the longer slant (h/sin ε) and stretches 1/sin ε along the look direction; scan loss not included. Preset
         notes: today's D2C payload ~25 m² per Musk's 2022 description; 2027 ≈ 5× → ~125 m² (derived); AST Block 2 ≈ 223 m²
-        but shown on 850 MHz partner low-band — at equal frequency AST's larger panel beats SpaceX's by ~1.3× linear, while
-        on low-band its beams re-widen. The purple readout is the punchline: sub-km cells at phone frequencies demand a
+        — click its two presets back-to-back: the identical panel paints ~12 km spots on 850 MHz partner low-band but
+        ~5 km at 2 GHz. The panel is real; the wavelength decides what it buys — spectrum choice is silently a beam-size
+        choice. The purple readout is the punchline: sub-km cells at phone frequencies demand a
         ~50 m panel (~2,500 m²) — an order of magnitude beyond anything flying or announced, which is why every D2C player
         converges on kilometers-wide cells and why femtocells, not satellites, own street-level capacity.
       </p>
@@ -2261,6 +2263,27 @@ function TechTab() {
           </div>
         ))}
       </div>
+      <Info label="where cell isolation actually comes from (Gen1 vs 2027)">
+        There is no separate "isolation box" on a satellite — the isolation <em>is the antenna</em>, and the 2027
+        hardware improves it through four compounding channels. <strong>1 · The aperture (dominant, confirmed):</strong>
+        isolation is really about how fast a beam's energy falls off outside its cell, and the right unit is
+        <em> beam-widths of separation, not km</em>. Two same-channel cells 40 km apart sit inside each other's skirts for
+        Gen1 (~30–50 km beams) but are comfortably separated for the 2027 satellite (~5–10 km beams) — same spacing,
+        radically better isolation, purely from a 5× array at a lower altitude. <strong>2 · Element count → pattern
+        control (implied):</strong> a phased array's ability to sculpt where energy <em>doesn't</em> go — taper down
+        sidelobes, steer deliberate nulls toward co-channel cells — scales with element count, which scales with area;
+        the announced custom silicon is what turns those elements into fine-grained digital pattern control.
+        <strong>3 · MIMO (claimed):</strong> named at MWC — and the same multi-beam math that multiplexes streams to
+        users can orthogonalize energy between cells. <strong>4 · Regenerative Rel-19 scheduling (architectural):</strong>
+        with a full base station on board, the satellite coordinates its beams' frequency, power, and timing at
+        millisecond granularity — the software that converts hardware isolation into actual reuse-1 operation. The
+        cleanest tell that SpaceX believes this story is the "20×20 MHz beams" spec itself: giving every beam the entire
+        owned allocation is only sane if beams are isolated enough to run reuse-1-dominant. Gen1 could never make that
+        bet — its beams are too fat to keep same-channel cells out of each other's skirts at any useful density. So the
+        2027 satellites don't carry a different <em>kind</em> of isolation; they carry quantitatively more of the same
+        mechanism, pushed past the threshold where full-spectrum beams become the operating norm instead of a nadir-only
+        special case.
+      </Info>
 
       <div className="card" style={{ marginTop: 16 }}>
         <div className="eyebrow">Spot-beam evolution — the same window of ground, three generations</div>
