@@ -33,6 +33,7 @@
   table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
   thead th { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
     color: var(--dim); background: var(--panel2); text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  tr[id] { scroll-margin-top: 24px; }
   tbody td { padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 13px; color: var(--body); }
   tbody tr:last-child td { border-bottom: none; }
   td.topic { width: 22%; font-weight: 600; color: var(--text); font-size: 13.5px; }
@@ -55,7 +56,8 @@
   @media (max-width: 800px) {
     table, thead, tbody, tr, td, th { display: block; }
     thead { display: none; }
-    tbody td { border-bottom: none; padding: 6px 16px; }
+    tr[id] { scroll-margin-top: 24px; }
+  tbody td { border-bottom: none; padding: 6px 16px; }
     td.topic { padding-top: 16px; border-top: 1px solid var(--line); width: auto; }
     td.src { padding-bottom: 16px; width: auto; }
     td.claims { width: auto; }
@@ -81,7 +83,7 @@
     <thead><tr><th>Topic area</th><th>Key data covered in the site</th><th>Sources</th></tr></thead>
     <tbody>
 
-      <tr>
+      <tr id="echostar">
         <td class="topic">EchoStar spectrum acquisition &amp; FCC approval</td>
         <td class="claims">~$19.6B total (AWS-4 + H-block ~$17B; unpaired AWS-3 ~$2.6B); 65 MHz across all BEAs except PR/USVI; two-step trust assignment; waivers; Nov 30, 2027 consummation deadline; $2.4B vendor escrow.</td>
         <td class="src">
@@ -93,7 +95,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="milestones">
         <td class="topic">Buildout conditions &amp; milestones</td>
         <td class="claims">Appendix C geographic performance metrics over 90% of each BEA: SINR/availability (5 dB@70% in 2 yrs → 10 dB@90% in 9 yrs); uplink ≥100→300 kbps/MHz; spectral efficiency 300/100 → 600/200 kbps/MHz/beam; acceleration and automatic-termination ladder.</td>
         <td class="src">
@@ -101,7 +103,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="scs">
         <td class="topic">SCS framework &amp; G-block grants</td>
         <td class="claims">T-Mobile PCS G-block lease (1910–1915 / 1990–1995 MHz, Band 25); SMS-only conditional grant (Nov 2024); Mar 2025 waiver adding 9.4 dB OOBE headroom (~3.1 dB power) over AT&amp;T/Verizon/EchoStar objections; −110.6 dBW/m²/MHz PFD.</td>
         <td class="src">
@@ -111,7 +113,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="gen2">
         <td class="topic">Gen2 broadband constellation authority</td>
         <td class="claims">Dec 2022 grant of 7,500 satellites; Jan 9, 2026 grant of 7,500 more (total 15,000 broadband); lower shells; Ku/Ka/V/E/W-band for FSS+MSS; overlapping-beam restriction waived; E-band gateways (Mar 2024); OOBE relaxation −120 → −110.6 dBW/m²/MHz.</td>
         <td class="src">
@@ -120,7 +122,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="d2c-application">
         <td class="topic">Dedicated D2C constellation application</td>
         <td class="claims">Up to 15,000 D2C satellites at <strong>326–335 km</strong>; filed Sept 16, 2025, amended Nov 25, 2025; GN Docket 25-340; SCS on PCS-G/H-block/unpaired AWS-3 + MSS on AWS-4; US and international service.</td>
         <td class="src">
@@ -130,7 +132,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="mss">
         <td class="topic">MSS bands &amp; denied requests</td>
         <td class="claims">1.6/2.4 GHz "Big LEO" bands unavailable for an additional MSS system (Globalstar/Iridium incumbency); exclusive AWS-4/2 GHz terrestrial + MSS rights confirmed; 2024 dismissal of SpaceX's Gen2 MSS modification.</td>
         <td class="src">
@@ -139,7 +141,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="fleet">
         <td class="topic">Current D2C fleet &amp; satellite hardware</td>
         <td class="claims">~650 D2C-capable V2 Mini-class satellites (fully deployed first-gen constellation); ~800 kg; ~25 m² D2C phased array per satellite (originates with Musk's Aug 25, 2022 "Coverage Above and Beyond" description: "five or six meters on a side, roughly 25 square meters"); up to 43 spot beams per AIAA; ~20–23 per Falcon 9; adapted-LTE eNodeB payloads; largest 4G provider by geography.</td>
         <td class="src">
@@ -153,7 +155,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="nextgen">
         <td class="topic">Next-gen D2C satellite claims</td>
         <td class="claims">5× larger phased array (→ ~125 m² derived); 4× bandwidth/beam; 20× link performance; &gt;100 Gbps DL / &gt;50 Gbps UL per satellite; up to 150 Mbps per phone; 20×20 MHz beams; MIMO; Rel-19 NR-NTN; "thousands of spatial beams"; mid-2027 commercial launch.</td>
         <td class="src">
@@ -163,7 +165,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="v3">
         <td class="topic">V3 broadband satellite</td>
         <td class="claims">1 Tbps DL / 160–200 Gbps UL per satellite; ~4 Tbps combined backhaul; E-band feeder links; ~2,000 kg Starship-class; up to 60 per launch (~60 Tbps/launch); no phone radio as publicly specced.</td>
         <td class="src">
@@ -173,7 +175,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="measured">
         <td class="topic">Measured D2C performance</td>
         <td class="claims">~3.1 Mbps per beam on 2×5 MHz G-block (≈0.62 Mbps/MHz/beam); scaling projections with H-block and AWS-4 aggregation (~6.2 → ~15.5–18.6 Mbps/beam); RSRP −121 vs −97 dBm; SINR 0 vs 5 dB; n252-not-in-chipsets finding.</td>
         <td class="src">
@@ -181,7 +183,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="femto">
         <td class="topic">Terrestrial / femtocell strategy</td>
         <td class="claims">Aug 4, 2026 earnings call: terrestrial buildout confirmed; "little femtocells" on rooftop dish mounts, deployed "as you need it"; "100 times better"; service "end of next year"; targeting Big Three's ~$600B/yr revenue; Musk on small-station bandwidth.</td>
         <td class="src">
@@ -191,7 +193,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="analysts">
         <td class="topic">Analyst &amp; incumbent skepticism</td>
         <td class="claims">Moffett: competitive D2C service "extraordinarily challenging to imagine" within 5 yrs; femtocells "work best where it matters least"; Evans: steel-and-concrete urban wall, "what's the algebra?"; Barden: 65 MHz vs ~1,000 MHz over three decades; Gopalan: "I struggle to see which consumer problems they would solve."</td>
         <td class="src">
@@ -200,7 +202,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="partners">
         <td class="topic">International carrier partnerships</td>
         <td class="claims">T-Mobile, Rogers, Optus/Telstra, One NZ/Spark, KDDI, Salt, Entel, Kyivstar (Veon), Beeline, Airtel Africa, Globe, Virgin Media O2, MasOrange; Deutsche Telekom V2 launch planned early 2028; T-Mobile US exclusivity expiry; US Mobile first MVNO.</td>
         <td class="src">
@@ -210,7 +212,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="auctions">
         <td class="topic">Spectrum auctions</td>
         <td class="claims">AWS-3 Auction 113 (closed Jun 23, 2026): $3.57B total; Verizon $3.16B; SpaceX ~$8.5M for 2 licenses (Cincinnati Band 70 gap-fill + Gulf); Upper C-band: rules adopted Jul 22, 2026, 160 MHz (3.98–4.14 GHz) to auction by Jul 2027; satellite carve-out rejected.</td>
         <td class="src">
@@ -219,7 +221,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="competitors">
         <td class="topic">Competitors</td>
         <td class="claims">AST SpaceMobile: 64 m² Block 1 arrays → ~223 m² Block 2 (largest commercial LEO arrays); ~6,100 kg BlueBird 6; ~2,000 coverage cells; 45–60 satellites by end-2026. Amazon Leo/Kuiper: acquiring Globalstar; 5,105-satellite D2D filing on 1.6/2.4 GHz, deployment from 2028.</td>
         <td class="src">
@@ -229,7 +231,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="standards">
         <td class="topic">Device ecosystem &amp; standards</td>
         <td class="claims">3GPP Rel-17 NTN baseline (ephemeris, HARQ, RACH); Rel-19 NR-NTN for Starlink Mobile; n252 introduced as a Rel-19 NTN band and first validated live on commercial modem silicon at CES 2026 (Keysight × Samsung, incl. sat-to-sat mobility); Qualcomm X105 first modem with native support; H-block has no 3GPP NTN work item — usable instead via the SCS adapted-LTE path (as the G-block is today); n70 in recent flagships (Dish legacy).</td>
         <td class="src">
@@ -240,7 +242,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="subscribers">
         <td class="topic">Subscribers, revenue &amp; pricing</td>
         <td class="claims">25M active users targeted by end-2026; 10M monthly actives / 16M+ unique users via partners; Starlink Mobile revenue $632M (S-1); T-Satellite $10/mo; US Mobile bundle from $47/mo; independent estimate ~3M US subscribers (TMF, early 2026).</td>
         <td class="src">
@@ -250,7 +252,7 @@
         </td>
       </tr>
 
-      <tr>
+      <tr id="derived">
         <td class="topic">Derived figures computed in this site</td>
         <td class="claims">Beam footprints (~20–50 km current; ~5–10 km next-gen); ~125 m² next-gen array; simultaneous-beam estimates (~hundreds); per-beam capacity model (0.62 Mbps/MHz anchor × configuration); deployment clock (launches, years-to-fleet, sustainment tempo); femtocell throughput (bps/Hz × MHz); capacity-density comparison.</td>
         <td class="src">

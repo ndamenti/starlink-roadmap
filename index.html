@@ -669,7 +669,7 @@ function ModeSwitch() {
 
   return (
     <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
-      <div className="eyebrow" style={{ color: C.amber }}>The switch-hitter · 2000–2020 MHz · one block, two personalities</div>
+      <div className="eyebrow" style={{ color: C.amber }}>The switch-hitter · 2000–2020 MHz · one block, two personalities <Src k="d2capp" topic="d2c-application" /></div>
       <p className="body" style={{ marginBottom: 6 }}>
         The same 20 MHz is a <strong style={{ color: C.amber }}>satellite uplink</strong> in the n252 configuration and a{" "}
         <strong style={{ color: C.blue }}>femtocell downlink</strong> in the n70 configuration. Both are SpaceX's — but they are
@@ -801,7 +801,7 @@ function Readiness() {
   const [selRow, setSelRow] = useState(3);
   return (
     <div className="card">
-      <div className="eyebrow">Band readiness — the silicon clock · slide the year</div>
+      <div className="eyebrow">Band readiness — the silicon clock · slide the year <Src k="standards" topic="standards" /></div>
       <p className="body" style={{ marginBottom: 12 }}>
         Owning spectrum is step one; three more gates decide when it carries traffic: is the band in <em>handsets</em>, is it
         in the <em>3GPP NTN standard</em> (usable from orbit), and is it <em>legally live terrestrially</em> (deal close ≤ Nov 30,
@@ -861,7 +861,7 @@ function SpectrumTab({ cfg, setCfg }) {
   return (
     <div>
       <div className="card">
-        <div className="eyebrow">The D2C mid-band stack · 1650–2250 MHz, drawn to scale</div>
+        <div className="eyebrow">The D2C mid-band stack · 1650–2250 MHz, drawn to scale <Src k="echostar" topic="echostar" /></div>
         <p className="body" style={{ marginBottom: 18 }}>
           Every block below is spectrum a standard phone can (or will) talk on. Amber = owned outright after the EchoStar
           deals; blue = leased. Click a block. Then see how the pieces snap together in the mode-switch panel and the
@@ -1152,7 +1152,7 @@ function NetworkTab() {
     <div>
       <div className="split">
         <div className="card">
-          <div className="eyebrow">One network, four layers — click each</div>
+          <div className="eyebrow">One network, four layers — click each <Src k="femto" topic="femto" /></div>
           <div className="stack">
             {LAYERS.map((l) => (
               <button key={l.id} onClick={() => setSel(l.id)}
@@ -1226,13 +1226,13 @@ function VerdictTab() {
     <div>
       <div className="split">
         <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
-          <div className="eyebrow" style={{ color: C.green }}>The bull case</div>
+          <div className="eyebrow" style={{ color: C.green }}>The bull case <Src k="nextgen" topic="analysts" /></div>
           {QUOTES_BULL.map((q, i) => (
             <div key={i} className="quote"><p>“{q.q}”</p><div className="quoteWho">{q.who}</div></div>
           ))}
         </div>
         <div className="card" style={{ borderTop: `2px solid ${C.red}` }}>
-          <div className="eyebrow" style={{ color: C.red }}>The bear case</div>
+          <div className="eyebrow" style={{ color: C.red }}>The bear case <Src k="analysts" topic="analysts" /></div>
           {QUOTES_BEAR.map((q, i) => (
             <div key={i} className="quote"><p>“{q.q}”</p><div className="quoteWho">{q.who}</div></div>
           ))}
@@ -1368,6 +1368,81 @@ function mulberry(seed) {
   };
 }
 
+
+/* Central source registry: card-level citation chips draw from here.
+   k: primary = FCC/company documents; claim = company statements; derived = computed in this site. */
+const SRC = {
+  echostar: [
+    { t: "FCC Order DA 26-471 (May 12, 2026)", u: "https://docs.fcc.gov/public/attachments/DA-26-471A1.pdf", k: "primary" },
+    { t: "EchoStar Form 8-K (Nov 6, 2025)", u: "https://ir.echostar.com/static-files/57bf0a65-59a3-4f0e-8b6d-f2d7cbb9d454", k: "primary" },
+  ],
+  d2capp: [
+    { t: "FCC Public Notice DA 25-1018 (Dec 5, 2025)", u: "https://docs.fcc.gov/public/attachments/DA-25-1018A1.pdf", k: "primary" },
+    { t: "FCC Order DA 26-398 (Apr 23, 2026)", u: "https://docs.fcc.gov/public/attachments/DA-26-398A1.pdf", k: "primary" },
+  ],
+  fleet: [
+    { t: "KeepTrack — D2C fleet status", u: "https://keeptrack.space/deep-dive/starlink-direct-to-cell", k: "claim" },
+    { t: "SDxCentral — Nicolls MWC keynote", u: "https://www.sdxcentral.com/news/starlink-targets-25m-users-by-year-end-as-gen2-satellite-plan-promises-100x-data-density/", k: "claim" },
+  ],
+  antenna: [
+    { t: "Spaceflight Now — Musk's 2022 antenna description", u: "https://spaceflightnow.com/2023/12/15/live-coverage-spacex-to-launch-first-starlink-satellites-with-direct-to-cell-capability/", k: "primary" },
+    { t: "Aerospace America (AIAA) — 25 m², 43 beams", u: "https://aerospaceamerica.aiaa.org/departments/direct-to-device-satellite-internet-sparks-competing-concepts/", k: "claim" },
+    { t: "AST SpaceMobile — Block 2 BlueBird", u: "https://ast-science.com/next-gen-bluebird/", k: "primary" },
+  ],
+  nextgen: [
+    { t: "Light Reading — MWC 2026", u: "https://www.lightreading.com/satellite/at-mwc-spacex-execs-tout-starlink-v2-and-a-key-carrier-partner-for-it", k: "claim" },
+    { t: "RCR Wireless — Nicolls quotes", u: "https://rcrwireless.com/20260304/5g/spacex-starlink-mobile", k: "claim" },
+    { t: "Fierce Network — thousands of spatial beams", u: "https://www.fierce-network.com/wireless/mwc-starlink-mobile-unveils-plans-v2-satellites-and-more", k: "claim" },
+  ],
+  v3: [
+    { t: "EDUP — V3 1 Tbps coverage", u: "https://www.szedup.com/starlink/SpaceXTeases1TbpsofDownloadBandwidthonV3StarlinkSatellites.html", k: "claim" },
+    { t: "Veksler — V1→V3 engineering cheat sheet", u: "https://cheatsheets.davidveksler.com/starlink-satellite-anatomy.html", k: "claim" },
+  ],
+  measured: [
+    { t: "Garcia-Cabeza et al. (UPM), arXiv 2506.00283 — measurements", u: "https://arxiv.org/html/2506.00283v8", k: "primary" },
+    { t: "FCC DA 26-471, Appendix C — milestones", u: "https://docs.fcc.gov/public/attachments/DA-26-471A1.pdf", k: "primary" },
+  ],
+  standards: [
+    { t: "Keysight — first live NR-NTN in n252 (Rel-19)", u: "https://www.businesswire.com/news/home/20260108204481/en/Keysight-Achieves-Industry-Leading-Live-NR-NTN-Connectivity-in-n252-S-Band-Including-Satellite-to-Satellite-Mobility-in-Collaboration-with-Samsung", k: "primary" },
+    { t: "RCR Wireless — n252 as Rel-19 band", u: "https://www.rcrwireless.com/20260112/test-measurement/keysight-samsung-demonstrate-nr-ntn-link-in-n252-band-as-the-industry-pushes-for-direct-to-cell-connectivity", k: "claim" },
+    { t: "UPM study — band readiness", u: "https://arxiv.org/html/2506.00283v8", k: "primary" },
+  ],
+  femto: [
+    { t: "Fierce Network — Aug 2026 earnings call", u: "https://www.fierce-network.com/wireless/spacex-lays-out-plan-compete-big-3-wireless-carriers", k: "claim" },
+    { t: "Wireless Estimator — building around towers", u: "https://wirelessestimator.com/articles/2026/spacex-wants-to-be-a-fourth-major-network-but-its-building-around-towers-not-on-them/", k: "claim" },
+  ],
+  analysts: [
+    { t: "MLQ — buildout skepticism roundup", u: "https://mlq.ai/news/spacexs-mobile-plan-targets-us-carriers-but-the-network-still-faces-a-long-buildout/", k: "claim" },
+  ],
+  scs: [
+    { t: "Broadband Breakfast — DA 25-197 power waiver", u: "https://broadbandbreakfast.com/fcc-backs-spacexs-direct-to-cell-service-at-higher-power-levels/", k: "claim" },
+  ],
+  auctions: [
+    { t: "Mobile World Live — Auction 113 analysis", u: "https://www.mobileworldlive.com/verizon/analysis-aws-3-auction-turned-on-echostar-bidding-strategy/", k: "claim" },
+  ],
+};
+
+function Src({ k, topic }) {
+  const [open, setOpen] = useState(false);
+  const list = SRC[k] || [];
+  return (
+    <span className="srcWrap">
+      <button className={"srcChip" + (open ? " on" : "")} onClick={() => setOpen(!open)}>{open ? "× close" : "\u25C8 sources"}</button>
+      {open && (
+        <span className="srcPop">
+          {list.map((sc, i) => (
+            <a key={i} href={sc.u} target="_blank" rel="noreferrer" className="srcItem">
+              <i className={"sb " + sc.k} />{sc.t}
+              <em className="sk">{sc.k}</em>
+            </a>
+          ))}
+          <a href={topic ? "sources.html#" + topic : "sources.html"} className="srcAllLink">full citations table \u2192</a>
+        </span>
+      )}
+    </span>
+  );
+}
+
 /* Click-to-expand plain-language explainer */
 function Info({ label, children }) {
   const [open, setOpen] = useState(false);
@@ -1391,7 +1466,7 @@ function FootprintPanel() {
   const rPx = Math.min(f.rKm * 0.19, 195);
   return (
     <div className="card">
-      <div className="eyebrow">Panel 1 · One satellite's reach — footprint geometry, and the satellite-count ladder</div>
+      <div className="eyebrow">Panel 1 · One satellite's reach — footprint geometry, and the satellite-count ladder <Src k="fleet" topic="fleet" /></div>
       <p className="body" style={{ marginBottom: 12 }}>
         A satellite's <em>visible</em> footprint is set by the minimum elevation angle phones need for a clean line of sight.
         There is no single "correct" angle — it's an <strong>environment statistic</strong>: open terrain works near 25°,
@@ -1599,7 +1674,7 @@ function BeamSizeLab() {
   const k = Math.min(360 / Math.max(along, 0.001), 46); // px per km, capped
   return (
     <div className="card" style={{ borderTop: `2px solid #C79BFF` }}>
-      <div className="eyebrow" style={{ color: "#C79BFF" }}>Panel 1b · Beam-size lab — panel size × frequency × altitude × look angle → spot on the ground</div>
+      <div className="eyebrow" style={{ color: "#C79BFF" }}>Panel 1b · Beam-size lab — panel size × frequency × altitude × look angle → spot on the ground <Src k="antenna" topic="fleet" /></div>
       <p className="body" style={{ marginBottom: 10 }}>
         Four knobs fully determine a spot beam. <strong>Panel size</strong>: bigger antenna → narrower beam (diffraction:
         beamwidth ≈ wavelength ÷ panel side). <strong>Frequency</strong>: higher frequency → shorter wavelength → narrower
@@ -1743,7 +1818,7 @@ function BeamMap() {
 
   return (
     <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
-      <div className="eyebrow" style={{ color: C.amber }}>Panel 2 · Earth-fixed cells, hopping beams, frequency reuse — the animation</div>
+      <div className="eyebrow" style={{ color: C.amber }}>Panel 2 · Earth-fixed cells, hopping beams, frequency reuse — the animation <Src k="nextgen" topic="nextgen" /></div>
       <p className="body" style={{ marginBottom: 10 }}>
         The grid never moves: those are <strong>Earth-fixed cells</strong>, virtual towers nailed to geography. Satellites
         sweep across at 7.5 km/s (a ~3-minute pass, compressed), and the constellation is sized so footprints
@@ -1918,7 +1993,7 @@ function AdaptiveReusePanel() {
   }
   return (
     <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
-      <div className="eyebrow" style={{ color: C.green }}>Panel 3 · Adaptive frequency reuse — full menu at nadir, rationing toward the horizon</div>
+      <div className="eyebrow" style={{ color: C.green }}>Panel 3 · Adaptive frequency reuse — full menu at nadir, rationing toward the horizon <Src k="measured" topic="measured" /></div>
       <p className="body" style={{ marginBottom: 10 }}>
         <strong>Nadir</strong> is the point directly beneath the satellite (if you stand there, it's straight overhead —
         90° elevation). Beams aimed near nadir land short, square-on, and crisply circular: geometry isolates them from
@@ -2050,7 +2125,7 @@ function NtnPanel() {
   const Y = (k) => 130 - (k / 3.2) * 92;  // kHz → px
   return (
     <div className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
-      <div className="eyebrow" style={{ color: C.blue }}>Panel 4 · What Rel-17 / Rel-19 NTN phones change</div>
+      <div className="eyebrow" style={{ color: C.blue }}>Panel 4 · What Rel-17 / Rel-19 NTN phones change <Src k="standards" topic="standards" /></div>
       <p className="body" style={{ marginBottom: 10 }}>
         Today the satellite pre-corrects Doppler and delay so a satellite-unaware phone thinks the tower is stationary — but
         the correction is exact only at the <em>beam center</em>. Off-center phones see residual frequency error, and the
@@ -2260,6 +2335,7 @@ function TechTab() {
               <div key={i} className="specRow"><span className="specL">{r[0]}</span><span className="specV">{r[1]}</span></div>
             ))}
             <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 10 }}>{g.note}</p>
+            <Src k={({ gen1: "fleet", v2: "nextgen", v3: "v3" })[g.id] || "fleet"} topic={({ gen1: "fleet", v2: "nextgen", v3: "v3" })[g.id] || "fleet"} />
           </div>
         ))}
       </div>
@@ -2286,7 +2362,7 @@ function TechTab() {
       </Info>
 
       <div className="card" style={{ marginTop: 16 }}>
-        <div className="eyebrow">Spot-beam evolution — the same window of ground, three generations</div>
+        <div className="eyebrow">Spot-beam evolution — the same window of ground, three generations <Src k="nextgen" topic="nextgen" /></div>
         <p className="body" style={{ marginBottom: 12 }}>
           Capacity from orbit scales by shrinking and multiplying beams: every additional beam re-uses the same MHz over a
           smaller patch of ground, so fewer users share each one. Toggle generations and watch the reuse math — then notice
@@ -2419,7 +2495,7 @@ function RegTab() {
     <div>
       <div className="split">
         <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
-          <div className="eyebrow" style={{ color: C.green }}>Secured — the authority already in hand</div>
+          <div className="eyebrow" style={{ color: C.green }}>Secured — the authority already in hand <Src k="echostar" topic="echostar" /></div>
           {REG_SECURED.map((r, i) => (
             <div key={i} className="evt">
               <div className="evtBody"><strong style={{ color: C.text }}>{r.t}.</strong> {r.d}</div>
@@ -2427,7 +2503,7 @@ function RegTab() {
           ))}
         </div>
         <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
-          <div className="eyebrow" style={{ color: C.amber }}>Pending — what still has to land</div>
+          <div className="eyebrow" style={{ color: C.amber }}>Pending — what still has to land <Src k="auctions" topic="auctions" /></div>
           {REG_PENDING.map((r, i) => (
             <div key={i} className="evt">
               <div className="evtBody"><Dot s={r.s} /> <strong style={{ color: C.text }}>{r.t}.</strong> {r.d}</div>
@@ -2438,7 +2514,7 @@ function RegTab() {
 
       <div className="split">
         <div className="card" style={{ borderLeft: `2px solid ${C.red}` }}>
-          <div className="eyebrow" style={{ color: C.red }}>Standing obligations — conditions that never go away</div>
+          <div className="eyebrow" style={{ color: C.red }}>Standing obligations — conditions that never go away <Src k="measured" topic="milestones" /></div>
           {REG_KEEP.map((r, i) => (
             <div key={i} className="evt">
               <div className="evtBody"><strong style={{ color: C.text }}>{r.t}.</strong> {r.d}</div>
@@ -2646,6 +2722,24 @@ function StarlinkMobileRoadmap() {
         .infoBox { display: block; margin-top: 8px; background: ${C.panel2}; border-left: 2px solid ${C.blue};
           border-radius: 0 6px 6px 0; padding: 12px 16px; font-size: 13px; line-height: 1.65; color: #C7D1E2; }
         .infoBox strong { color: ${C.text}; }
+        .srcWrap { display: inline-block; margin-left: 10px; vertical-align: middle; }
+        .srcChip { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.06em; color: #C79BFF;
+          background: rgba(199,155,255,0.08); border: 1px solid rgba(199,155,255,0.35); border-radius: 4px;
+          padding: 2px 7px; cursor: pointer; }
+        .srcChip:hover { border-color: #C79BFF; }
+        .srcChip.on { color: ${C.dim}; border-color: ${C.line}; background: none; }
+        .srcPop { display: block; margin-top: 8px; background: ${C.panel2}; border-left: 2px solid #C79BFF;
+          border-radius: 0 6px 6px 0; padding: 8px 12px; font-family: var(--disp); }
+        .srcItem { display: block; font-size: 12px; color: #C7D1E2; text-decoration: none; padding: 4px 0;
+          border-bottom: 1px solid ${C.line}; }
+        .srcItem:last-of-type { border-bottom: none; }
+        .srcItem:hover { color: ${C.text}; }
+        .sb { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; }
+        .sb.primary { background: #C79BFF; }
+        .sb.claim { background: ${C.amber}; }
+        .sb.derived { background: ${C.blue}; }
+        .sk { font-family: var(--mono); font-size: 9px; color: ${C.dim}; margin-left: 8px; font-style: normal; }
+        .srcAllLink { display: block; margin-top: 6px; font-family: var(--mono); font-size: 10.5px; color: #C79BFF; text-decoration: none; }
         @media (max-width: 900px) { .genGrid { grid-template-columns: 1fr; } }
         .specRow { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0;
           border-bottom: 1px solid ${C.line}; font-size: 12.5px; }
