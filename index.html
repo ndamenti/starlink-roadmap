@@ -1665,13 +1665,15 @@ function BeamMap() {
 
 function AdaptiveReusePanel() {
   const [devKm, setDevKm] = useState(120);
+  const [pool, setPool] = useState("now");
+  const poolMHz = pool === "now" ? 20 : 25;
   const h = 330;
   const eps = Math.min(90, (Math.atan(h / Math.max(devKm, 0.001)) * 180) / Math.PI);
   const sinE = Math.sin((eps * Math.PI) / 180);
   const stretch = 1 / sinE;
   const slant = h / sinE;
   const regime = eps >= 60 ? "reuse1" : eps >= 42 ? "mix" : "reuse3";
-  const mhz = regime === "reuse1" ? 60 : regime === "mix" ? 40 : 20;
+  const mhzTxt = regime === "reuse1" ? `${poolMHz} of ${poolMHz}` : regime === "mix" ? `~${Math.round((poolMHz * 2) / 3)} of ${poolMHz}` : `~${(poolMHz / 3).toFixed(1)} of ${poolMHz}`;
   const FC = [C.amber, C.blue, "#C79BFF"];
   const gx = 140, gy = 296, satY = 56;
   const X = (km) => gx + km * 0.78;
@@ -1692,7 +1694,16 @@ function AdaptiveReusePanel() {
         aimed toward the horizon land long, slanted, and smeared into ellipses that slather energy past their own cells —
         so there the spectrum is rationed (reuse-3 — one lane per cell) to keep neighbors off each other's channel. Each
         ground patch below is one beam's landing zone; its colored stripes are the lanes it may use. Drag the phone.
+        <em style={{ color: C.dim }}> Scope note: the "menu" is the owned satellite downlink. Today that's 20 MHz at
+        2180–2200 (n252 — standardized for NTN since Rel-17, arriving in handsets with Rel-19/X105-class silicon). The
+        H-block's 5 MHz DL at 1995–2000 is the mirror image — in handsets for years, but not yet standardized for NTN;
+        toggle below to model the pool after it clears. 2000–2020 is the uplink (its own parallel reuse story) and AWS-3
+        is uplink-only, so neither joins this menu. Lanes are thirds of the selected pool.</em>
       </p>
+      <div className="tglRow" style={{ marginBottom: 10 }}>
+        <button className={"genBtn" + (pool === "now" ? " on" : "")} onClick={() => setPool("now")}>NTN-standardized today · n252 only · 20 MHz DL</button>
+        <button className={"genBtn" + (pool === "future" ? " on" : "")} onClick={() => setPool("future")}>+ H-block DL after NTN standardization · 25 MHz</button>
+      </div>
       <svg viewBox="0 0 900 400" style={{ width: "100%", display: "block" }} role="img" aria-label="Side view of satellite beams landing from nadir to horizon with adaptive frequency reuse">
         {/* satellite */}
         <g transform={`translate(${gx}, ${satY})`}>
@@ -1746,8 +1757,8 @@ function AdaptiveReusePanel() {
           <div className="statV" style={{ color: regime === "reuse1" ? C.green : regime === "mix" ? C.amber : "#C79BFF" }}>
             {regime === "reuse1" ? "Reuse-1 · all lanes" : regime === "mix" ? "Transitional · most lanes" : "Reuse-3 · one lane"}
           </div></div>
-        <div className="stat"><div className="statL">Spectrum available in your cell</div>
-          <div className="statV">{mhz} of 60 MHz
+        <div className="stat"><div className="statL">Satellite downlink usable in your cell {pool === "now" ? "(2180–2200)" : "(2180–2200 + 1995–2000)"}</div>
+          <div className="statV">{mhzTxt} MHz
             <span style={{ marginLeft: 8 }}>
               {[0, 1, 2].map((f) => (
                 <span key={f} style={{ display: "inline-block", width: 16, height: 9, borderRadius: 2, marginRight: 3, background: FC[f], opacity: (regime === "reuse1" || (regime === "mix" && f > 0) || (regime === "reuse3" && f === 1)) ? 0.95 : 0.15 }} />
@@ -1756,20 +1767,24 @@ function AdaptiveReusePanel() {
           </div></div>
       </div>
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
-        Zone thresholds (~60°/~40°) and the three-lane split are illustrative — real systems schedule reuse dynamically,
-        per beam, per moment. Flat-ground geometry; curvature ignored below ~600 km. The structural point stands: spectrum
-        efficiency is highest under the satellite and rationed toward the edges, which is why the scheduler prefers
-        assigning each cell to whichever overhead satellite sees it most steeply.
+        Zone thresholds (~60°/~40°) are illustrative — real systems schedule reuse dynamically, per beam, per moment; the
+        lanes are thirds of the selected pool. Both DL bands face the same two gates — 3GPP NTN standardization, then
+        handset silicon — from opposite sides: n252 is standardized but awaits Rel-19 handsets; the H-block is in handsets
+        but awaits standardization. Flat-ground geometry; curvature ignored below ~600 km. Worth noticing: the MWC-claimed
+        "20×20 MHz beams" for 2027 means each beam gets the <em>entire</em> owned allocation per direction — implicitly a
+        bet on reuse-1 operation with spatial isolation, which is exactly what smaller beams buy. Spectrum efficiency is
+        highest under the satellite and rationed toward the edges, which is why the scheduler prefers assigning each cell
+        to whichever overhead satellite sees it most steeply.
       </p>
       <Info label="walk me through this panel slowly">
         Imagine standing outdoors with one satellite overhead. If you're at <strong>nadir</strong> — directly beneath it —
         its beam reaches you by the shortest possible path and lands as a small, sharp circle. Your cell's beam and its
-        neighbors' beams barely spill onto each other, so there's no interference to manage: every cell can use all of
-        SpaceX's spectrum at once (the three stacked color stripes — the "full menu"). Now walk away from nadir. From your
+        neighbors' beams barely spill onto each other, so there's no interference to manage: every cell can use the entire
+        20 MHz downlink channel at once (the three stacked color stripes — the "full menu"). Now walk away from nadir. From your
         new position the satellite hangs lower in the sky; its beam reaches you along a longer slanted path and smears into
         a stretched ellipse (drag the slider and watch the patches widen). Smeared beams slop energy onto their neighbors,
-        so cells out here can't all shout on the same frequencies — the network rations: adjacent cells split the spectrum
-        (single stripes, alternating colors) so each one's channel stays clean, at the cost of only a third of the lanes.
+        so cells out here can't all shout on the same frequencies — the network rations: adjacent cells split the downlink
+        channel (single stripes, alternating colors) so each one's slice stays clean, at the cost of only a third of it.
         The satellite also has two finer tools not drawn here: it can aim <em>silence</em> in specific directions (a
         "beamforming null" — shaping the antenna pattern so a particular same-channel cell hears almost nothing) and turn
         each beam's volume up or down depending on how close its channel-mates are. And because footprints overlap, the
