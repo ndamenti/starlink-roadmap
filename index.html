@@ -702,18 +702,17 @@ function ModeSwitch() {
         <rect x={W - 112} y={groundY - 156} width="70" height="156" fill={C.panel2} stroke={C.line} />
         <circle cx={W - 77} cy={groundY - 162} r="7" fill="none" stroke={C.blue} strokeWidth="1.6" />
         <rect x={W - 66} y={groundY - 168} width="7" height="12" fill={C.blue} rx="1" />
-        <text x={W - 112} y={groundY - 174} fill={C.blue} fontSize="10" fontFamily="var(--mono)" textAnchor="end">dish + femtocell</text>
-        <rect x={W - 210} y={groundY - 22} width="10" height="20" rx="2" fill={C.text} opacity="0.85" />
-        {/* DL 1: n70 */}
-        <line x1={W - 80} y1={groundY - 152} x2={W - 202} y2={groundY - 28} stroke={C.blue} strokeWidth="1.8" markerEnd="url(#arrB)" />
-        <text x={W - 262} y={groundY - 104} fill={C.blue} fontSize="11" fontFamily="var(--mono)" textAnchor="end">↓ 1995–2020 · n70 DL (25 MHz)</text>
-        {/* DL 2: n66 SDL — separate arrow */}
-        <line x1={W - 62} y1={groundY - 146} x2={W - 188} y2={groundY - 24} stroke="#C79BFF" strokeWidth="1.6" markerEnd="url(#arrP)" />
-        <text x={W - 196} y={groundY - 136} fill="#C79BFF" fontSize="11" fontFamily="var(--mono)" textAnchor="start">↓ 2180–2200 · n66 SDL (20 MHz)</text>
-        {/* UL */}
-        <line x1={W - 214} y1={groundY - 34} x2={W - 94} y2={groundY - 152} stroke={C.blue} strokeWidth="1.2" strokeDasharray="4 3" markerEnd="url(#arrB)" />
-        <text x={W - 24} y={groundY - 48} fill={C.blue} fontSize="11" fontFamily="var(--mono)" textAnchor="end">↑ 1695–1710 · n70 UL (15 MHz)</text>
-        <text x={W - 24} y={groundY - 30} fill={C.dim} fontSize="9.5" fontFamily="var(--mono)" textAnchor="end">two bonded downlinks, one uplink</text>
+        {/* stacked link legend — top-right sky, clear of all geometry */}
+        <text x={W - 16} y="48" fill={C.blue} fontSize="10.5" fontFamily="var(--mono)" textAnchor="end">↓ n70 DL · 1995–2020 · 25 MHz</text>
+        <text x={W - 16} y="64" fill="#C79BFF" fontSize="10.5" fontFamily="var(--mono)" textAnchor="end">↓ n66 SDL · 2180–2200 · 20 MHz</text>
+        <text x={W - 16} y="80" fill={C.blue} opacity="0.75" fontSize="10.5" fontFamily="var(--mono)" textAnchor="end">↑ n70 UL · 1695–1710 · 15 MHz</text>
+        <text x={W - 16} y="95" fill={C.dim} fontSize="9" fontFamily="var(--mono)" textAnchor="end">two bonded downlinks · one uplink</text>
+        <text x={W - 120} y="110" fill={C.blue} fontSize="10" fontFamily="var(--mono)" textAnchor="end">dish + femtocell →</text>
+        <rect x={W - 172} y={groundY - 22} width="10" height="20" rx="2" fill={C.text} opacity="0.85" />
+        {/* tight parallel bundle: two solid downlinks + one dashed uplink */}
+        <line x1={W - 82} y1={groundY - 142} x2={W - 164} y2={groundY - 28} stroke={C.blue} strokeWidth="2" markerEnd="url(#arrB)" />
+        <line x1={W - 68} y1={groundY - 136} x2={W - 152} y2={groundY - 22} stroke="#C79BFF" strokeWidth="2" markerEnd="url(#arrP)" />
+        <line x1={W - 178} y1={groundY - 30} x2={W - 96} y2={groundY - 148} stroke={C.blue} strokeWidth="1.2" strokeDasharray="4 3" markerEnd="url(#arrB)" opacity="0.8" />
 
         <rect x={px - 16} y="0" width="32" height={groundY} fill="rgba(255,107,107,0.10)" />
         <line x1={px} y1="0" x2={px} y2={groundY} stroke={C.red} strokeWidth="1.4" strokeDasharray="5 4" />
@@ -1412,30 +1411,27 @@ function FootprintPanel() {
           <circle cx="220" cy="220" r="200" fill="none" stroke={C.line} strokeDasharray="3 4" />
           <text x="220" y="34" textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">25° ELEVATION FOOTPRINT SCALE</text>
           <circle cx="220" cy="220" r={rPx} fill={C.amberDim} stroke={C.amber} strokeWidth="1.5" style={{ transition: "r 300ms" }} />
-          {/* sample beam footprints along a radial: circular at nadir, elliptical toward the edge */}
-          {[0.02, 0.3, 0.55, 0.8, 0.97].map((fr, i) => {
+          {/* sample beam footprints along the horizontal radial: circular at nadir, elliptical toward the edge */}
+          {[0.22, 0.55, 0.88].map((fr, i) => {
             const Re = 6371, dKm = fr * f.rKm;
             const lamD = dKm / Re;
             const eLoc = Math.atan2(Math.cos(lamD) - Re / (Re + alt), Math.sin(lamD));
-            const stretch = Math.min(1 / Math.max(Math.sin(eLoc), 0.2), 4.5);
-            const ang = 40 * (Math.PI / 180); // radial direction: toward lower-right
-            const cx = 220 + fr * rPx * Math.cos(ang), cy = 220 + fr * rPx * Math.sin(ang);
-            const rMinor = 7;
+            const stretch = Math.min(1 / Math.max(Math.sin(eLoc), 0.28), 3.4);
+            const rm = Math.max(3.5, rPx * 0.055);
             return (
-              <ellipse key={i} cx={cx} cy={cy} rx={rMinor * stretch} ry={rMinor}
-                transform={`rotate(${40} ${cx} ${cy})`}
-                fill="rgba(91,168,255,0.22)" stroke={C.blue} strokeWidth="1"
+              <ellipse key={i} cx={220 + fr * rPx} cy={220} rx={rm * stretch} ry={rm}
+                fill="rgba(91,168,255,0.25)" stroke={C.blue} strokeWidth="1"
                 style={{ transition: "all 300ms" }} />
             );
           })}
+          <text x="220" y="50" textAnchor="middle" fill={C.blue} fontSize="8.5" fontFamily="var(--mono)">
+            blue: sample beams — circles at nadir → ellipses near the edge (~1/sin elev)
+          </text>
           <rect x="215" y="215" width="10" height="7" fill={C.amber} rx="1" />
           <rect x="203" y="217" width="9" height="4" fill="none" stroke={C.amber} strokeWidth="1" />
           <rect x="228" y="217" width="9" height="4" fill="none" stroke={C.amber} strokeWidth="1" />
           <text x="220" y={224 + rPx + 16} textAnchor="middle" fill={C.amber} fontSize="11" fontFamily="var(--mono)">
             r ≈ {Math.round(f.rKm)} km
-          </text>
-          <text x="220" y={240 + rPx + 16} textAnchor="middle" fill={C.blue} fontSize="9" fontFamily="var(--mono)">
-            blue: sample beam footprints — circular at nadir, ~1/sin(elev) ellipses at the edge
           </text>
         </svg>
         <div>
@@ -1707,8 +1703,8 @@ function AdaptiveReusePanel() {
   const dlMHz = regime === "reuse1" ? poolMHz : regime === "mix" ? (poolMHz * 2) / 3 : poolMHz / 3;
   const ulPool = 20; // 2000–2020 n252 UL
   const ulMHz = regime === "reuse1" ? ulPool : regime === "mix" ? (ulPool * 2) / 3 : ulPool / 3;
-  const dlMbps = dlMHz * 2.48 * sinE; // 2.48 Mbps/MHz = measured 0.62 × claimed 4× (V2 anchor)
-  const ulMbps = ulMHz * 0.2 * sinE;  // 0.10–0.30 Mbps/MHz FCC milestone range, midpoint
+  const dlMbps = dlMHz * 2.48 * sinE; // 2.48 Mbps/MHz = measured 0.62 × claimed 4× — same V2 anchor as the Physics & Capacity lab
+  const ulMbps = ulMHz * 0.3 * sinE;  // 0.30 Mbps/MHz = FCC 9-yr milestone — same V2 anchor as the Physics & Capacity lab
   const FC = [C.amber, C.blue, "#C79BFF"];
   const gx = 140, gy = 296, satY = 56;
   const X = (km) => gx + km * 0.78;
@@ -1807,9 +1803,11 @@ function AdaptiveReusePanel() {
       </div>
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
         Zone thresholds (~60°/~40°) are illustrative — real systems schedule reuse dynamically, per beam, per moment; the
-        lanes are thirds of the selected pool. Throughput model: available MHz × spectral-efficiency anchor (DL 2.48
-        Mbps/MHz = UPM-measured 0.62 × the claimed 4×; UL 0.2 Mbps/MHz, midpoint of the FCC's 0.10→0.30 milestones) × an
-        elevation penalty (~sin ε) for the longer slant path and scan loss toward the edge — a shaped estimate, not a
+        lanes are thirds of the selected pool. Throughput model: available MHz × the <em>same V2 spectral-efficiency
+        anchors as the Physics &amp; Capacity lab</em> (DL 2.48 Mbps/MHz = UPM-measured 0.62 × the claimed 4×; UL 0.30
+        Mbps/MHz = the FCC 9-yr milestone) × an elevation penalty (~sin ε) for the longer slant path and scan loss toward
+        the edge. At nadir with the 20 MHz pool this reproduces the lab's ~50 Mbps-class per-beam figure exactly; away
+        from nadir the elevation penalty applies, which the lab treats as zone-averaged. A shaped estimate, not a
         prediction. Gate status (2026): n252 is a Release-19 NTN band, first validated live on
         commercial modem silicon at CES 2026 (Keysight × Samsung) — handsets ~2027, volume ~2028–29. The H-block has
         <em> no 3GPP NTN work item</em>; but there's a bypass: under the FCC's SCS framework the satellite can serve it as
