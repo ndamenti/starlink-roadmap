@@ -262,7 +262,7 @@ const READINESS = {
 
 const BLOCKS = [
   { id: "aws3", label: "1695–1710", sub: "UL only · 15 MHz", ulMHz: 15, dlMHz: 0, allowed: ["terr", "sat", "split", "off"], satGate: "satellite SUL pending 3GPP NTN + FCC Earth-to-space treatment" },
-  { id: "g", label: "G-block", sub: "2×5 · leased*", ulMHz: 5, dlMHz: 5, allowed: ["sat", "off"], satGate: "T-Mobile license, revocable SCS lease — partner-channel only; cannot underwrite a competing carrier" },
+  { id: "g", label: "G-block", sub: "2×5 · leased*", ulMHz: 5, dlMHz: 5, allowed: ["sat", "off"], satGate: "T-Mobile license, revocable SCS lease — partner-channel only; cannot underwrite a competing carrier. It therefore defaults OFF in every scenario and at every model year — click its SAT button to include it deliberately" },
   { id: "h", label: "H-block", sub: "2×5 · owned", ulMHz: 5, dlMHz: 5, allowed: ["terr", "sat", "split", "off"], satGate: "satellite use pending 3GPP NTN standardization" },
   { id: "a4main", label: "2000–2020", sub: "switch-hitter · 20 MHz", ulMHz: 20, dlMHz: 20, allowed: ["sat", "terr", "split", "off"], satGate: null, switcher: true },
   { id: "a4dl", label: "2180–2200", sub: "DL / n66 SDL · 20 MHz", ulMHz: 0, dlMHz: 20, allowed: ["sat", "terr", "split", "off"], satGate: null },
@@ -315,7 +315,7 @@ function feasibility(cfg) {
   if (["aws3", "h", "a4main", "a4dl"].some((id) => cfg[id] !== "off"))
     need(2027, "EchoStar deal consummation (deadline Nov 2027)");
   if (cfg.g !== "off")
-    gates.push({ y: 2026, t: "G-block: T-Mobile spectrum under a revocable SCS lease — partner-channel capacity serving T-Mobile service, NOT fourth-carrier capacity" });
+    gates.push({ y: 2026, t: "G-block MANUALLY INCLUDED: T-Mobile spectrum under a revocable SCS lease — partner-channel capacity serving T-Mobile service, NOT fourth-carrier capacity; excluded from every default scenario" });
   if (satU(cfg.a4main) || satU(cfg.a4dl))
     need(2027, "n252 from orbit: 2027 satellites + first Rel-19/X105-class handsets (handset volume ~2028\u201329)");
   if (satU(cfg.h))
@@ -330,7 +330,7 @@ function feasibility(cfg) {
   return { year, gates };
 }
 
-function clampCfgToYear(cfg, year, gLease) {
+function clampCfgToYear(cfg, year) {
   const c = { ...cfg };
   const changes = [];
   const chg = (id, from, to, why) => { c[id] = to; changes.push(`${id === "a4main" ? "2000\u20132020" : id === "a4dl" ? "2180\u20132200" : id.toUpperCase()}: ${from.toUpperCase()} \u2192 ${to.toUpperCase()} — ${why}`); };
@@ -349,43 +349,39 @@ function clampCfgToYear(cfg, year, gLease) {
     }
   }
   if (cfg.gen === "v2" && year < 2027) { c.gen = "gen1"; changes.push("Satellites: V2 \u2192 Gen1 — dedicated D2C satellites fly from mid-2027"); }
-  if (cfg.g === "sat" && year >= 2028 && !gLease) {
-    c.g = "off";
-    changes.push("G-BLOCK: SAT \u2192 OFF — competing-carrier era: T-Mobile's revocable lease can't be presumed once Starlink Mobile is a rival (toggle 'assume lease persists' to model continued partnership)");
-  }
   return { cfg: c, changes };
 }
 
 const SCENARIOS = [
   {
     id: "today", name: "Today (pre-close)",
-    d: "Only the leased G-block is live from orbit. The owned 65 MHz sits idle until consummation.",
-    cfg: { aws3: "off", g: "sat", h: "off", a4main: "off", a4dl: "off", gen: "gen1" },
+    d: "The honest picture of SpaceX-as-carrier today: zero. The owned 65 MHz sits idle until consummation, and the only spectrum live from orbit — T-Mobile's leased G-block — serves T-Mobile's product, not a Starlink carrier. Click the G-block's SAT button to manually include that partner-channel capacity.",
+    cfg: { aws3: "off", g: "off", h: "off", a4main: "off", a4dl: "off", gen: "gen1" },
   },
   {
     id: "close", name: "Close day, standards as-is",
     d: "Spectrum splits along what silicon allows: n252 (2000–2020 ↑ / 2180–2200 ↓) to orbit for the phones that have it; H-block and AWS-3, already in handsets, go terrestrial.",
-    cfg: { aws3: "terr", g: "sat", h: "terr", a4main: "sat", a4dl: "sat", gen: "gen1" },
+    cfg: { aws3: "terr", g: "off", h: "terr", a4main: "sat", a4dl: "sat", gen: "gen1" },
   },
   {
     id: "hybrid", name: "The hybrid playbook (likely)",
     d: "The 2 GHz blocks run split-mode: n252 satellite service over rural geography, n70/n66 femtocell service in town — the same MHz doing different jobs in different places. V2 satellites assumed.",
-    cfg: { aws3: "terr", g: "sat", h: "terr", a4main: "split", a4dl: "split", gen: "v2" },
+    cfg: { aws3: "terr", g: "off", h: "terr", a4main: "split", a4dl: "split", gen: "v2" },
   },
   {
     id: "urban", name: "Urban-max terrestrial",
     d: "Everything ownable feeds femtocells: 45 MHz of downlink, 20 of uplink per cell. The satellite keeps only the lease — the configuration Moffett's critique assumes.",
-    cfg: { aws3: "terr", g: "sat", h: "terr", a4main: "terr", a4dl: "terr", gen: "v2" },
+    cfg: { aws3: "terr", g: "off", h: "terr", a4main: "terr", a4dl: "terr", gen: "v2" },
   },
   {
     id: "satmax", name: "Satellite-max (standards complete*)",
     d: "Every owned MHz to orbit — 30 MHz down, 45 up per beam. The deep-rural, maritime, and disaster picture, only reachable once H-block and n70 clear NTN standardization.",
-    cfg: { aws3: "sat", g: "sat", h: "sat", a4main: "sat", a4dl: "sat", gen: "v2" },
+    cfg: { aws3: "sat", g: "off", h: "sat", a4main: "sat", a4dl: "sat", gen: "v2" },
   },
   {
     id: "iot", name: "Machine / IoT overlay (2028+*)",
     d: "Uplink-heavy for physical AI: AWS-3 runs split as terrestrial n70 uplink in town AND supplemental uplink from orbit for telemetry, drones, and vehicles everywhere else.",
-    cfg: { aws3: "split", g: "sat", h: "terr", a4main: "sat", a4dl: "sat", gen: "v2" },
+    cfg: { aws3: "split", g: "off", h: "terr", a4main: "sat", a4dl: "sat", gen: "v2" },
   },
 ];
 
@@ -394,8 +390,7 @@ const ASSIGN_COLOR = { sat: C.amber, terr: C.blue, split: "url(#splitGrad)", off
 
 function ConfigLab({ cfg, setCfg, compact }) {
   const [year, setYear] = useState(2032);
-  const [gLease, setGLease] = useState(false);
-  const { cfg: cfgEff, changes } = clampCfgToYear(cfg, year, gLease);
+  const { cfg: cfgEff, changes } = clampCfgToYear(cfg, year);
   const z = calcZones(cfgEff);
   const activeScen = SCENARIOS.find((s) =>
     Object.entries(s.cfg).every(([k, v]) => cfg[k] === v)
@@ -438,12 +433,7 @@ function ConfigLab({ cfg, setCfg, compact }) {
         Model year: <strong>{year}</strong>{year >= 2032 ? " — all gates assumed cleared" : " — assignments auto-adjusted to what's available"}
         <input type="range" min="2026" max="2032" value={year} onChange={(e) => setYear(+e.target.value)} />
       </label>
-      {year >= 2028 && (
-        <div className="tglRow" style={{ marginBottom: 8 }}>
-          <button className={"genBtn" + (!gLease ? " on" : "")} onClick={() => setGLease(false)}>G-block lease lapses in competing era (default)</button>
-          <button className={"genBtn" + (gLease ? " on" : "")} onClick={() => setGLease(true)}>Assume T-Mobile lease persists</button>
-        </div>
-      )}
+
       {changes.length > 0 && (
         <div className="feasBox" style={{ borderLeftColor: C.amber }}>
           <span className="feasYear" style={{ color: C.amber }}>⚠ Auto-adjusted for {year}:</span>
@@ -3016,7 +3006,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v31 · H-block UL verdict</span>
+        <span className="buildTag">build v32 · G-block default-off</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
