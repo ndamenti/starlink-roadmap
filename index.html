@@ -2368,6 +2368,48 @@ function NtnPanel() {
         <div className="bench"><div className="benchT">Rel-19 unlocks the owned spectrum</div><div className="benchW">Native 5G NR NTN with n252 support (Qualcomm X105-class) is what finally puts SpaceX's 40 MHz of AWS-4 within reach of a consumer device from orbit.</div></div>
         <div className="bench"><div className="benchT">Efficiency everywhere</div><div className="benchW">Fewer blind retransmissions (NTN HARQ), scheduled uplink that assumes correct timing, better link adaptation — quietly one of the biggest capacity unlocks in the next-gen system.</div></div>
       </div>
+      <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
+        <div className="eyebrow" style={{ marginBottom: 6 }}>Same MHz, two protocols — what the SCS → NTN transition is worth</div>
+        <p className="body" style={{ fontSize: 13, marginBottom: 12 }}>
+          <strong>SCS — Supplemental Coverage from Space</strong> — is the FCC framework (2024) that lets a satellite
+          transmit on a terrestrial carrier's band to completely <em>unmodified</em> phones: the satellite impersonates a
+          terrestrial cell, no 3GPP standards required. It's how today's G-block service works and how the H-block goes
+          live ~2027. The NTN path is the opposite bargain: wait for standards and new handsets, get the efficiency.
+          Same 5 MHz of H-block downlink, both regimes:
+        </p>
+        <div className="benchGrid">
+          <div className="bench" style={{ borderLeft: `2px solid ${C.amber}` }}>
+            <div className="benchT" style={{ color: C.amber }}>Adapted-LTE via SCS · from ~2027</div>
+            <div className="benchW">
+              <strong>0.62 Mbps/MHz</strong> (UPM-measured) → a 5 MHz H-block DL cell carries <strong>~3–5 Mbps, shared</strong>;
+              uplink at the ~0.10 Mbps/MHz floor. Works with <em>every LTE phone in existence</em>, satellite-unaware.
+              The permanent taxes: blind HARQ repeats, whole-cell conservative margins, beam-edge degradation, wasteful
+              random access — the Panel-4 penalties, paid forever.
+            </div>
+          </div>
+          <div className="bench" style={{ borderLeft: `2px solid ${C.blue}` }}>
+            <div className="benchT" style={{ color: C.blue }}>NR-NTN (Rel-19) · ~2029+ (work item unfiled)</div>
+            <div className="benchW">
+              <strong>2.48 Mbps/MHz</strong> (claim-anchored ≈ 4×) → the same 5 MHz carries <strong>~12 Mbps, ~20+ with
+              MIMO</strong>; uplink ~0.30 Mbps/MHz (2–3× — the biggest gainer, since unaware phones waste most on the
+              uplink). Requires Rel-19/X105-class handsets <em>and</em> a 3GPP band-addition work item nobody has filed.
+            </div>
+          </div>
+        </div>
+        <p className="body" style={{ fontSize: 12.5, marginTop: 10 }}>
+          <strong style={{ color: C.green }}>The value ramp: ~4× downlink, ~3× uplink from the same MHz</strong> — the
+          economic case for eventually filing the 3GPP work item, and the FCC's milestone ladder encodes the same
+          expectation (DL spectral efficiency 300 → 600 kbps/MHz over nine years, largely from NTN-capable devices).
+          The regimes aren't either/or: the 2027 satellites run both simultaneously — adapted-LTE on G+H for hundreds of
+          millions of legacy phones, NR-NTN on n252 for the growing Rel-19 fleet — so service value ratchets up as
+          spectrum and handsets migrate from the first bucket to the second.
+        </p>
+        <p className="body" style={{ fontSize: 12, color: C.dim }}>
+          Caveat (unverified): the H-block's 1915–1920 uplink half sits just above the classic PCS handset transmit range
+          and outside n70's uplink — whether shipping phones can transmit it is an open question, so the 2027 H-block
+          story may be downlink-only (+5 MHz DL real, "2×5" optimistic).
+        </p>
+      </div>
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>kHz values are illustrative — chosen to show the mechanism, not measured figures (the real uplink requirement is far stricter: ±0.1 ppm ≈ ±200 Hz at 2 GHz). The structural point is real: legacy beams are usability-capped at the edges; NTN handsets remove the cap.</p>
       <Info label="Rel-17 vs Rel-18 vs Rel-19 — are they the same thing?">
         No — they're successive versions of the global cellular standard (3GPP numbers its releases like software), each
@@ -2969,7 +3011,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v29 · lease-lapse toggle + sawtooth axes</span>
+        <span className="buildTag">build v30 · SCS-vs-NTN value card</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
