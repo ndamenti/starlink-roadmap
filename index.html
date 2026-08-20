@@ -1554,6 +1554,129 @@ function FootprintPanel() {
         extrapolations rather than guesses. It remains an estimate: real constellation design juggles inclinations,
         planes, and phasing that no single factor captures.
       </Info>
+      <Info label="why more satellites ≠ smaller beams (how coverage becomes capacity)">
+        A common misreading of the ladder: that launching more satellites shrinks the beams. It doesn't — beam size is
+        frozen into each satellite's hardware at the factory by the diffraction limit (wavelength ÷ antenna size) and the
+        orbital altitude. A thousand more identical satellites leave every beam exactly as big as before. Densification
+        actually runs on two separate clocks. <strong>Hardware generations shrink beams:</strong> Gen1's ~25 m² arrays at
+        530 km paint ~20–50 km spots; the 2027 satellites' ~5× arrays at 330 km paint ~5–10 km — and there's a floor: at
+        phone frequencies, ~4–5 km is roughly the physical minimum for buildable antennas (sub-km would need a ~50 m
+        panel; nobody's flying that — see the beam-size lab below). <strong>Fleet growth densifies by stacking:</strong>
+        more satellites overhead means more beams available per km², higher revisit duty-cycle per cell — and, subtly,
+        <em> steeper average look angles</em>: with ten satellites in view instead of two, every cell gets handed to one
+        nearly overhead, pushing more of the map into the full-menu reuse-1 zone (Panel 3). That last effect means
+        per-cell spectrum and efficiency improve purely from fleet count, with zero hardware change — a capacity gain
+        hiding inside a coverage number. So the ladder's real meaning: ~650 saturates coverage; everything beyond
+        multiplies capacity along three compounding axes — beams-per-area, duty cycle, and look-angle quality — until the
+        aperture floor, regulatory power-density ceilings, and the launch treadmill become the binding constraints.
+        15,000 satellites isn't more coverage; it's the same coverage served ~20× more densely at steadily steeper angles.
+      </Info>
+    </div>
+  );
+}
+
+function BeamSizeLab() {
+  const [D, setD] = useState(11.2);   // aperture side, m
+  const [f, setF] = useState(2.0);    // GHz
+  const [h, setH] = useState(330);    // km
+  const [be, setBe] = useState(90);   // beam elevation at the ground spot, deg
+  const lam = 0.2998 / f;             // wavelength, m
+  const th = lam / D;                 // beamwidth, rad (λ/D convention)
+  const s = Math.sin((be * Math.PI) / 180);
+  const nadirKm = th * h;
+  const slant = h / s;
+  const across = th * slant;          // km, cross-track
+  const along = across / s;           // km, along look direction
+  const area = Math.PI * (across / 2) * (along / 2);
+  const Dsub = lam * h;               // aperture side for 1-km nadir cells at this f & h
+  const PRESETS = [
+    { n: "V2-Mini D2C (today)", D: 5.0, f: 2.0, h: 530 },
+    { n: "Dedicated D2C 2027", D: 11.2, f: 2.0, h: 330 },
+    { n: "AST BlueBird Block 2", D: 14.9, f: 0.85, h: 520 },
+  ];
+  const isPre = (p) => Math.abs(D - p.D) < 0.15 && Math.abs(f - p.f) < 0.03 && Math.abs(h - p.h) < 6;
+  const k = Math.min(360 / Math.max(along, 0.001), 46); // px per km, capped
+  return (
+    <div className="card" style={{ borderTop: `2px solid #C79BFF` }}>
+      <div className="eyebrow" style={{ color: "#C79BFF" }}>Panel 1b · Beam-size lab — panel size × frequency × altitude × look angle → spot on the ground</div>
+      <p className="body" style={{ marginBottom: 10 }}>
+        Four knobs fully determine a spot beam. <strong>Panel size</strong>: bigger antenna → narrower beam (diffraction:
+        beamwidth ≈ wavelength ÷ panel side). <strong>Frequency</strong>: higher frequency → shorter wavelength → narrower
+        beam (why low-band partner spectrum re-widens AST's beams despite its giant panel). <strong>Altitude</strong>:
+        the beam is a cone — farther away, wider spot. <strong>Look angle</strong>: off-nadir, the slant is longer and the
+        landing oblique → the ellipse from Panel 1. Presets are real systems; then break physics on purpose — drag the
+        panel slider and watch what sub-km cells would demand.
+      </p>
+      <div className="tglRow" style={{ marginBottom: 10 }}>
+        {PRESETS.map((p) => (
+          <button key={p.n} className={"genBtn" + (isPre(p) ? " on" : "")}
+            onClick={() => { setD(p.D); setF(p.f); setH(p.h); }}>{p.n}</button>
+        ))}
+      </div>
+      <div className="split" style={{ alignItems: "start" }}>
+        <div>
+          <label className="sliderL">Antenna panel side: <strong>{D.toFixed(1)} m</strong> (~{(D * D).toFixed(0)} m² aperture)
+            <input type="range" min="3" max="60" step="0.1" value={D} onChange={(e) => setD(+e.target.value)} /></label>
+          <label className="sliderL">Frequency: <strong>{f.toFixed(2)} GHz</strong> (λ = {(lam * 100).toFixed(1)} cm)
+            <input type="range" min="0.7" max="3.5" step="0.05" value={f} onChange={(e) => setF(+e.target.value)} /></label>
+          <label className="sliderL">Orbital altitude: <strong>{h} km</strong>
+            <input type="range" min="300" max="700" step="5" value={h} onChange={(e) => setH(+e.target.value)} /></label>
+          <label className="sliderL">Beam elevation at the spot: <strong>{be}°</strong> {be >= 88 ? "(nadir)" : ""}
+            <input type="range" min="25" max="90" value={be} onChange={(e) => setBe(+e.target.value)} /></label>
+          <div className="statGrid" style={{ marginTop: 10 }}>
+            <div className="stat"><div className="statL">Beamwidth</div><div className="statV">~{(th * 57.296).toFixed(2)}°</div></div>
+            <div className="stat"><div className="statL">Spot at nadir</div><div className="statV">~{nadirKm.toFixed(1)} km ⌀</div></div>
+            <div className="stat"><div className="statL">Spot at {be}°</div><div className="statV" style={{ color: C.amber }}>~{across.toFixed(1)} × {along.toFixed(1)} km · ~{area.toFixed(0)} km²</div></div>
+            <div className="stat"><div className="statL">Panel needed for 1-km cells here</div>
+              <div className="statV" style={{ color: "#C79BFF" }}>~{Dsub.toFixed(0)} m side (~{(Dsub * Dsub / 1000).toFixed(1)}k m²)</div></div>
+          </div>
+        </div>
+        <svg viewBox="0 0 440 300" style={{ width: "100%", display: "block" }} role="img" aria-label="To-scale ground spot ellipse with kilometre dimensions">
+          <text x="220" y="22" textAnchor="middle" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">GROUND SPOT · TO SCALE</text>
+          <ellipse cx="220" cy="150" rx={Math.max((along / 2) * k, 1.5)} ry={Math.max((across / 2) * k, 1.5)}
+            fill="rgba(199,155,255,0.18)" stroke="#C79BFF" strokeWidth="1.5" style={{ transition: "all 150ms" }} />
+          <line x1={220 - (along / 2) * k} y1="150" x2={220 + (along / 2) * k} y2="150" stroke="#C79BFF" strokeWidth="0.8" strokeDasharray="2 3" opacity="0.7" />
+          <text x="220" y={158 + Math.max((across / 2) * k, 1.5) + 14} textAnchor="middle" fill="#C79BFF" fontSize="10.5" fontFamily="var(--mono)">
+            {along.toFixed(1)} km along look · {across.toFixed(1)} km across
+          </text>
+          {/* 10 km scale bar */}
+          {10 * k < 380 && (
+            <g>
+              <line x1={30} y1="272" x2={30 + 10 * k} y2="272" stroke={C.text} strokeWidth="2" opacity="0.7" />
+              <text x={30 + 5 * k} y="288" textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">10 km</text>
+            </g>
+          )}
+          {/* 1 km reference circle */}
+          {0.5 * k >= 1.5 && (
+            <g>
+              <circle cx="395" cy="255" r={0.5 * k} fill="none" stroke={C.green} strokeWidth="1" strokeDasharray="2 2" />
+              <text x="395" y={262 + 0.5 * k + 10} textAnchor="middle" fill={C.green} fontSize="8.5" fontFamily="var(--mono)">1 km</text>
+            </g>
+          )}
+        </svg>
+      </div>
+      <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
+        Model: beamwidth ≈ λ/D (half-power convention varies by taper; treat sizes as ±30% estimates); spot at elevation ε
+        widens by the longer slant (h/sin ε) and stretches 1/sin ε along the look direction; scan loss not included. Preset
+        notes: today's D2C payload ~25 m² per Musk's 2022 description; 2027 ≈ 5× → ~125 m² (derived); AST Block 2 ≈ 223 m²
+        but shown on 850 MHz partner low-band — at equal frequency AST's larger panel beats SpaceX's by ~1.3× linear, while
+        on low-band its beams re-widen. The purple readout is the punchline: sub-km cells at phone frequencies demand a
+        ~50 m panel (~2,500 m²) — an order of magnitude beyond anything flying or announced, which is why every D2C player
+        converges on kilometers-wide cells and why femtocells, not satellites, own street-level capacity.
+      </p>
+      <Info label="walk me through the four knobs">
+        Think of the antenna as a flashlight lens. <strong>Bigger lens, tighter beam:</strong> a radio antenna can only
+        focus energy into a cone about as narrow as (wavelength ÷ its own width) — physics' non-negotiable exchange rate.
+        Double the panel, halve the beam. <strong>Higher frequency, tighter beam:</strong> shorter waves focus better
+        through the same lens — which cuts both ways: AST's enormous 223 m² panel makes tight beams on 2 GHz, but when it
+        serves a partner's 850 MHz low-band the wavelength more than doubles and the beams balloon back out. Spectrum
+        choice is silently a beam-size choice. <strong>Lower altitude, smaller spot:</strong> the beam is a cone; catch it
+        closer to the apex and the circle is smaller — one of the reasons the 2027 fleet drops to ~330 km.
+        <strong> Steeper look, rounder spot:</strong> Panel 1's ellipse story — off-nadir, the cone travels farther and
+        lands obliquely. Multiply the four together and you get the punchline number: at 2 GHz from 330 km, 1-km cells
+        need a ~50-meter antenna. That's not an engineering challenge, it's a different class of spacecraft — so the
+        entire industry's cells bottom out at kilometers, and the last mile of capacity density belongs to the ground.
+      </Info>
     </div>
   );
 }
@@ -2033,6 +2156,7 @@ function CoverageTab() {
         </p>
       </div>
       <FootprintPanel />
+      <BeamSizeLab />
       <BeamMap />
       <AdaptiveReusePanel />
       <NtnPanel />
