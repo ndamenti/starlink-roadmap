@@ -262,7 +262,7 @@ const READINESS = {
 
 const BLOCKS = [
   { id: "aws3", label: "1695–1710", sub: "AWS-3 · UL only · 15 MHz", ulMHz: 15, dlMHz: 0, allowed: ["terr", "sat", "split", "off"], satGate: "satellite SUL pending 3GPP NTN + FCC Earth-to-space treatment" },
-  { id: "g", label: "G-block", sub: "1910/1990 · 2×5 · leased", ulMHz: 5, dlMHz: 5, allowed: ["sat", "off"], satGate: null },
+  { id: "g", label: "G-block", sub: "1910/1990 · 2×5 · leased (T-Mobile)", ulMHz: 5, dlMHz: 5, allowed: ["sat", "off"], satGate: "T-Mobile license, revocable SCS lease — partner-channel only; cannot underwrite a competing carrier" },
   { id: "h", label: "H-block", sub: "1915/1995 · 2×5 · owned", ulMHz: 5, dlMHz: 5, allowed: ["terr", "sat", "split", "off"], satGate: "satellite use pending 3GPP NTN standardization" },
   { id: "a4main", label: "2000–2020", sub: "AWS-4 · the switch-hitter · 20 MHz", ulMHz: 20, dlMHz: 20, allowed: ["sat", "terr", "split", "off"], satGate: null, switcher: true },
   { id: "a4dl", label: "2180–2200", sub: "AWS-4 DL / n66 SDL · 20 MHz", ulMHz: 0, dlMHz: 20, allowed: ["sat", "terr", "split", "off"], satGate: null },
@@ -302,6 +302,30 @@ function calcZones(cfg) {
     gates,
     boundary: cfg.a4main === "split",
   };
+}
+
+function feasibility(cfg) {
+  const satU = (a) => a === "sat" || a === "split";
+  const terrU = (a) => a === "terr" || a === "split";
+  const gates = [];
+  let year = 2026;
+  const need = (y, t) => { gates.push({ y, t }); if (y > year) year = y; };
+  if (["aws3", "h", "a4main", "a4dl"].some((id) => cfg[id] !== "off"))
+    need(2027, "EchoStar deal consummation (deadline Nov 2027)");
+  if (cfg.g !== "off")
+    gates.push({ y: 2026, t: "G-block: T-Mobile spectrum under a revocable SCS lease — partner-channel capacity serving T-Mobile service, NOT fourth-carrier capacity" });
+  if (satU(cfg.a4main) || satU(cfg.a4dl))
+    need(2027, "n252 from orbit: 2027 satellites + first Rel-19/X105-class handsets (handset volume ~2028\u201329)");
+  if (satU(cfg.h))
+    need(2027, "H-block from orbit: via SCS adapted-LTE once the D2C application grants (~2027); full NR-NTN needs a 3GPP band work item nobody has filed (~2029+ if championed)");
+  if (satU(cfg.aws3))
+    need(2029, "AWS-3 supplemental UL from orbit: 3GPP NTN + FCC Earth-to-space treatment — the furthest-out gate");
+  if (["aws3", "h", "a4main", "a4dl"].some((id) => terrU(cfg[id])))
+    need(2028, "Femtocell/terrestrial layer at meaningful scale (service from ~late 2027)");
+  if (cfg.gen === "v2")
+    need(2027, "Dedicated D2C satellites flying at scale (launches from mid-2027)");
+  gates.sort((a, b) => a.y - b.y);
+  return { year, gates };
 }
 
 const SCENARIOS = [
@@ -378,7 +402,18 @@ function ConfigLab({ cfg, setCfg, compact }) {
             className={"scenBtn" + (activeScen && activeScen.id === s.id ? " on" : "")}>{s.name}</button>
         ))}
       </div>
-      {activeScen && <p className="body" style={{ fontSize: 13, color: C.dim, marginBottom: 12 }}>{activeScen.d}</p>}
+      {activeScen && <p className="body" style={{ fontSize: 13, color: C.dim, marginBottom: 8 }}>{activeScen.d}</p>}
+      {(() => {
+        const fz = feasibility(cfg);
+        return (
+          <div className="feasBox">
+            <span className="feasYear">{fz.year <= 2026 ? "\u25F7 Possible today (2026)" : "\u25F7 Earliest plausible: ~" + fz.year}</span>
+            {fz.gates.map((g, i) => (
+              <span key={i} className="feasGate"><em>{g.y}</em> {g.t}</span>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* allocation strip */}
       <svg viewBox={`0 0 ${stripW} ${stripH + 34}`} style={{ width: "100%", display: "block" }} role="img" aria-label="Spectrum block allocation strip">
@@ -2579,6 +2614,7 @@ function StarlinkMobileRoadmap() {
           letter-spacing: 0.08em; color: ${C.amber}; text-decoration: none;
           border: 1px solid ${C.line}; border-radius: 6px; padding: 7px 12px; }
         .srcA:hover { border-color: ${C.amber}; }
+        .buildTag { display: inline-block; margin-left: 10px; font-family: var(--mono); font-size: 9.5px; color: ${C.dim}; opacity: 0.7; }
         .tabs { max-width: 1120px; margin: 22px auto 18px; display: flex; gap: 6px; flex-wrap: wrap;
           border-bottom: 1px solid ${C.line}; }
         .tab { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; color: ${C.dim};
@@ -2741,6 +2777,11 @@ function StarlinkMobileRoadmap() {
         .sb.derived { background: ${C.blue}; }
         .sk { font-family: var(--mono); font-size: 9px; color: ${C.dim}; margin-left: 8px; font-style: normal; }
         .srcAllLink { display: block; margin-top: 6px; font-family: var(--mono); font-size: 10.5px; color: #C79BFF; text-decoration: none; }
+        .feasBox { background: ${C.panel2}; border: 1px solid ${C.line}; border-left: 2px solid ${C.green};
+          border-radius: 0 6px 6px 0; padding: 8px 14px; margin-bottom: 12px; }
+        .feasYear { display: block; font-family: var(--mono); font-size: 12px; color: ${C.green}; margin-bottom: 4px; }
+        .feasGate { display: block; font-size: 11.5px; color: ${C.dim}; line-height: 1.55; padding: 1px 0; }
+        .feasGate em { font-family: var(--mono); font-style: normal; color: #C7D1E2; margin-right: 6px; }
         @media (max-width: 900px) { .genGrid { grid-template-columns: 1fr; } }
         .specRow { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0;
           border-bottom: 1px solid ${C.line}; font-size: 12.5px; }
@@ -2764,6 +2805,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
+        <span className="buildTag">build v27 · feasibility engine</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
