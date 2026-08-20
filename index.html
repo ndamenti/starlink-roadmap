@@ -278,7 +278,7 @@ const SAT_EFF = { gen1: { dl: 0.62, ul: 0.10 }, v2: { dl: 2.48, ul: 0.30 } };
 function calcZones(cfg) {
   const inSat = (a) => a === "sat" || a === "split";
   const inTerr = (a) => a === "terr" || a === "split";
-  let satDL = 0, satUL = 0, terrDL = 0, terrUL = 0;
+  let satDL = 0, satUL = 0, terrDL = 0, terrUL = 0, leasedDL = 0, leasedUL = 0;
   const gates = [];
   for (const b of BLOCKS) {
     const a = cfg[b.id];
@@ -286,6 +286,7 @@ function calcZones(cfg) {
       // a4main in sat mode contributes UL only (n252 uplink); its DL twin is a4dl
       satUL += b.id === "a4main" ? 20 : b.ulMHz;
       satDL += b.id === "a4main" ? 0 : b.dlMHz;
+      if (b.id === "g") { leasedDL += b.dlMHz; leasedUL += b.ulMHz; }
       if (b.satGate) gates.push(`${b.label}: ${b.satGate}`);
     }
     if (inTerr(a)) {
@@ -297,6 +298,7 @@ function calcZones(cfg) {
   const eff = SAT_EFF[cfg.gen];
   return {
     satDLMHz: satDL, satULMHz: satUL, terrDLMHz: terrDL, terrULMHz: terrUL,
+    leasedDL, leasedUL, ownedDL: satDL - leasedDL, ownedUL: satUL - leasedUL,
     satDLMbps: satDL * eff.dl, satULMbps: satUL * eff.ul,
     terrDLMbps: terrDL * cfg.terrEff, terrULMbps: terrUL * cfg.terrEff * 0.6,
     gates,
@@ -326,6 +328,28 @@ function feasibility(cfg) {
     need(2027, "Dedicated D2C satellites flying at scale (launches from mid-2027)");
   gates.sort((a, b) => a.y - b.y);
   return { year, gates };
+}
+
+function clampCfgToYear(cfg, year) {
+  const c = { ...cfg };
+  const changes = [];
+  const chg = (id, from, to, why) => { c[id] = to; changes.push(`${id === "a4main" ? "2000\u20132020" : id === "a4dl" ? "2180\u20132200" : id.toUpperCase()}: ${from.toUpperCase()} \u2192 ${to.toUpperCase()} — ${why}`); };
+  const ownedIds = ["aws3", "h", "a4main", "a4dl"];
+  for (const id of ownedIds) {
+    if (cfg[id] !== "off" && year < 2027) { chg(id, cfg[id], "off", "owned spectrum unusable before deal consummation (2027)"); continue; }
+    const a = c[id];
+    const satOK = id === "aws3" ? year >= 2029 : year >= 2027;
+    const terrOK = year >= 2028;
+    if (a === "sat" && !satOK) chg(id, a, terrOK && id !== "a4dl" ? "terr" : "off", id === "aws3" ? "satellite SUL opens ~2029 (3GPP + FCC)" : "satellite path opens ~2027");
+    else if (a === "terr" && !terrOK) chg(id, a, "off", "femtocell layer at scale from ~2028");
+    else if (a === "split") {
+      if (!satOK && terrOK) chg(id, a, "terr", "satellite half not yet available");
+      else if (satOK && !terrOK) chg(id, a, "sat", "terrestrial half not yet at scale (~2028)");
+      else if (!satOK && !terrOK) chg(id, a, "off", "neither mode available yet");
+    }
+  }
+  if (cfg.gen === "v2" && year < 2027) { c.gen = "gen1"; changes.push("Satellites: V2 \u2192 Gen1 — dedicated D2C satellites fly from mid-2027"); }
+  return { cfg: c, changes };
 }
 
 const SCENARIOS = [
@@ -365,7 +389,9 @@ const ASSIGN_LABEL = { sat: "SAT", terr: "TERR", split: "SPLIT", off: "OFF" };
 const ASSIGN_COLOR = { sat: C.amber, terr: C.blue, split: "url(#splitGrad)", off: C.line };
 
 function ConfigLab({ cfg, setCfg, compact }) {
-  const z = calcZones(cfg);
+  const [year, setYear] = useState(2032);
+  const { cfg: cfgEff, changes } = clampCfgToYear(cfg, year);
+  const z = calcZones(cfgEff);
   const activeScen = SCENARIOS.find((s) =>
     Object.entries(s.cfg).every(([k, v]) => cfg[k] === v)
   );
@@ -403,8 +429,18 @@ function ConfigLab({ cfg, setCfg, compact }) {
         ))}
       </div>
       {activeScen && <p className="body" style={{ fontSize: 13, color: C.dim, marginBottom: 8 }}>{activeScen.d}</p>}
+      <label className="sliderL" style={{ marginBottom: 8 }}>
+        Model year: <strong>{year}</strong>{year >= 2032 ? " — all gates assumed cleared" : " — assignments auto-adjusted to what's available"}
+        <input type="range" min="2026" max="2032" value={year} onChange={(e) => setYear(+e.target.value)} />
+      </label>
+      {changes.length > 0 && (
+        <div className="feasBox" style={{ borderLeftColor: C.amber }}>
+          <span className="feasYear" style={{ color: C.amber }}>\u26A0 Auto-adjusted for {year}:</span>
+          {changes.map((c2, i) => <span key={i} className="feasGate">{c2}</span>)}
+        </div>
+      )}
       {(() => {
-        const fz = feasibility(cfg);
+        const fz = feasibility(cfgEff);
         return (
           <div className="feasBox">
             <span className="feasYear">{fz.year <= 2026 ? "\u25F7 Possible today (2026)" : "\u25F7 Earliest plausible: ~" + fz.year}</span>
@@ -450,9 +486,10 @@ function ConfigLab({ cfg, setCfg, compact }) {
         <div className="zone" style={{ borderColor: C.amber }}>
           <div className="zoneHead" style={{ color: C.amber }}>SATELLITE ZONE · per beam (tens of km, shared)</div>
           <div className="zoneNums">
-            <div><span className="zN">{z.satDLMbps.toFixed(1)}</span><span className="zU">Mbps ↓</span><div className="zM">{z.satDLMHz} MHz DL</div></div>
-            <div><span className="zN">{z.satULMbps.toFixed(1)}</span><span className="zU">Mbps ↑</span><div className="zM">{z.satULMHz} MHz UL</div></div>
+            <div><span className="zN">{z.satDLMbps.toFixed(1)}</span><span className="zU">Mbps ↓</span><div className="zM">{z.satDLMHz} MHz DL{z.leasedDL > 0 ? ` (${z.ownedDL} owned + ${z.leasedDL} leased*)` : ""}</div></div>
+            <div><span className="zN">{z.satULMbps.toFixed(1)}</span><span className="zU">Mbps ↑</span><div className="zM">{z.satULMHz} MHz UL{z.leasedUL > 0 ? ` (${z.ownedUL} owned + ${z.leasedUL} leased*)` : ""}</div></div>
           </div>
+          {z.leasedDL > 0 && <div className="labNote" style={{ marginTop: 6 }}>* leased G-block = partner-channel capacity serving T-Mobile's service under a revocable lease — not fourth-carrier spectrum</div>}
           <div className="tglRow" style={{ marginTop: 10 }}>
             <button onClick={() => setCfg({ ...cfg, gen: "gen1" })} className={"genBtn" + (cfg.gen === "gen1" ? " on" : "")}>Gen1 · measured</button>
             <button onClick={() => setCfg({ ...cfg, gen: "v2" })} className={"genBtn" + (cfg.gen === "v2" ? " on" : "")}>V2 · claims (4×)</button>
@@ -2150,6 +2187,101 @@ function AdaptiveReusePanel() {
   );
 }
 
+function SawtoothPanel() {
+  const [fleet, setFleet] = useState(650);
+  const [pool, setPool] = useState(20);
+  const mask = 30, alt = 330;
+  // coverage multiplicity: satellites simultaneously visible above mask, calibrated via cap geometry
+  const capf = (1 - Math.cos(Math.acos((6371 / (6371 + alt)) * Math.cos((mask * Math.PI) / 180)) - (mask * Math.PI) / 180)) / 2;
+  const kVis = Math.max((fleet * capf) / 3.3 * 3.3, fleet * capf); // expected sats in view ≈ N × cap fraction
+  // simulate passes: each pass rises mask→peak→mask over PD steps; serving elevation = max over active passes
+  const STEPS = 240, PD = 60;
+  const rand = mulberry(fleet * 31 + pool * 7);
+  const passes = [];
+  const spawnP = kVis / PD; // expected concurrent ≈ kVis
+  for (let t = -PD; t < STEPS; t++) {
+    let n = 0;
+    if (spawnP >= 1) { n = Math.floor(spawnP); if (rand() < spawnP - n) n++; }
+    else if (rand() < spawnP) n = 1;
+    for (let j = 0; j < n; j++) passes.push({ t0: t, pk: mask + (90 - mask) * Math.sqrt(rand()) });
+  }
+  const elev = [], thr = [];
+  const regime = (e) => (e >= 60 ? 1 : e >= 42 ? 2 : 3);
+  for (let t = 0; t < STEPS; t++) {
+    let best = 0;
+    for (const p of passes) {
+      const dt = t - p.t0;
+      if (dt < 0 || dt > PD) continue;
+      const frac = 1 - Math.abs(dt - PD / 2) / (PD / 2);
+      const e = mask + (p.pk - mask) * frac;
+      if (e > best) best = e;
+    }
+    elev.push(best);
+    if (best < mask) { thr.push(0); continue; }
+    const r = regime(best);
+    const mhz = r === 1 ? pool : r === 2 ? (pool * 2) / 3 : pool / 3;
+    thr.push(mhz * 2.48 * Math.sin((best * Math.PI) / 180));
+  }
+  const valid = thr.filter((x) => x > 0);
+  const mean = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
+  const sorted = [...thr].sort((a, b) => a - b);
+  const p10 = sorted[Math.floor(STEPS * 0.1)], p90 = sorted[Math.floor(STEPS * 0.9)];
+  const outage = (thr.filter((x) => x === 0).length / STEPS) * 100;
+  const r1pct = (elev.filter((e) => e >= 60).length / STEPS) * 100;
+  const maxT = pool * 2.48;
+  const X = (t) => 40 + (t / STEPS) * 830;
+  const Ye = (e) => 120 - ((e - 0) / 90) * 95;
+  const Yt = (v) => 285 - (v / maxT) * 120;
+  const line = (arr, Y) => arr.map((v, t) => `${t === 0 ? "M" : "L"} ${X(t).toFixed(1)} ${Y(v).toFixed(1)}`).join(" ");
+  return (
+    <div className="card" style={{ borderTop: `2px solid ${C.red}` }}>
+      <div className="eyebrow" style={{ color: C.red }}>Panel 5 · The elevation sawtooth — throughput variance vs fleet size <Src k="measured" topic="derived" /></div>
+      <p className="body" style={{ marginBottom: 10 }}>
+        Your serving satellite isn't a constant — it rises from the mask, peaks, and recedes, replaced by the next. With a
+        sparse fleet, the <em>best</em> satellite in your sky sometimes peaks barely above the mask, and throughput
+        sawtooths violently between full-menu overhead moments and rationed low-angle troughs. Saturate the sky and the
+        max over many visible satellites never drops far: the sawtooth flattens into a ripple. Drag the fleet slider and
+        watch <strong>variance</strong>, not just the average — variance is what a phone call actually experiences.
+      </p>
+      <div className="tglRow" style={{ marginBottom: 8, alignItems: "center" }}>
+        <button className={"genBtn" + (pool === 20 ? " on" : "")} onClick={() => setPool(20)}>20 MHz DL · n252 today</button>
+        <button className={"genBtn" + (pool === 25 ? " on" : "")} onClick={() => setPool(25)}>25 MHz · + H-block (future)</button>
+        <label className="sliderL" style={{ flex: 1, minWidth: 220, fontSize: 12 }}>
+          Fleet size: <strong>{fleet.toLocaleString()}</strong> satellites (~{kVis.toFixed(1)} typically in view above {mask}°)
+          <input type="range" min="650" max="15000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
+        </label>
+      </div>
+      <svg viewBox="0 0 900 320" style={{ width: "100%", display: "block" }} role="img" aria-label="Serving satellite elevation and per-cell throughput over time for the selected fleet size">
+        <text x="40" y="16" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">SERVING SATELLITE ELEVATION (best in view)</text>
+        <line x1="40" y1={Ye(mask)} x2="870" y2={Ye(mask)} stroke={C.red} strokeWidth="0.8" strokeDasharray="4 4" />
+        <text x="874" y={Ye(mask) + 3} fill={C.red} fontSize="8.5" fontFamily="var(--mono)">mask {mask}°</text>
+        <line x1="40" y1={Ye(60)} x2="870" y2={Ye(60)} stroke={C.green} strokeWidth="0.8" strokeDasharray="4 4" />
+        <text x="874" y={Ye(60) + 3} fill={C.green} fontSize="8.5" fontFamily="var(--mono)">reuse-1 ≥60°</text>
+        <path d={line(elev, Ye)} fill="none" stroke={C.green} strokeWidth="1.3" />
+        <text x="40" y="168" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">PER-CELL DL THROUGHPUT (Panel 3 model: MHz by reuse regime × 2.48 × sin ε)</text>
+        <line x1="40" y1={Yt(0)} x2="870" y2={Yt(0)} stroke={C.line} />
+        <line x1="40" y1={Yt(maxT)} x2="870" y2={Yt(maxT)} stroke={C.line} strokeDasharray="3 4" opacity="0.6" />
+        <text x="874" y={Yt(maxT) + 3} fill={C.dim} fontSize="8.5" fontFamily="var(--mono)">{maxT.toFixed(0)} Mbps ceiling</text>
+        <path d={line(thr, Yt)} fill="none" stroke={C.amber} strokeWidth="1.4" />
+        <text x="455" y="314" textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">time → (~a few orbital passes, schematic)</text>
+      </svg>
+      <div className="statGrid" style={{ marginTop: 10 }}>
+        <div className="stat"><div className="statL">Mean per-cell DL</div><div className="statV">~{mean.toFixed(0)} Mbps</div></div>
+        <div className="stat"><div className="statL">p10 – p90 swing</div><div className="statV" style={{ color: C.amber }}>{p10.toFixed(0)} – {p90.toFixed(0)} Mbps {mean > 0 ? `(±${(((p90 - p10) / 2 / mean) * 100).toFixed(0)}%)` : ""}</div></div>
+        <div className="stat"><div className="statL">Time in reuse-1 (≥60°)</div><div className="statV" style={{ color: C.green }}>{r1pct.toFixed(0)}%</div></div>
+        <div className="stat"><div className="statL">Coverage gaps (no sat ≥{mask}°)</div><div className="statV" style={{ color: outage > 0.5 ? C.red : C.dim }}>{outage.toFixed(1)}% of time</div></div>
+      </div>
+      <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
+        Model (derived, schematic): satellites-in-view ≈ fleet × visible-cap fraction at 330 km; passes rise
+        mask → random peak → mask; the phone is served by the highest satellite in view; throughput uses Panel 3's exact
+        anchors and reuse thresholds. Real constellations phase their planes to smooth this further — treat the shapes and
+        the variance trend as the point, not the exact Mbps. The strategic reading: fleet growth's least-advertised
+        product is <em>consistency</em> — the same slider that adds capacity is quietly deleting the troughs.
+      </p>
+    </div>
+  );
+}
+
 function NtnPanel() {
   const [ntn, setNtn] = useState(false);
   const [pos, setPos] = useState(62); // percent of beam half-width, -100..100
@@ -2273,6 +2405,7 @@ function CoverageTab() {
       <BeamMap />
       <AdaptiveReusePanel />
       <NtnPanel />
+      <SawtoothPanel />
     </div>
   );
 }
@@ -2805,7 +2938,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v27 · feasibility engine</span>
+        <span className="buildTag">build v28 · leased-split + year slider + sawtooth</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
