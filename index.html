@@ -1479,6 +1479,48 @@ function FootprintPanel() {
           {satElev >= 85 ? " — straight overhead: a circle" : satElev <= 30 ? " — low in the sky: strongly elliptical" : ""}
           <input type="range" min="25" max="90" value={satElev} onChange={(e) => setSatElev(+e.target.value)} />
         </label>
+        {(() => {
+          const regime = satElev >= 60 ? 1 : satElev >= 42 ? 2 : 3;
+          const FC = [C.amber, C.blue, "#C79BFF"];
+          const laneMHz = regime === 1 ? 20 : regime === 2 ? 20 * (2 / 3) : 20 / 3;
+          const dlCell = laneMHz * 2.48 * Math.sin(se);
+          const r0 = 26, ry = r0, rx = r0 * Math.min(bStretch, 2.6);
+          const cellsN = 5;
+          const startX = 440 - ((cellsN - 1) * rx);
+          return (
+            <div style={{ marginTop: 12, background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 8, padding: "12px 16px" }}>
+              <div className="eyebrow" style={{ fontSize: 9.5, marginBottom: 4 }}>Inset — a sample cell cluster at this elevation: reuse regime &amp; effective throughput</div>
+              <svg viewBox="0 0 880 110" style={{ width: "100%", display: "block" }} role="img" aria-label="Row of neighboring cells at the current beam shape, striped by frequency reuse assignment">
+                <defs>
+                  {Array.from({ length: cellsN }, (_, i) => (
+                    <clipPath key={i} id={`bcell${i}`}><ellipse cx={startX + i * 2 * rx} cy="52" rx={rx} ry={ry} /></clipPath>
+                  ))}
+                </defs>
+                {Array.from({ length: cellsN }, (_, i) => {
+                  const stripes = regime === 1 ? [0, 1, 2] : regime === 2 ? (i % 2 ? [0, 1] : [1, 2]) : [[0, 1, 2][i % 3]];
+                  const sh = (2 * ry) / stripes.length;
+                  const cx = startX + i * 2 * rx;
+                  return (
+                    <g key={i}>
+                      <g clipPath={`url(#bcell${i})`}>
+                        {stripes.map((f, j) => (
+                          <rect key={j} x={cx - rx} y={52 - ry + j * sh} width={2 * rx} height={sh} fill={FC[f]} opacity="0.4" />
+                        ))}
+                      </g>
+                      <ellipse cx={cx} cy="52" rx={rx} ry={ry} fill="none" stroke={C.dim} strokeWidth="1" />
+                    </g>
+                  );
+                })}
+                <text x="860" y="30" textAnchor="end" fill={regime === 1 ? C.green : regime === 2 ? C.amber : "#C79BFF"} fontSize="12" fontFamily="var(--mono)">
+                  Reuse-{regime}{regime === 1 ? " · every cell: all lanes" : regime === 2 ? " · neighbors split 2 of 3" : " · one lane per cell"}
+                </text>
+                <text x="860" y="52" textAnchor="end" fill={C.text} fontSize="12" fontFamily="var(--mono)">~{laneMHz.toFixed(laneMHz < 10 ? 1 : 0)} MHz DL per cell</text>
+                <text x="860" y="74" textAnchor="end" fill={C.amber} fontSize="13" fontFamily="var(--mono)">~{dlCell.toFixed(0)} Mbps DL · shared per cell</text>
+                <text x="860" y="94" textAnchor="end" fill={C.dim} fontSize="8.5" fontFamily="var(--mono)">same anchors &amp; thresholds as Panel 3 (20 MHz pool · 2.48 Mbps/MHz × sin ε)</text>
+              </svg>
+            </div>
+          );
+        })()}
         <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 8 }}>
           This is why the big footprint's edge cells are served by ellipses while its center gets circles (Panel 3), and why
           the scheduler hands every cell to whichever overhead satellite sees it most steeply. (The slant range also grows
