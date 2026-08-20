@@ -79,7 +79,7 @@ const PHASES = [
     sats: "Next-gen V2 D2C: 5G NR NTN, 20×20 MHz beams, MIMO",
     orbit: 0.32,
     summary:
-      "The pivot from tenant to landlord. H-block (1915–1920 / 1995–2000 MHz) is an existing IMT band phones can use almost immediately — doubling per-beam capacity the day it lights up. Next-gen D2C satellites move from adapted LTE to native 5G NR NTN with arrays ~5× larger, 16× more beams and 4× bandwidth per beam. SpaceX claims up to 150 Mbps to an unmodified phone.",
+      "The pivot from tenant to landlord. H-block (1915–1920 / 1995–2000 MHz) brings a downlink half phones can already receive (via n70) — its uplink half is stranded outside every handset band — doubling per-beam capacity the day it lights up. Next-gen D2C satellites move from adapted LTE to native 5G NR NTN with arrays ~5× larger, 16× more beams and 4× bandwidth per beam. SpaceX claims up to 150 Mbps to an unmodified phone.",
     events: [
       { d: "2027", t: "Next-gen D2D satellites begin launching; Qualcomm X105 (3GPP Rel-19) is the first modem with native Starlink Mobile 5G.", side: "space" },
       { d: "Q3 2027", t: "Life-saving data services target; voice within months after.", side: "space" },
@@ -193,7 +193,7 @@ const BANDS = [
 /* Ledger: role of each range under each configuration */
 const LEDGER = [
   { f: "1695–1710", sat: { t: "future supplemental UL from orbit (SUL — pending NTN + FCC)", s: "off" }, ter: { t: "n70 uplink — phone → femtocell", s: "up" }, hot: false },
-  { f: "1915–1920 (H)", sat: { t: "future satellite UL (pending NTN standardization)", s: "off" }, ter: { t: "PCS-adjacent uplink", s: "up" }, hot: false },
+  { f: "1915–1920 (H)", sat: { t: "stranded: no phone transmits it — FCC: needs standards + equipment (or relief)", s: "off" }, ter: { t: "PCS-adjacent uplink — no handset band covers it (B25 ends at 1915)", s: "off" }, hot: true },
   { f: "1995–2000 (H)", sat: { t: "future satellite DL (pending NTN standardization)", s: "off" }, ter: { t: "n70 downlink (bottom 5 MHz)", s: "down" }, hot: false },
   { f: "2000–2020 (AWS-4)", sat: { t: "SATELLITE UPLINK — phone → satellite (n252)", s: "up" }, ter: { t: "FEMTOCELL DOWNLINK — femtocell → phone (n70)", s: "down" }, hot: true },
   { f: "2180–2200 (AWS-4)", sat: { t: "satellite downlink (n252)", s: "down" }, ter: { t: "supplemental downlink via n66 (in all phones)", s: "down" }, hot: false },
@@ -2405,9 +2405,14 @@ function NtnPanel() {
           spectrum and handsets migrate from the first bucket to the second.
         </p>
         <p className="body" style={{ fontSize: 12, color: C.dim }}>
-          Caveat (unverified): the H-block's 1915–1920 uplink half sits just above the classic PCS handset transmit range
-          and outside n70's uplink — whether shipping phones can transmit it is an open question, so the 2027 H-block
-          story may be downlink-only (+5 MHz DL real, "2×5" optimistic).
+          Verified (Aug 2026): the 2027 H-block story is <strong>downlink-only</strong>. No shipping phone transmits
+          1915–1920 — Band 25's uplink ends at exactly 1915, and n70's designers deliberately paired the H-block DL with
+          the AWS-3 uplink (1695–1710) instead. The FCC said it plainly in the EchoStar assignment order: 3GPP NTN
+          standards don't support 1915–1920, and SpaceX "must pursue standards and equipment support or seek additional
+          regulatory relief." SpaceX's application requests the uplink anyway (as future "ordinary handsets" under Part
+          27) — a filing about intent, not existing devices. So: +5 MHz DL is real and near-term; the uplink half needs
+          new standards <em>and</em> new phone RF hardware regardless of protocol path. Legacy-phone uplink comes from the
+          G-block and (waivers pending) AWS-3's 1695–1710, which n70 phones genuinely transmit.
         </p>
       </div>
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>kHz values are illustrative — chosen to show the mechanism, not measured figures (the real uplink requirement is far stricter: ±0.1 ppm ≈ ±200 Hz at 2 GHz). The structural point is real: legacy beams are usability-capped at the edges; NTN handsets remove the cap.</p>
@@ -3011,7 +3016,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v30 · SCS-vs-NTN value card</span>
+        <span className="buildTag">build v31 · H-block UL verdict</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
