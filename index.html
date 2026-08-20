@@ -639,7 +639,7 @@ function StoryTab({ phase, setPhase }) {
 
         <div>
           <div className="card">
-            <div className="eyebrow">What happens</div>
+            <div className="eyebrow">What happens <Src k={({ 0: "scs", 1: "echostar", 2: "nextgen", 3: "d2capp" })[p.id] || "echostar"} topic={({ 0: "scs", 1: "echostar", 2: "nextgen", 3: "d2c-application" })[p.id] || "echostar"} /></div>
             {p.events.map((e, i) => (
               <div key={i} className="evt">
                 <div className="evtHead">
@@ -651,7 +651,7 @@ function StoryTab({ phase, setPhase }) {
             ))}
           </div>
           <div className="card" style={{ borderLeft: `2px solid ${C.red}` }}>
-            <div className="eyebrow" style={{ color: C.red }}>What can stop it</div>
+            <div className="eyebrow" style={{ color: C.red }}>What can stop it <Src k="analysts" topic="analysts" /></div>
             {p.gates.map((g, i) => <div key={i} className="gate">{g}</div>)}
           </div>
         </div>
