@@ -1768,13 +1768,15 @@ function AdaptiveReusePanel() {
       </div>
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
         Zone thresholds (~60°/~40°) are illustrative — real systems schedule reuse dynamically, per beam, per moment; the
-        lanes are thirds of the selected pool. Both DL bands face the same two gates — 3GPP NTN standardization, then
-        handset silicon — from opposite sides: n252 is standardized but awaits Rel-19 handsets; the H-block is in handsets
-        but awaits standardization. Flat-ground geometry; curvature ignored below ~600 km. Worth noticing: the MWC-claimed
-        "20×20 MHz beams" for 2027 means each beam gets the <em>entire</em> owned allocation per direction — implicitly a
-        bet on reuse-1 operation with spatial isolation, which is exactly what smaller beams buy. Spectrum efficiency is
-        highest under the satellite and rationed toward the edges, which is why the scheduler prefers assigning each cell
-        to whichever overhead satellite sees it most steeply.
+        lanes are thirds of the selected pool. Gate status (2026): n252 is a Release-19 NTN band, first validated live on
+        commercial modem silicon at CES 2026 (Keysight × Samsung) — handsets ~2027, volume ~2028–29. The H-block has
+        <em> no 3GPP NTN work item</em>; but there's a bypass: under the FCC's SCS framework the satellite can serve it as
+        an ordinary LTE band to satellite-unaware phones (exactly how today's G-block service works, no NTN standard
+        involved) — plausibly ~2027, gated on the pending D2C application and deal close. The full NR-NTN version of the
+        25 MHz pool needs a band-addition work item nobody has filed yet (~1 yr in 3GPP once championed + 1–2 yrs silicon
+        → ~2029 earliest). Worth noticing: the MWC-claimed "20×20 MHz beams" for 2027 means each beam gets the
+        <em> entire</em> owned allocation per direction — implicitly a bet on reuse-1 operation with spatial isolation,
+        which is exactly what smaller beams buy.
       </p>
       <Info label="walk me through this panel slowly">
         Imagine standing outdoors with one satellite overhead. If you're at <strong>nadir</strong> — directly beneath it —
