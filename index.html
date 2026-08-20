@@ -275,7 +275,7 @@ const BLOCKS = [
    TERR: user-set 2–6 bps/Hz small-cell efficiency. */
 const SAT_EFF = { gen1: { dl: 0.62, ul: 0.10 }, v2: { dl: 2.48, ul: 0.30 } };
 
-function calcZones(cfg) {
+function calcZones(cfg, year = 2032) {
   const inSat = (a) => a === "sat" || a === "split";
   const inTerr = (a) => a === "terr" || a === "split";
   let satDL = 0, satUL = 0, terrDL = 0, terrUL = 0, leasedDL = 0, leasedUL = 0;
@@ -284,8 +284,10 @@ function calcZones(cfg) {
     const a = cfg[b.id];
     if (inSat(a)) {
       // a4main in sat mode contributes UL only (n252 uplink); its DL twin is a4dl
-      satUL += b.id === "a4main" ? 20 : b.ulMHz;
+      const hULStranded = b.id === "h" && year < 2029;
+      satUL += b.id === "a4main" ? 20 : hULStranded ? 0 : b.ulMHz;
       satDL += b.id === "a4main" ? 0 : b.dlMHz;
+      if (hULStranded) gates.push("H-block satellite = DL-only (5 MHz): the 1915\u20131920 uplink is stranded \u2014 no handset band covers it; needs new standards + phone RF (~2029+ at best)");
       if (b.id === "g") { leasedDL += b.dlMHz; leasedUL += b.ulMHz; }
       if (b.satGate) gates.push(`${b.label}: ${b.satGate}`);
     }
@@ -391,7 +393,7 @@ const ASSIGN_COLOR = { sat: C.amber, terr: C.blue, split: "url(#splitGrad)", off
 function ConfigLab({ cfg, setCfg, compact }) {
   const [year, setYear] = useState(2032);
   const { cfg: cfgEff, changes } = clampCfgToYear(cfg, year);
-  const z = calcZones(cfgEff);
+  const z = calcZones(cfgEff, year);
   const activeScen = SCENARIOS.find((s) =>
     Object.entries(s.cfg).every(([k, v]) => cfg[k] === v)
   );
@@ -471,8 +473,8 @@ function ConfigLab({ cfg, setCfg, compact }) {
                 fillOpacity={a === "split" ? 1 : a === "off" ? 0 : 0.28}
                 stroke={a === "sat" ? C.amber : a === "terr" ? C.blue : a === "split" ? C.text : C.line}
                 strokeWidth="1.3" strokeDasharray={a === "off" ? "4 3" : "0"} />
-              <text x={x + w / 2} y={stripH / 2 - 3} textAnchor="middle" fill={C.text} fontSize="12" fontWeight="600" fontFamily="var(--disp)">{b.label}</text>
-              <text x={x + w / 2} y={stripH / 2 + 12} textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">{b.sub}</text>
+              <text paintOrder="stroke" stroke="#0B1322" strokeWidth="3.5" x={x + w / 2} y={stripH / 2 - 3} textAnchor="middle" fill={C.text} fontSize="12" fontWeight="600" fontFamily="var(--disp)">{b.label}</text>
+              <text paintOrder="stroke" stroke="#0B1322" strokeWidth="3" x={x + w / 2} y={stripH / 2 + 12} textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">{b.sub}</text>
               <text x={x + w / 2} y={stripH + 12} textAnchor="middle"
                 fill={a === "sat" ? C.amber : a === "terr" ? C.blue : a === "split" ? C.text : C.dim}
                 fontSize="10" fontFamily="var(--mono)" letterSpacing="0.12em">{ASSIGN_LABEL[a]}{b.satGate && (a === "sat" || a === "split") ? "*" : ""}</text>
@@ -481,6 +483,14 @@ function ConfigLab({ cfg, setCfg, compact }) {
           );
         })}
       </svg>
+      {Object.values(cfgEff).includes("split") && (
+        <div className="labNote" style={{ marginTop: 6 }}>
+          SPLIT = the geographic mode-switch: the <em>same MHz</em> runs satellite mode (n252) over rural geography and
+          terrestrial mode (n70/n66) inside towns — different places, never simultaneously in one place. Both zone
+          readouts show its full bandwidth because each zone runs it across its own territory; that's partitioning, not
+          double-counting.
+        </div>
+      )}
 
       {/* zone outputs */}
       <div className="zoneGrid">
@@ -3006,7 +3016,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v32 · G-block default-off</span>
+        <span className="buildTag">build v33 · tested: H-UL year-aware + SPLIT legend</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
