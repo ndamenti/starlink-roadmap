@@ -2519,14 +2519,17 @@ function StitchPanel() {
     }
   });
   const beams = [];
-  const hopN = Math.floor(t * 1.5); // discrete dwell intervals — beams re-point, they don't sweep
-  const hash01 = (x) => { const v = Math.sin(x) * 43758.5453; return v - Math.floor(v); }; // uniform, degeneracy-free
+  const hopN = Math.floor(t * 1.5); // discrete dwell intervals
+  // Fixed sunflower lattice of cell sites tiles each patch evenly; hopping = a sliding subset of sites is lit.
+  // Consecutive sunflower indices are themselves evenly spread, so the lit set stays uniform at every instant,
+  // and shifting the window a few steps per hop swaps only a few beams — churn without chaos.
+  const NPOS = Math.max(nb * 3, 60);
+  const GA = 2.39996;
   zsats.forEach(([zx, zy], si) => {
     for (let m = 0; m < nb; m++) {
-      const u1 = hash01(m * 12.9898 + si * 78.233 + hopN * 37.719);
-      const u2 = hash01(m * 39.3468 + si * 11.135 + hopN * 83.155);
-      const rr = patchPx * 0.92 * Math.sqrt(u1);
-      const a = u2 * 6.28318;
+      const j = (hopN * 7 + si * 13 + m) % NPOS;
+      const rr = patchPx * 0.95 * Math.sqrt((j + 0.5) / NPOS);
+      const a = j * GA;
       beams.push([zx + rr * Math.cos(a), zy + rr * Math.sin(a), si]);
     }
   });
@@ -2668,8 +2671,10 @@ function StitchPanel() {
         share</strong> — <em>not</em> its total reach: the satellite's physical footprint is ~1,200 km across (Panel 1's amber circle — its <em>reach</em>), but with
         neighbors present it only serves the patch where it is the steepest option, and the fleet slider sets that
         share's size. The colored dots inside a share are a <strong>sample of the spot beams that satellite is pointing
-        this instant</strong> (beams drawn to scale; the count slider sets the sample) — it covers the rest of its share
-        by discretely re-pointing them every dwell interval, which is why they jump rather than sweep. The dotted grid
+        this instant</strong> (beams drawn to scale; the count slider sets the sample). Beam sites form a fixed, evenly
+        spaced lattice of cells across the share; each dwell interval a <em>different subset</em> of sites lights up —
+        a few beams switch per hop while the rest hold — so coverage stays even while the pattern churns calmly rather
+        than sweeping or teleporting. The dotted grid
         is Earth-fixed cells. Phones sit in the gaps between strips — the genuinely contested ground. Beams come to phones, not the other way
         around: most cycles the scheduler assigns one of the serving satellite's beams to the phone's own cell — drawn
         highlighted with a double ring, off-centerline wherever the phone sits — with the solid line linking phone to
@@ -3393,7 +3398,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v49 · gap phones ×10 + degeneracy-free beams</span>
+        <span className="buildTag">build v50 · fixed cell-sites, sliding lit subset</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
