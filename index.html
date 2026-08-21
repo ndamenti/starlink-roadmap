@@ -2451,6 +2451,7 @@ function StitchPanel() {
   const [zspd, setZspd] = useState(60);
   const [nb, setNb] = useState(19);
   const [nph, setNph] = useState(1);
+  const [nstr, setNstr] = useState(3);
   const [t, setT] = useState(0);
   useEffect(() => {
     if (spd === 0 && zspd === 0) return;
@@ -2501,7 +2502,8 @@ function StitchPanel() {
   });
   // ZOOM: three adjacent SE-bound strips, satellites streaming with their spot-beam clusters over an Earth-fixed cell grid
   const zw = 560, zh = 340;
-  const zSpanKm = 3.2 * spacing;
+  const zSpanKm = (nstr + 0.2) * spacing;
+  const trks = Array.from({ length: nstr }, (_, i) => i - (nstr - 1) / 2);
   const zk = zw / zSpanKm;
   const zHKm = zh / zk;
   const beamR = Math.max(2.35 * zk, 1.1);
@@ -2509,8 +2511,8 @@ function StitchPanel() {
   const zoff = (t * 7.3 * zspd) % spacing;
   const PAL = ["#FFB04C", "#5BA8FF", "#C79BFF", "#6BDB8F", "#FF9ECF", "#4DD0E1"];
   const zsats = [];
-  [-1, 0, 1].forEach((tr) => {
-    const phase = tr === 0 ? 0 : spacing / 2;
+  trks.forEach((tr, ti) => {
+    const phase = ti % 2 ? spacing / 2 : 0;
     for (let n = -1; n * spacing <= zHKm + 2 * spacing; n++) {
       const yKm = ((n * spacing + phase + zoff) % (zHKm + 2 * spacing)) - spacing;
       zsats.push([zw / 2 + tr * spacing * zk, yKm * zk]);
@@ -2573,7 +2575,7 @@ function StitchPanel() {
         </text>
       </svg>
       <p className="body" style={{ fontSize: 13, marginTop: 14, marginBottom: 6 }}>
-        <strong style={{ color: C.green }}>Zoom — the strip machine:</strong> three adjacent descending strips, face-on.
+        <strong style={{ color: C.green }}>Zoom — the strip machine:</strong> {nstr} adjacent descending {nstr > 1 ? "strips" : "strip"}, face-on.
         Each satellite streams down its strip carrying its spot-beam cluster (beams to scale, a slider-set sample of the
         ~700 — slide it up and watch the patch saturate); each satellite's beams wear its color, so a phone's link
         visibly changes color at handover. The dotted grid is Earth-fixed cells; the scheduler assigns one of the
@@ -2595,12 +2597,16 @@ function StitchPanel() {
           Phones: <strong>{nph}</strong> · lit {litCount}/{nph}
           <input type="range" min="1" max="5" step="1" value={nph} onChange={(e) => setNph(+e.target.value)} />
         </label>
+        <label className="sliderL" style={{ flex: 1, minWidth: 120 }}>
+          Strips: <strong>{nstr}</strong>
+          <input type="range" min="1" max="5" step="1" value={nstr} onChange={(e) => setNstr(+e.target.value)} />
+        </label>
       </div>
       <div className="split" style={{ alignItems: "start" }}>
         <svg viewBox={`0 0 ${zw} ${zh}`} style={{ width: "100%", display: "block", background: C.panel2, borderRadius: 8 }} role="img" aria-label="Zoomed strips with moving satellites casting color-coded spot-beam clusters over an Earth-fixed cell grid, with phones handing over between satellites">
           {Array.from({ length: Math.ceil(zw / 18) }, (_, i) => <line key={"v" + i} x1={i * 18} y1="0" x2={i * 18} y2={zh} stroke={C.line} strokeWidth="0.4" opacity="0.5" />)}
           {Array.from({ length: Math.ceil(zh / 18) }, (_, i) => <line key={"h" + i} x1="0" y1={i * 18} x2={zw} y2={i * 18} stroke={C.line} strokeWidth="0.4" opacity="0.5" />)}
-          {[-1, 0, 1].map((tr) => <line key={tr} x1={zw / 2 + tr * spacing * zk} y1="0" x2={zw / 2 + tr * spacing * zk} y2={zh} stroke={C.dim} strokeDasharray="2 6" opacity="0.6" />)}
+          {trks.map((tr) => <line key={tr} x1={zw / 2 + tr * spacing * zk} y1="0" x2={zw / 2 + tr * spacing * zk} y2={zh} stroke={C.dim} strokeDasharray="2 6" opacity="0.6" />)}
           {zsats.map(([zx, zy], i) => <circle key={"p" + i} cx={zx} cy={zy} r={patchPx} fill="none" stroke={PAL[i % PAL.length]} strokeWidth="0.7" opacity="0.35" />)}
           {beams.map(([bx, by, si], i) => <circle key={"b" + i} cx={bx} cy={by} r={beamR} fill={PAL[si % PAL.length]} opacity="0.7" />)}
           {zsats.map(([zx, zy], i) => <circle key={"s" + i} cx={zx} cy={zy} r="3.5" fill={PAL[i % PAL.length]} stroke="#0B1322" strokeWidth="1" />)}
@@ -3381,7 +3387,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v47 · highlighted assigned beams</span>
+        <span className="buildTag">build v48 · strips slider 1–5</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
