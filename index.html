@@ -2408,6 +2408,81 @@ function SawtoothPanel() {
   );
 }
 
+function StitchPanel() {
+  const [fleet, setFleet] = useState(2000);
+  const h = 330, Re = 6371, EARTH = 510e6, US = 8.1e6;
+  const areaPer = EARTH / fleet;
+  const spacing = 1.075 * Math.sqrt(areaPer);
+  const rServe = spacing / Math.sqrt(3);
+  const lamD = rServe / Re;
+  const eEdge = (Math.atan2(Math.cos(lamD) - Re / (Re + h), Math.sin(lamD)) * 180) / Math.PI;
+  const regime = eEdge >= 60 ? 1 : eEdge >= 42 ? 2 : 3;
+  const tone = regime === 1 ? C.green : regime === 2 ? C.amber : "#C79BFF";
+  const beamArea = Math.PI * 2.35 * 2.35;
+  const beamsNeeded = areaPer / beamArea;
+  const duty = Math.min(700 / beamsNeeded, 1) * 100;
+  const satsUS = fleet * (US / EARTH) * 1.3; // ×1.3: 53°-inclined planes crowd mid-latitudes
+  const usCapGbps = satsUS * Math.min(700, beamsNeeded) * 0.05; // 50 Mbps claim-anchored per beam
+  // schematic US map: rough polygon, km coordinates → px
+  const k = 0.185, ox = 30, oy = 40;
+  const usPath = "M 60,930 L 60,330 L 340,220 L 700,150 L 1100,90 L 1600,60 L 2100,60 L 2600,120 L 3050,60 L 3400,90 L 3800,220 L 4150,320 L 4260,560 L 4100,700 L 4000,980 L 4150,1300 L 4000,1560 L 3700,1500 L 3400,1620 L 3000,1560 L 2600,1620 L 2300,1560 L 2050,1750 L 1900,2100 L 1750,1900 L 1500,1620 L 1100,1500 L 700,1360 L 340,1220 L 150,1080 Z";
+  const scaledPath = usPath.replace(/([\d.]+),([\d.]+)/g, (m, x, y) => `${(ox + (+x) * k).toFixed(1)},${(oy + (+y) * k * 0.9).toFixed(1)}`);
+  // hex lattice over the bounding box, clipped to the US path
+  const sats = [];
+  const sPx = spacing * k;
+  for (let row = 0; row * sPx * 0.866 < 420; row++) {
+    for (let col = -1; col * sPx < 880; col++) {
+      sats.push([ox - 10 + col * sPx + (row % 2 ? sPx / 2 : 0), oy + row * sPx * 0.866]);
+    }
+  }
+  return (
+    <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
+      <div className="eyebrow" style={{ color: C.green }}>Panel 6 · The stitching — satellite adjacency over the US as the fleet grows <Src k="fleet" topic="derived" /></div>
+      <p className="body" style={{ marginBottom: 10 }}>
+        Every cell is served by whichever satellite sees it steepest, so the ground is partitioned into per-satellite
+        service patches whose size is set purely by fleet count. Grow the fleet and each patch shrinks — which retires
+        the low-elevation, elliptical, rationed beams from service entirely: <strong>the "channel path" narrows</strong>.
+        Drag the slider and watch the stitching tighten.
+      </p>
+      <label className="sliderL">
+        D2C fleet (global): <strong>{fleet.toLocaleString()}</strong> satellites — ~{satsUS.toFixed(0)} over the continental US at any instant
+        <input type="range" min="650" max="15000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
+      </label>
+      <svg viewBox="0 0 900 460" style={{ width: "100%", display: "block" }} role="img" aria-label="Schematic continental US with the serving-satellite lattice and per-satellite service patches at the selected fleet size">
+        <defs><clipPath id="usClip"><path d={scaledPath} /></clipPath></defs>
+        <path d={scaledPath} fill="rgba(91,168,255,0.05)" stroke={C.line} strokeWidth="1.2" />
+        <g clipPath="url(#usClip)">
+          {sats.map(([sx, sy], i) => (
+            <g key={i}>
+              <circle cx={sx} cy={sy} r={rServe * k} fill="none" stroke={tone} strokeWidth="0.8" opacity="0.45" />
+              <circle cx={sx} cy={sy} r="2.2" fill={tone} />
+            </g>
+          ))}
+        </g>
+        <text x="450" y="452" textAnchor="middle" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">
+          schematic map · dots = serving satellites (nadirs) · circles = each one's service patch (~{Math.round(2 * rServe).toLocaleString()} km across)
+        </text>
+      </svg>
+      <div className="statGrid" style={{ marginTop: 10 }}>
+        <div className="stat"><div className="statL">Satellite spacing</div><div className="statV">~{Math.round(spacing).toLocaleString()} km</div></div>
+        <div className="stat"><div className="statL">Worst-case serving elevation (patch edge)</div><div className="statV" style={{ color: tone }}>~{Math.max(eEdge, 25).toFixed(0)}° → {regime === 1 ? "all reuse-1, near-circular beams" : regime === 2 ? "transition at edges" : "rationed, elliptical edges"}</div></div>
+        <div className="stat"><div className="statL">Beam positions per patch vs ~700 available</div><div className="statV">~{Math.round(beamsNeeded).toLocaleString()} → duty ~{duty < 10 ? duty.toFixed(1) : duty.toFixed(0)}%</div></div>
+        <div className="stat"><div className="statL">US aggregate (claim-anchored ceiling)</div><div className="statV" style={{ color: C.amber }}>~{usCapGbps >= 1000 ? (usCapGbps / 1000).toFixed(1) + " Tbps" : Math.round(usCapGbps) + " Gbps"}</div></div>
+      </div>
+      <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
+        Model (derived, schematic): hex partition of the globe by fleet count (×1.3 mid-latitude crowding for 53° planes);
+        patch-edge elevation from spherical geometry at 330 km; beams-per-patch = patch area ÷ 4.7 km beams; duty = ~700
+        available beams ÷ positions to cover (below 100%, coverage is time-shared by hopping — even at 15,000 satellites
+        it's ~3:1, which is why Earth-fixed cells and paging schedules exist at every fleet size). US capacity = satellites
+        over the US × beams × 50 Mbps claim-anchored — a ceiling, not a forecast. The stitching story in one line: at 650
+        satellites a patch is ~900 km wide and its edges are rationed ellipses; at 15,000 it's ~190 km and the worst beam
+        any phone ever sees is a ~74°, near-circular, full-menu beam. Fleet growth doesn't just add capacity — it deletes
+        the bad geometry.
+      </p>
+    </div>
+  );
+}
+
 function NtnPanel() {
   const [ntn, setNtn] = useState(false);
   const [pos, setPos] = useState(62); // percent of beam half-width, -100..100
@@ -2580,6 +2655,7 @@ function CoverageTab() {
       <AdaptiveReusePanel />
       <NtnPanel />
       <SawtoothPanel />
+      <StitchPanel />
     </div>
   );
 }
@@ -2720,9 +2796,8 @@ function TechTab() {
           const litPct = (litKm2 / fpKm2) * 100;
           // deterministic beam positions
           const pts = [];
-          let seed = 12345;
-          const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-          for (let n = 0; n < Math.min(g.nBeams, 700); n++) { const a = rnd() * 6.283, rr = Math.sqrt(rnd()) * R * 0.96; pts.push([cxp + rr * Math.cos(a), cyp + rr * Math.sin(a)]); }
+          const NPT = Math.min(g.nBeams, 700), GA = 2.39996; // sunflower: quasi-uniform, isolation-spaced
+          for (let n = 0; n < NPT; n++) { const rr = R * 0.97 * Math.sqrt((n + 0.5) / NPT), a = n * GA; pts.push([cxp + rr * Math.cos(a), cyp + rr * Math.sin(a)]); }
           return (
             <div className="split" style={{ alignItems: "start" }}>
               <svg viewBox="0 0 500 330" style={{ width: "100%", display: "block" }} role="img" aria-label="Satellite footprint drawn to scale with instantaneous beam coverage">
@@ -2733,7 +2808,7 @@ function TechTab() {
                 ))}
                 {bg !== "v3" && (
                   <text x={cxp} y={cyp + R + 22} textAnchor="middle" fill={g.tone} fontSize="10.5" fontFamily="var(--mono)">
-                    beams drawn TO SCALE ({g.beamD} km ⌀) — lit right now: ~{litPct < 0.1 ? litPct.toFixed(2) : litPct.toFixed(1)}% of the footprint
+                    beams TO SCALE ({g.beamD} km ⌀) · lit now: ~{litPct < 0.1 ? litPct.toFixed(2) : litPct.toFixed(1)}% — placement is scheduler-driven (drawn quasi-uniform); the pattern hops across cells every few ms
                   </text>
                 )}
                 {bg === "v3" && (
@@ -2745,10 +2820,11 @@ function TechTab() {
                 <div className="specRow"><span className="specL">Altitude · mask</span><span className="specV">{alt} km · {g.mask}°</span></div>
                 <div className="specRow"><span className="specL">Footprint (steerable)</span><span className="specV">~{Math.round(fpKm).toLocaleString()} km across (~{(fpKm2 / 1e6).toFixed(1)}M km²)</span></div>
                 {bg !== "v3" && <div className="specRow"><span className="specL">Beam diameter (nadir)</span><span className="specV">~{g.beamD} km</span></div>}
+                {bg === "v2" && <div className="specRow"><span className="specL">Beam at the 25° edge</span><span className="specV" style={{ whiteSpace: "normal" }}>~10 × 24 km ellipse (2.4:1, ecc. ≈ 0.91, ~11× nadir area): 2.15× slant widening × 2.37× oblique stretch</span></div>}
                 <div className="specRow"><span className="specL">Simultaneous beams</span><span className="specV" style={{ whiteSpace: "normal" }}>{g.nLabel}</span></div>
                 {bg !== "v3" && <div className="specRow"><span className="specL">Spectrum per beam</span><span className="specV">{g.mhzL}</span></div>}
                 {bg !== "v3" && <div className="specRow"><span className="specL">Per-beam throughput</span><span className="specV">{g.perBeam}</span></div>}
-                {bg === "v2" && <div className="specRow"><span className="specL">Per-satellite aggregate</span><span className="specV" style={{ whiteSpace: "normal", color: C.amber }}>at ~700 beams: ~9 Gbps (measured eff) → ~35 Gbps (claim-anchored) — the scale at which the \u201c100\u00d7 density\u201d arithmetic actually closes; an order less if the count reads as ~64. Undisclosed.</span></div>}
+                {bg === "v2" && <div className="specRow"><span className="specL">Per-satellite aggregate</span><span className="specV" style={{ whiteSpace: "normal", color: C.amber }}>at ~700 beams: ~9 Gbps (measured eff) → ~35 Gbps (claim-anchored) — the scale at which the "100× density" arithmetic actually closes; an order less if the count reads as ~64. Undisclosed.</span></div>}
                 {bg === "gen1" && <div className="specRow"><span className="specL">Per-satellite aggregate</span><span className="specV">~0.15 Gbps class (48 beams × ~3.1 Mbps measured)</span></div>}
               </div>
             </div>
@@ -3110,7 +3186,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v37 · beam-count reconciled (~48 / ~700)</span>
+        <span className="buildTag">build v38 · US stitching panel + edge-ellipse specs</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
