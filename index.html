@@ -2411,12 +2411,15 @@ function SawtoothPanel() {
 function StitchPanel() {
   const [fleet, setFleet] = useState(2000);
   const [spd, setSpd] = useState(60);
+  const [zspd, setZspd] = useState(60);
+  const [nb, setNb] = useState(19);
+  const [nph, setNph] = useState(1);
   const [t, setT] = useState(0);
   useEffect(() => {
-    if (spd === 0) return;
+    if (spd === 0 && zspd === 0) return;
     const id = setInterval(() => setT((x) => x + 0.1), 100);
     return () => clearInterval(id);
-  }, [spd]);
+  }, [spd, zspd]);
   const h = 330, Re = 6371, EARTH = 510e6, US = 8.1e6;
   const areaPer = EARTH / fleet;
   const spacing = 1.075 * Math.sqrt(areaPer);
@@ -2461,7 +2464,8 @@ function StitchPanel() {
   const zHKm = zh / zk;
   const beamR = Math.max(2.35 * zk, 1.1);
   const patchPx = rServe * zk;
-  const zoff = (t * 7.3 * spd) % spacing;
+  const zoff = (t * 7.3 * zspd) % spacing;
+  const PAL = ["#FFB04C", "#5BA8FF", "#C79BFF", "#6BDB8F", "#FF9ECF", "#4DD0E1"];
   const zsats = [];
   [-1, 0, 1].forEach((tr) => {
     const phase = tr === 0 ? 0 : spacing / 2;
@@ -2470,19 +2474,25 @@ function StitchPanel() {
       zsats.push([zw / 2 + tr * spacing * zk, yKm * zk]);
     }
   });
-  const NB = 19, GA2 = 2.39996;
+  const GA2 = 2.39996;
   const beams = [];
   zsats.forEach(([zx, zy], si) => {
-    for (let m = 0; m < NB; m++) {
-      const rr = patchPx * 0.92 * Math.sqrt((m + 0.5) / NB);
+    for (let m = 0; m < nb; m++) {
+      const rr = patchPx * 0.92 * Math.sqrt((m + 0.5) / nb);
       const a = m * GA2 + t * 1.6 + si; // pattern hops
       beams.push([zx + rr * Math.cos(a), zy + rr * Math.sin(a), si]);
     }
   });
-  const cell = [zw / 2 + spacing * zk * 0.45, zh * 0.5];
-  let best = null, bestD = 1e9;
-  zsats.forEach(([zx, zy]) => { const dd = Math.hypot(zx - cell[0], zy - cell[1]); if (dd < bestD) { bestD = dd; best = [zx, zy]; } });
-  const lit = beams.some(([bx, by]) => Math.hypot(bx - cell[0], by - cell[1]) < beamR + 5);
+  const PH_SPOTS = [[0.5, 0.5], [0.24, 0.34], [0.76, 0.66], [0.3, 0.74], [0.7, 0.28]];
+  const phones = PH_SPOTS.slice(0, nph).map(([fx, fy], pi) => {
+    const pxy = [zw * fx, zh * fy];
+    let bsat = 0, bd = 1e9;
+    zsats.forEach(([zx, zy], si) => { const dd = Math.hypot(zx - pxy[0], zy - pxy[1]); if (dd < bd) { bd = dd; bsat = si; } });
+    let hit = null;
+    for (const [bx, by, si] of beams) { if (Math.hypot(bx - pxy[0], by - pxy[1]) < beamR + 4) { hit = si; break; } }
+    return { pxy, serving: hit !== null ? hit : bsat, lit: hit !== null, pi };
+  });
+  const litCount = phones.filter((p) => p.lit).length;
   return (
     <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
       <div className="eyebrow" style={{ color: C.green }}>Panel 6 · The stitching — satellite adjacency over the US as the fleet grows <Src k="fleet" topic="derived" /></div>
@@ -2520,22 +2530,45 @@ function StitchPanel() {
       </svg>
       <p className="body" style={{ fontSize: 13, marginTop: 14, marginBottom: 6 }}>
         <strong style={{ color: C.green }}>Zoom — the strip machine:</strong> three adjacent descending strips, face-on.
-        Each satellite streams down its strip carrying its spot-beam cluster (beams to scale, a 19-beam sample of the
-        ~700, pattern hopping); the dotted grid is Earth-fixed cells. Watch the marked cell: beams sweep it, its serving
-        satellite recedes, the next takes over — continuous coverage stitched from moving parts.
+        Each satellite streams down its strip carrying its spot-beam cluster (beams to scale, a slider-set sample of the
+        ~700 — slide it up and watch the patch saturate); each satellite's beams wear its color, so a phone's link
+        visibly changes color at handover. The dotted grid is Earth-fixed cells; phones fill with their serving
+        satellite's color while a beam dwells on them — continuous coverage stitched from moving parts.
       </p>
+      <div className="tglRow" style={{ alignItems: "center", marginBottom: 6 }}>
+        <label className="sliderL" style={{ flex: 1, minWidth: 150 }}>
+          Strip time: <strong>{zspd === 0 ? "paused" : "×" + zspd}</strong>
+          <input type="range" min="0" max="300" step="10" value={zspd} onChange={(e) => setZspd(+e.target.value)} />
+        </label>
+        <label className="sliderL" style={{ flex: 1, minWidth: 150 }}>
+          Beams shown / satellite: <strong>{nb}</strong> <span style={{ color: C.dim }}>of ~700</span>
+          <input type="range" min="19" max="100" step="1" value={nb} onChange={(e) => setNb(+e.target.value)} />
+        </label>
+        <label className="sliderL" style={{ flex: 1, minWidth: 140 }}>
+          Phones: <strong>{nph}</strong> · lit {litCount}/{nph}
+          <input type="range" min="1" max="5" step="1" value={nph} onChange={(e) => setNph(+e.target.value)} />
+        </label>
+      </div>
       <div className="split" style={{ alignItems: "start" }}>
-        <svg viewBox={`0 0 ${zw} ${zh}`} style={{ width: "100%", display: "block", background: C.panel2, borderRadius: 8 }} role="img" aria-label="Zoomed strips with moving satellites casting spot-beam clusters over an Earth-fixed cell grid">
+        <svg viewBox={`0 0 ${zw} ${zh}`} style={{ width: "100%", display: "block", background: C.panel2, borderRadius: 8 }} role="img" aria-label="Zoomed strips with moving satellites casting color-coded spot-beam clusters over an Earth-fixed cell grid, with phones handing over between satellites">
           {Array.from({ length: Math.ceil(zw / 18) }, (_, i) => <line key={"v" + i} x1={i * 18} y1="0" x2={i * 18} y2={zh} stroke={C.line} strokeWidth="0.4" opacity="0.5" />)}
           {Array.from({ length: Math.ceil(zh / 18) }, (_, i) => <line key={"h" + i} x1="0" y1={i * 18} x2={zw} y2={i * 18} stroke={C.line} strokeWidth="0.4" opacity="0.5" />)}
           {[-1, 0, 1].map((tr) => <line key={tr} x1={zw / 2 + tr * spacing * zk} y1="0" x2={zw / 2 + tr * spacing * zk} y2={zh} stroke={C.dim} strokeDasharray="2 6" opacity="0.6" />)}
-          {zsats.map(([zx, zy], i) => <circle key={"p" + i} cx={zx} cy={zy} r={patchPx} fill="none" stroke={C.green} strokeWidth="0.7" opacity="0.3" />)}
-          {beams.map(([bx, by], i) => <circle key={"b" + i} cx={bx} cy={by} r={beamR} fill={C.amber} opacity="0.75" />)}
-          {zsats.map(([zx, zy], i) => <circle key={"s" + i} cx={zx} cy={zy} r="3.5" fill={C.green} />)}
-          {best && <line x1={cell[0]} y1={cell[1]} x2={best[0]} y2={best[1]} stroke={lit ? C.amber : C.dim} strokeWidth="1.4" strokeDasharray="4 3" />}
-          <rect x={cell[0] - 6} y={cell[1] - 6} width="12" height="12" fill={lit ? "rgba(255,176,76,0.35)" : "none"} stroke={C.amber} strokeWidth="1.5" />
-          <text x="8" y="16" fill={C.dim} fontSize="8.5" fontFamily="var(--mono)">dotted grid = Earth-fixed cells (schematic) · ▼ travel</text>
-          <text x={cell[0] + 12} y={cell[1] - 10} fill={C.amber} fontSize="9" fontFamily="var(--mono)">{lit ? "cell LIT — beam dwelling now" : "between dwells — scheduled hop returns"}</text>
+          {zsats.map(([zx, zy], i) => <circle key={"p" + i} cx={zx} cy={zy} r={patchPx} fill="none" stroke={PAL[i % PAL.length]} strokeWidth="0.7" opacity="0.35" />)}
+          {beams.map(([bx, by, si], i) => <circle key={"b" + i} cx={bx} cy={by} r={beamR} fill={PAL[si % PAL.length]} opacity="0.7" />)}
+          {zsats.map(([zx, zy], i) => <circle key={"s" + i} cx={zx} cy={zy} r="3.5" fill={PAL[i % PAL.length]} stroke="#0B1322" strokeWidth="1" />)}
+          {phones.map((p) => {
+            const scol = PAL[p.serving % PAL.length];
+            const sp = zsats[p.serving];
+            return (
+              <g key={p.pi}>
+                {sp && <line x1={p.pxy[0]} y1={p.pxy[1]} x2={sp[0]} y2={sp[1]} stroke={p.lit ? scol : C.dim} strokeWidth="1.3" strokeDasharray="4 3" opacity={p.lit ? 1 : 0.6} />}
+                <rect x={p.pxy[0] - 5} y={p.pxy[1] - 8} width="10" height="16" rx="2" fill={p.lit ? scol : "none"} fillOpacity="0.4" stroke={p.lit ? scol : C.dim} strokeWidth="1.5" />
+                <text x={p.pxy[0] + 9} y={p.pxy[1] - 10} fill={p.lit ? scol : C.dim} fontSize="8.5" fontFamily="var(--mono)">P{p.pi + 1}{p.lit ? " · lit" : ""}</text>
+              </g>
+            );
+          })}
+          <text x="8" y="16" fill={C.dim} fontSize="8.5" fontFamily="var(--mono)">dotted grid = Earth-fixed cells (schematic) · beams colored by satellite · ▼ travel</text>
         </svg>
         <div>
           <div className="stat"><div className="statL">Satellite spacing</div><div className="statV">~{Math.round(spacing).toLocaleString()} km</div></div>
@@ -2548,8 +2581,8 @@ function StitchPanel() {
         Model (derived, schematic): CONUS boundary from Natural Earth (public domain), equirectangular at 38°N; two
         interleaved hex lattices (ascending + descending families) netting the fleet's density, ×1.3 mid-latitude
         crowding for 53° planes; patch-edge elevation from spherical geometry at 330 km; duty = ~700 available beams ÷
-        positions to cover — even at 15,000 satellites it's ~3:1, which is why the zoom's cell blinks between "lit" and
-        "between dwells": Earth-fixed cells and hopping schedules exist at every fleet size. Handover cadence at real
+        positions to cover — even at 15,000 satellites it's ~3:1, which is why the zoom's phones blink between lit and
+        between-dwells: Earth-fixed cells and hopping schedules exist at every fleet size. Handover cadence at real
         speed: every ~1–2 minutes at 15,000 satellites, ~2–3 at 650. US capacity = satellites over CONUS × beams ×
         50 Mbps claim-anchored — a ceiling, not a forecast. Fleet growth doesn't just add capacity — it deletes the bad
         geometry.
@@ -3261,7 +3294,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v40 · uniform families + beam-cluster strips</span>
+        <span className="buildTag">build v41 · strip controls: clock, beams, colors, phones</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
