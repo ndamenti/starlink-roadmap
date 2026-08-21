@@ -1512,6 +1512,7 @@ const SRC = {
     { t: "Spaceflight Now — Musk's 2022 antenna description", u: "https://spaceflightnow.com/2023/12/15/live-coverage-spacex-to-launch-first-starlink-satellites-with-direct-to-cell-capability/", k: "primary" },
     { t: "Aerospace America (AIAA) — 25 m², 43 beams", u: "https://aerospaceamerica.aiaa.org/departments/direct-to-device-satellite-internet-sparks-competing-concepts/", k: "claim" },
     { t: "AST SpaceMobile — Block 2 BlueBird", u: "https://ast-science.com/next-gen-bluebird/", k: "primary" },
+    { t: "Axis Intelligence teardown — 3 DL antennas \u00d7 8 beams \u00d7 2 pol = 48 DL beams/satellite", u: "https://axis-intelligence.com/starlink-direct-to-cell-2026-mobile-sat/", k: "claim" },
   ],
   nextgen: [
     { t: "Light Reading — MWC 2026", u: "https://www.lightreading.com/satellite/at-mwc-spacex-execs-tout-starlink-v2-and-a-key-carrier-partner-for-it", k: "claim" },
@@ -2704,8 +2705,8 @@ function TechTab() {
         </div>
         {(() => {
           const G = {
-            gen1: { alt: 530, mask: 25, beamD: 16, nBeams: 43, nLabel: "up to 43 (AIAA claim); simultaneous count undisclosed", ap: "~25 m² (Musk, Aug 2022)", mhz: 5, mhzL: "5 MHz leased G-block DL", perBeam: "~3.1 Mbps (UPM-measured)", tone: C.dim },
-            v2: { alt: 330, mask: 25, beamD: 4.7, nBeams: 64, nLabel: "undisclosed — bracket ~64 to several hundred (the MWC \u201c16\u00d7\u201d multiplier has an ambiguous base: 16\u00d7 the ~4 active wide beams \u2192 64; 16\u00d7 the 43-beam antenna claim \u2192 ~700)", ap: "~125 m² (5\u00d7 claim, derived)", mhz: 20, mhzL: "20 MHz owned n252 DL per beam (the \u201c20\u00d720 MHz beams\u201d claim)", perBeam: "~12 Mbps at measured efficiency \u2192 ~50 Mbps claim-anchored", tone: C.amber },
+            gen1: { alt: 530, mask: 25, beamD: 16, nBeams: 48, nLabel: "~43–48 downlink (converging secondary sources: AIAA \u201cup to 43\u201d; payload teardown 3 DL antennas \u00d7 8 beams \u00d7 2 polarizations = 48). No SpaceX primary. Early service ran far fewer active LTE carriers — a config fact once misread as beam capability.", ap: "~25 m² (Musk, Aug 2022)", mhz: 5, mhzL: "5 MHz leased G-block DL", perBeam: "~3.1 Mbps (UPM-measured)", tone: C.dim },
+            v2: { alt: 330, mask: 25, beamD: 4.7, nBeams: 700, nLabel: "undisclosed — ~700-class derived (16\u00d7 the ~43\u201348 Gen1 beams). Residual ambiguity: MWC\u2019s \u201c20\u00d720 MHz beams\u201d could parse as twenty 20-MHz beams; the count is genuinely not public.", ap: "~125 m² (5\u00d7 claim, derived)", mhz: 20, mhzL: "20 MHz owned n252 DL per beam (the \u201c20\u00d720 MHz beams\u201d claim)", perBeam: "~12 Mbps at measured efficiency \u2192 ~50 Mbps claim-anchored", tone: C.amber },
             v3: { alt: 350, mask: 25, beamD: 3, nBeams: 0, nLabel: "different product: GHz-wide Ku beams to dish antennas (real gain, powered, steered) — 1 Tbps/satellite claim. No phone radio as specced; it backhauls the femtocells that serve phones instead.", ap: "Ku/E-band arrays", mhz: 0, mhzL: "", perBeam: "", tone: C.blue },
           };
           const g = G[bg];
@@ -2721,7 +2722,7 @@ function TechTab() {
           const pts = [];
           let seed = 12345;
           const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-          for (let n = 0; n < Math.min(g.nBeams, 200); n++) { const a = rnd() * 6.283, rr = Math.sqrt(rnd()) * R * 0.96; pts.push([cxp + rr * Math.cos(a), cyp + rr * Math.sin(a)]); }
+          for (let n = 0; n < Math.min(g.nBeams, 700); n++) { const a = rnd() * 6.283, rr = Math.sqrt(rnd()) * R * 0.96; pts.push([cxp + rr * Math.cos(a), cyp + rr * Math.sin(a)]); }
           return (
             <div className="split" style={{ alignItems: "start" }}>
               <svg viewBox="0 0 500 330" style={{ width: "100%", display: "block" }} role="img" aria-label="Satellite footprint drawn to scale with instantaneous beam coverage">
@@ -2747,16 +2748,16 @@ function TechTab() {
                 <div className="specRow"><span className="specL">Simultaneous beams</span><span className="specV" style={{ whiteSpace: "normal" }}>{g.nLabel}</span></div>
                 {bg !== "v3" && <div className="specRow"><span className="specL">Spectrum per beam</span><span className="specV">{g.mhzL}</span></div>}
                 {bg !== "v3" && <div className="specRow"><span className="specL">Per-beam throughput</span><span className="specV">{g.perBeam}</span></div>}
-                {bg === "v2" && <div className="specRow"><span className="specL">Per-satellite aggregate</span><span className="specV" style={{ whiteSpace: "normal", color: C.amber }}>bracket: ~0.8 Gbps (64 beams, measured eff) → ~3.2 Gbps (64, claim-anchored) → tens of Gbps if the beam count is in the hundreds — undisclosed</span></div>}
-                {bg === "gen1" && <div className="specRow"><span className="specL">Per-satellite aggregate</span><span className="specV">~0.1–0.3 Gbps class (measured per-beam × beam bracket)</span></div>}
+                {bg === "v2" && <div className="specRow"><span className="specL">Per-satellite aggregate</span><span className="specV" style={{ whiteSpace: "normal", color: C.amber }}>at ~700 beams: ~9 Gbps (measured eff) → ~35 Gbps (claim-anchored) — the scale at which the \u201c100\u00d7 density\u201d arithmetic actually closes; an order less if the count reads as ~64. Undisclosed.</span></div>}
+                {bg === "gen1" && <div className="specRow"><span className="specL">Per-satellite aggregate</span><span className="specV">~0.15 Gbps class (48 beams × ~3.1 Mbps measured)</span></div>}
               </div>
             </div>
           );
         })()}
         <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 10 }}>
-          Provenance: apertures and the 16× / "20×20 MHz beams" multipliers are company claims (MWC 2026); the
-          43-beam figure is AIAA's; simultaneous beam counts are <em>not disclosed</em> by SpaceX — everything labeled
-          bracket is honest arithmetic on the claims, not a spec. The V3 tab is deliberate context: swap the fingernail
+          Provenance: apertures and the 16× / "20×20 MHz beams" multipliers are company claims (MWC 2026); Gen1's
+          ~43–48 beams rest on two converging secondary sources (AIAA; payload teardown reporting) — no SpaceX primary
+          discloses either generation's count, so the ~700-class 2027 figure is honest arithmetic on claims, not a spec. The V3 tab is deliberate context: swap the fingernail
           phone antenna for a powered, steered dish and the same physics yields thousands of times more throughput —
           which is why V3 carries no phone radio and doesn't need one; it backhauls the femtocell layer while phone
           capacity scales on the dedicated D2C line. D2C is a payload and a product line — not a V-number.
@@ -3109,7 +3110,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v36 · per-satellite budget card</span>
+        <span className="buildTag">build v37 · beam-count reconciled (~48 / ~700)</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
