@@ -1626,6 +1626,9 @@ function FootprintPanel() {
           <text x="220" y={224 + rPx + 16} textAnchor="middle" fill={C.amber} fontSize="11" fontFamily="var(--mono)">
             r ≈ {Math.round(f.rKm)} km
           </text>
+          <text x="220" y={240 + rPx + 16} textAnchor="middle" fill={C.dim} fontSize="8.5" fontFamily="var(--mono)">
+            ONE satellite's REACH — pure geometry (altitude + mask); fleet size never changes this circle
+          </text>
         </svg>
         <div>
           <label className="sliderL">Minimum elevation angle phones require: <strong>{elev}°</strong>
@@ -1759,6 +1762,18 @@ function FootprintPanel() {
         coverage from 530 km. With the model anchored to a known truth, the other slider positions become credible
         extrapolations rather than guesses. It remains an estimate: real constellation design juggles inclinations,
         planes, and phasing that no single factor captures.
+      </Info>
+      <Info label="reach vs share vs illumination — the three circle sizes on this site">
+        This site draws circles at three very different scales, and they nest. <strong>Reach</strong> (this panel's amber
+        circle): everything one satellite <em>can</em> see above the elevation mask — set purely by altitude and mask
+        geometry, and completely independent of how many other satellites exist. <strong>Share</strong> (Panel 6's faint
+        circles): the slice of its reach a satellite <em>actually serves</em> once neighbors claim the rest — every cell
+        goes to whichever satellite sees it steepest, so shares shrink as the fleet grows (~900 km across at 650
+        satellites, ~190 km at 15,000) while reach never moves. <strong>Illumination</strong> (the ~5 km beam dots): the
+        ground a satellite is <em>lighting this instant</em> inside its share, hopping to cover the rest. Reach ⊇ share ⊇
+        lit beams. The satellite-count ladder on this panel is derived from reach — Earth's area ÷ one footprint (× a
+        constellation overlap factor) — which is why the fleet number is an <em>output</em> of this circle, never an
+        input to it.
       </Info>
       <Info label="why more satellites ≠ smaller beams (how coverage becomes capacity)">
         A common misreading of the ladder: that launching more satellites shrinks the beams. It doesn't — beam size is
@@ -2474,23 +2489,25 @@ function StitchPanel() {
       zsats.push([zw / 2 + tr * spacing * zk, yKm * zk]);
     }
   });
-  const GA2 = 2.39996;
   const beams = [];
+  const hopN = Math.floor(t * 1.5); // discrete dwell intervals — beams re-point, they don't sweep
   zsats.forEach(([zx, zy], si) => {
     for (let m = 0; m < nb; m++) {
-      const rr = patchPx * 0.92 * Math.sqrt((m + 0.5) / nb);
-      const a = m * GA2 + t * 1.6 + si; // pattern hops
+      const j = (m * 37 + hopN * 11 + si * 5) % nb;
+      const rr = patchPx * 0.92 * Math.sqrt((j + 0.5) / nb);
+      const a = (((m * 997 + hopN * 61 + si * 13) % 628) / 100);
       beams.push([zx + rr * Math.cos(a), zy + rr * Math.sin(a), si]);
     }
   });
-  const PH_SPOTS = [[0.5, 0.5], [0.24, 0.34], [0.76, 0.66], [0.3, 0.74], [0.7, 0.28]];
+  // phones sit in the gaps between strips (tracks lie at 0.1875 / 0.5 / 0.8125 of width)
+  const PH_SPOTS = [[0.345, 0.30], [0.655, 0.40], [0.305, 0.66], [0.695, 0.72], [0.36, 0.50]];
   const phones = PH_SPOTS.slice(0, nph).map(([fx, fy], pi) => {
     const pxy = [zw * fx, zh * fy];
     let bsat = 0, bd = 1e9;
     zsats.forEach(([zx, zy], si) => { const dd = Math.hypot(zx - pxy[0], zy - pxy[1]); if (dd < bd) { bd = dd; bsat = si; } });
-    let hit = null;
-    for (const [bx, by, si] of beams) { if (Math.hypot(bx - pxy[0], by - pxy[1]) < beamR + 4) { hit = si; break; } }
-    return { pxy, serving: hit !== null ? hit : bsat, lit: hit !== null, pi };
+    let hit = null, hitPos = null;
+    for (const [bx, by, si] of beams) { if (Math.hypot(bx - pxy[0], by - pxy[1]) < beamR + 4) { hit = si; hitPos = [bx, by]; break; } }
+    return { pxy, serving: hit !== null ? hit : bsat, lit: hit !== null, hitPos, pi };
   });
   const litCount = phones.filter((p) => p.lit).length;
   return (
@@ -2533,7 +2550,8 @@ function StitchPanel() {
         Each satellite streams down its strip carrying its spot-beam cluster (beams to scale, a slider-set sample of the
         ~700 — slide it up and watch the patch saturate); each satellite's beams wear its color, so a phone's link
         visibly changes color at handover. The dotted grid is Earth-fixed cells; phones fill with their serving
-        satellite's color while a beam dwells on them — continuous coverage stitched from moving parts.
+        satellite's color while a beam dwells on them, with the solid link pointing at the dwelling beam itself —
+        continuous coverage stitched from moving parts.
       </p>
       <div className="tglRow" style={{ alignItems: "center", marginBottom: 6 }}>
         <label className="sliderL" style={{ flex: 1, minWidth: 150 }}>
@@ -2562,7 +2580,9 @@ function StitchPanel() {
             const sp = zsats[p.serving];
             return (
               <g key={p.pi}>
-                {sp && <line x1={p.pxy[0]} y1={p.pxy[1]} x2={sp[0]} y2={sp[1]} stroke={p.lit ? scol : C.dim} strokeWidth="1.3" strokeDasharray="4 3" opacity={p.lit ? 1 : 0.6} />}
+                {p.lit && p.hitPos
+                  ? <line x1={p.pxy[0]} y1={p.pxy[1]} x2={p.hitPos[0]} y2={p.hitPos[1]} stroke={scol} strokeWidth="1.6" />
+                  : sp && <line x1={p.pxy[0]} y1={p.pxy[1]} x2={sp[0]} y2={sp[1]} stroke={C.dim} strokeWidth="1" strokeDasharray="4 3" opacity="0.55" />}
                 <rect x={p.pxy[0] - 5} y={p.pxy[1] - 8} width="10" height="16" rx="2" fill={p.lit ? scol : "none"} fillOpacity="0.4" stroke={p.lit ? scol : C.dim} strokeWidth="1.5" />
                 <text x={p.pxy[0] + 9} y={p.pxy[1] - 10} fill={p.lit ? scol : C.dim} fontSize="8.5" fontFamily="var(--mono)">P{p.pi + 1}{p.lit ? " · lit" : ""}</text>
               </g>
@@ -2577,6 +2597,18 @@ function StitchPanel() {
           <div className="stat" style={{ marginTop: 8 }}><div className="statL">US aggregate (claim-anchored ceiling)</div><div className="statV" style={{ color: C.amber }}>~{usCapGbps >= 1000 ? (usCapGbps / 1000).toFixed(1) + " Tbps" : Math.round(usCapGbps) + " Gbps"}</div></div>
         </div>
       </div>
+      <Info label="what exactly am I looking at in the strip view?">
+        A face-on window of ground about three satellite-spacings wide. The dashed vertical lines are adjacent orbital
+        strips (descending family, face-on). Each large faint circle is a passing satellite's <strong>assigned service
+        share</strong> — <em>not</em> its total reach: the satellite's physical footprint is ~1,200 km across (Panel 1's amber circle — its <em>reach</em>), but with
+        neighbors present it only serves the patch where it is the steepest option, and the fleet slider sets that
+        share's size. The colored dots inside a share are a <strong>sample of the spot beams that satellite is pointing
+        this instant</strong> (beams drawn to scale; the count slider sets the sample) — it covers the rest of its share
+        by discretely re-pointing them every dwell interval, which is why they jump rather than sweep. The dotted grid
+        is Earth-fixed cells. Phones sit in the gaps between strips — the genuinely contested ground — and when a beam
+        dwells on one, the solid colored line points at <em>that beam</em>; between dwells, a dim dashed line marks the
+        satellite currently responsible for it. Handover = the colors change.
+      </Info>
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
         Model (derived, schematic): CONUS boundary from Natural Earth (public domain), equirectangular at 38°N; two
         interleaved hex lattices (ascending + descending families) netting the fleet's density, ×1.3 mid-latitude
@@ -3294,7 +3326,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v41 · strip controls: clock, beams, colors, phones</span>
+        <span className="buildTag">build v43 · reach/share/illumination hierarchy</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
