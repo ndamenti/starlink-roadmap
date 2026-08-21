@@ -2520,18 +2520,24 @@ function StitchPanel() {
   });
   const beams = [];
   const hopN = Math.floor(t * 1.5); // discrete dwell intervals — beams re-point, they don't sweep
+  const hash01 = (x) => { const v = Math.sin(x) * 43758.5453; return v - Math.floor(v); }; // uniform, degeneracy-free
   zsats.forEach(([zx, zy], si) => {
     for (let m = 0; m < nb; m++) {
-      const j = (m * 37 + hopN * 11 + si * 5) % nb;
-      const rr = patchPx * 0.92 * Math.sqrt((j + 0.5) / nb);
-      const a = (((m * 997 + hopN * 61 + si * 13) % 628) / 100);
+      const u1 = hash01(m * 12.9898 + si * 78.233 + hopN * 37.719);
+      const u2 = hash01(m * 39.3468 + si * 11.135 + hopN * 83.155);
+      const rr = patchPx * 0.92 * Math.sqrt(u1);
+      const a = u2 * 6.28318;
       beams.push([zx + rr * Math.cos(a), zy + rr * Math.sin(a), si]);
     }
   });
-  // phones sit in the gaps between strips; the SCHEDULER brings a dwell to each active phone's cell most cycles
-  const PH_SPOTS = [[0.345, 0.30], [0.655, 0.40], [0.305, 0.66], [0.695, 0.72], [0.36, 0.50]];
-  const phones = PH_SPOTS.slice(0, nph).map(([fx, fy], pi) => {
-    const pxy = [zw * fx, zh * fy];
+  // phones live in the GAPS between strips (guaranteed off-centerline at every strip count) — where handoffs are contested
+  const gapXs = nstr > 1
+    ? trks.slice(0, -1).map((tr) => zw / 2 + (tr + 0.5) * spacing * zk)
+    : [zw / 2 - 0.38 * spacing * zk, zw / 2 + 0.38 * spacing * zk];
+  const phones = Array.from({ length: nph }, (_, pi) => {
+    const gx = gapXs[pi % gapXs.length];
+    const wob = ((((pi * 47) % 5) - 2) * 0.07) * spacing * zk; // fixed wobble, stays well clear of tracks
+    const pxy = [gx + wob, zh * (0.12 + 0.76 * ((pi * 0.618) % 1))];
     let bsat = 0, bd = 1e9;
     zsats.forEach(([zx, zy], si) => { const dd = Math.hypot(zx - pxy[0], zy - pxy[1]); if (dd < bd) { bd = dd; bsat = si; } });
     const sched = ((pi * 53 + hopN * 29 + bsat * 7) % 10) < 7; // scheduled dwell ~70% of hop intervals
@@ -2595,7 +2601,7 @@ function StitchPanel() {
         </label>
         <label className="sliderL" style={{ flex: 1, minWidth: 140 }}>
           Phones: <strong>{nph}</strong> · lit {litCount}/{nph}
-          <input type="range" min="1" max="5" step="1" value={nph} onChange={(e) => setNph(+e.target.value)} />
+          <input type="range" min="1" max="10" step="1" value={nph} onChange={(e) => setNph(+e.target.value)} />
         </label>
         <label className="sliderL" style={{ flex: 1, minWidth: 120 }}>
           Strips: <strong>{nstr}</strong>
@@ -3387,7 +3393,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v48 · strips slider 1–5</span>
+        <span className="buildTag">build v49 · gap phones ×10 + degeneracy-free beams</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
