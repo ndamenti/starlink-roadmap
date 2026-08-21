@@ -1595,6 +1595,8 @@ function FootprintPanel() {
   const bStretch = 1 / Math.sin(se);
   const f = footprintGeom(alt, elev);
   const rPx = Math.min(f.rKm * 0.19, 195);
+  const ref25 = footprintGeom(alt, 25);
+  const refPx = Math.min(ref25.rKm * 0.19, 195);
   return (
     <div className="card">
       <div className="eyebrow">Panel 1 · One satellite's reach — footprint geometry, and the satellite-count ladder <Src k="fleet" topic="fleet" /></div>
@@ -1617,8 +1619,8 @@ function FootprintPanel() {
       </div>
       <div className="split" style={{ alignItems: "center" }}>
         <svg viewBox="0 0 440 440" style={{ width: "100%", display: "block" }} role="img" aria-label="Satellite footprint circle scaled by elevation angle, with sample beam footprints stretching toward the edge">
-          <circle cx="220" cy="220" r="200" fill="none" stroke={C.line} strokeDasharray="3 4" />
-          <text x="220" y="34" textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">25° ELEVATION FOOTPRINT SCALE</text>
+          <circle cx="220" cy="220" r={refPx} fill="none" stroke={C.line} strokeDasharray="3 4" style={{ transition: "r 300ms" }} />
+          <text x="220" y={214 - refPx} textAnchor="middle" fill={C.dim} fontSize="8.5" fontFamily="var(--mono)">dashed: footprint at the 25° mask, this altitude (~{Math.round(ref25.rKm)} km) — slide to 25° and the circles coincide</text>
           <circle cx="220" cy="220" r={rPx} fill={C.amberDim} stroke={C.amber} strokeWidth="1.5" style={{ transition: "r 300ms" }} />
           <rect x="215" y="215" width="10" height="7" fill={C.amber} rx="1" />
           <rect x="203" y="217" width="9" height="4" fill="none" stroke={C.amber} strokeWidth="1" />
@@ -1627,7 +1629,7 @@ function FootprintPanel() {
             r ≈ {Math.round(f.rKm)} km
           </text>
           <text x="220" y={240 + rPx + 16} textAnchor="middle" fill={C.dim} fontSize="8.5" fontFamily="var(--mono)">
-            ONE satellite's REACH — pure geometry (altitude + mask); fleet size never changes this circle
+            ONE satellite's REACH — geometry only; fleet size never changes it
           </text>
         </svg>
         <div>
@@ -3326,7 +3328,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v43 · reach/share/illumination hierarchy</span>
+        <span className="buildTag">build v44 · live 25° reference circle</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
