@@ -2643,21 +2643,6 @@ const ARTIFACTS = [
 
 function TechTab() {
   const [bg, setBg] = useState("v2");
-  const W = 900, H = 300;
-  const CONFS = {
-    gen1: { grid: 2, r: 88, per: 3.1, label: "~3.1 Mbps / beam (measured)", stroke: C.dim, fill: "rgba(138,152,176,0.10)", listens: "phones" },
-    v2: { grid: 8, r: 13, per: 12.4, label: "20 MHz beams @ measured efficiency ≈ 12.4 Mbps", stroke: C.amber, fill: C.amberDim, listens: "phones" },
-    v3: { grid: 12, r: 8, per: 6900, label: "multi-Gbps Ku beams to dishes (claim)", stroke: C.blue, fill: C.blueDim, listens: "dishes" },
-  };
-  const conf = CONFS[bg];
-  const total = conf.grid * conf.grid * conf.per;
-  const totalStr = total >= 1000 ? "~" + (total / 1000).toFixed(0) + " Gbps" : total.toFixed(0) + " Mbps";
-  const cells = [];
-  for (let i = 0; i < conf.grid; i++) for (let j = 0; j < conf.grid; j++) cells.push([i, j]);
-  const pad = 60;
-  const step = (W - 2 * pad) / conf.grid;
-  const stepY = (H - 70) / conf.grid;
-  const rad = Math.min(step, stepY) * 0.46; // radius from spacing: clean tiling, no overlap
   return (
     <div>
       <div className="card" style={{ marginBottom: 16 }}>
@@ -2703,66 +2688,79 @@ function TechTab() {
         special case.
       </Info>
 
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="eyebrow">Spot-beam evolution — the same window of ground, three generations <Src k="nextgen" topic="nextgen" /></div>
+      <div className="card">
+        <div className="eyebrow">Per-satellite beam &amp; capacity budget — what one satellite actually is <Src k="nextgen" topic="nextgen" /></div>
         <p className="body" style={{ marginBottom: 12 }}>
-          Capacity from orbit scales by shrinking and multiplying beams: every additional beam re-uses the same MHz over a
-          smaller patch of ground, so fewer users share each one. Toggle generations and watch the reuse math — then notice
-          what changes when the listener changes. <em style={{ color: C.dim }}>The circles are an illustrative window showing
-          ratios, not the satellite's beam inventory: the real 2027 satellites serve a footprint hundreds of km across with
-          ~hundreds of simultaneous beams hopping across thousands of positions (derived, not disclosed).</em>
+          One satellite is three numbers: how far it can point (the <strong>footprint</strong>), how much ground it lights
+          at once (<strong>beams × beam area</strong>), and what each lit patch carries. The drawing is to scale — which
+          is why the beams are nearly invisible. That is the finding, not a rendering flaw: at any instant a D2C satellite
+          illuminates a fraction of a percent of its footprint, and <em>beam-hopping across Earth-fixed cells (Panel 2 in
+          Coverage) is the entire game</em>.
         </p>
         <div className="tglRow" style={{ marginBottom: 10 }}>
-          <button className={"genBtn" + (bg === "gen1" ? " on" : "")} onClick={() => setBg("gen1")}>D2C payload v1 · 4 wide beams</button>
-          <button className={"genBtn" + (bg === "v2" ? " on" : "")} onClick={() => setBg("v2")}>Dedicated D2C 2027 · 16× beams (claims)</button>
-          <button className={"genBtn" + (bg === "v3" ? " on" : "")} onClick={() => setBg("v3")}>V3 · Ku beams to dishes (claims)</button>
+          <button className={"genBtn" + (bg === "gen1" ? " on" : "")} onClick={() => setBg("gen1")}>V2-Mini D2C payload · today</button>
+          <button className={"genBtn" + (bg === "v2" ? " on" : "")} onClick={() => setBg("v2")}>Dedicated D2C · 2027</button>
+          <button className={"genBtn" + (bg === "v3" ? " on" : "")} onClick={() => setBg("v3")}>V3 · Ku to dishes (context)</button>
         </div>
-        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block" }} role="img" aria-label="Spot beam footprint comparison between satellite generations">
-          <rect x="30" y="16" width={W - 60} height={H - 56} fill="none" stroke={C.line} strokeDasharray="4 4" rx="6" />
-          <text x="40" y={H - 22} fill={C.dim} fontSize="10" fontFamily="var(--mono)">SAME SERVICE AREA (hundreds of km across)</text>
-          {cells.map(([i, j], k) => (
-            <circle key={bg + k}
-              cx={pad + step * i + step / 2}
-              cy={40 + stepY * j + stepY / 2 - 10}
-              r={rad}
-              fill={conf.fill}
-              stroke={conf.stroke} strokeWidth="1.2"
-              style={{ transition: "all 400ms" }} />
-          ))}
-          {bg === "v3" && (
-            <g>
-              <line x1={W - 150} y1="30" x2={W - 62} y2={H - 76} stroke={C.blue} strokeWidth="1.4" strokeDasharray="6 4" />
-              <text x={W - 40} y="30" textAnchor="end" fill={C.blue} fontSize="10" fontFamily="var(--mono)">E-band feeder → gateway</text>
-            </g>
-          )}
-          <text x={W - 40} y={H - 22} textAnchor="end" fill={conf.stroke} fontSize="11" fontFamily="var(--mono)">
-            {conf.grid * conf.grid} beams × {conf.label}
-          </text>
-        </svg>
-        <div className="capOut" style={{ marginTop: 6 }}>
-          <div>
-            <div className="capNum" style={{ color: conf.stroke }}>{totalStr}</div>
-            <div className="capL">aggregate over the area shown ({conf.grid * conf.grid} beams){bg === "v3" ? " ≈ one satellite's 1 Tbps claim" : ""}</div>
-          </div>
-          <div>
-            <div className="capNum" style={{ color: C.blue }}>{bg === "gen1" ? "1×" : bg === "v2" ? "~64×" : "~80,000×*"}</div>
-            <div className="capL">
-              {bg === "gen1" && "baseline"}
-              {bg === "v2" && "16× beams × 4× bandwidth at measured efficiency — link/MIMO gains lift per-beam toward the ~50 Mbps class and the total toward the ~100× density claim"}
-              {bg === "v3" && "* apples-to-oranges on purpose: these beams close links to dish antennas with real gain, not 0.25 W phones"}
+        {(() => {
+          const G = {
+            gen1: { alt: 530, mask: 25, beamD: 16, nBeams: 43, nLabel: "up to 43 (AIAA claim); simultaneous count undisclosed", ap: "~25 m² (Musk, Aug 2022)", mhz: 5, mhzL: "5 MHz leased G-block DL", perBeam: "~3.1 Mbps (UPM-measured)", tone: C.dim },
+            v2: { alt: 330, mask: 25, beamD: 4.7, nBeams: 64, nLabel: "undisclosed — bracket ~64 to several hundred (the MWC \u201c16\u00d7\u201d multiplier has an ambiguous base: 16\u00d7 the ~4 active wide beams \u2192 64; 16\u00d7 the 43-beam antenna claim \u2192 ~700)", ap: "~125 m² (5\u00d7 claim, derived)", mhz: 20, mhzL: "20 MHz owned n252 DL per beam (the \u201c20\u00d720 MHz beams\u201d claim)", perBeam: "~12 Mbps at measured efficiency \u2192 ~50 Mbps claim-anchored", tone: C.amber },
+            v3: { alt: 350, mask: 25, beamD: 3, nBeams: 0, nLabel: "different product: GHz-wide Ku beams to dish antennas (real gain, powered, steered) — 1 Tbps/satellite claim. No phone radio as specced; it backhauls the femtocells that serve phones instead.", ap: "Ku/E-band arrays", mhz: 0, mhzL: "", perBeam: "", tone: C.blue },
+          };
+          const g = G[bg];
+          const Re = 6371, alt = g.alt, mrad = (g.mask * Math.PI) / 180;
+          const lam = Math.acos((Re / (Re + alt)) * Math.cos(mrad)) - mrad;
+          const fpKm = 2 * Re * lam; // footprint diameter, km
+          const cxp = 250, cyp = 165, R = 140;
+          const kpx = (2 * R) / fpKm;
+          const litKm2 = g.nBeams * Math.PI * Math.pow(g.beamD / 2, 2);
+          const fpKm2 = Math.PI * Math.pow(fpKm / 2, 2);
+          const litPct = (litKm2 / fpKm2) * 100;
+          // deterministic beam positions
+          const pts = [];
+          let seed = 12345;
+          const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+          for (let n = 0; n < Math.min(g.nBeams, 200); n++) { const a = rnd() * 6.283, rr = Math.sqrt(rnd()) * R * 0.96; pts.push([cxp + rr * Math.cos(a), cyp + rr * Math.sin(a)]); }
+          return (
+            <div className="split" style={{ alignItems: "start" }}>
+              <svg viewBox="0 0 500 330" style={{ width: "100%", display: "block" }} role="img" aria-label="Satellite footprint drawn to scale with instantaneous beam coverage">
+                <circle cx={cxp} cy={cyp} r={R} fill="rgba(91,168,255,0.05)" stroke={C.line} strokeDasharray="4 4" />
+                <text x={cxp} y="14" textAnchor="middle" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">STEERABLE FOOTPRINT · ~{Math.round(fpKm).toLocaleString()} km across ({g.mask}° mask, {alt} km)</text>
+                {bg !== "v3" && pts.map(([px, py], n) => (
+                  <circle key={bg + n} cx={px} cy={py} r={Math.max((g.beamD / 2) * kpx, 0.7)} fill={g.tone} opacity="0.9" />
+                ))}
+                {bg !== "v3" && (
+                  <text x={cxp} y={cyp + R + 22} textAnchor="middle" fill={g.tone} fontSize="10.5" fontFamily="var(--mono)">
+                    beams drawn TO SCALE ({g.beamD} km ⌀) — lit right now: ~{litPct < 0.1 ? litPct.toFixed(2) : litPct.toFixed(1)}% of the footprint
+                  </text>
+                )}
+                {bg === "v3" && (
+                  <text x={cxp} y={cyp} textAnchor="middle" fill={C.blue} fontSize="11" fontFamily="var(--mono)">serves dishes, not phones — see note</text>
+                )}
+              </svg>
+              <div>
+                <div className="specRow"><span className="specL">Antenna</span><span className="specV">{g.ap}</span></div>
+                <div className="specRow"><span className="specL">Altitude · mask</span><span className="specV">{alt} km · {g.mask}°</span></div>
+                <div className="specRow"><span className="specL">Footprint (steerable)</span><span className="specV">~{Math.round(fpKm).toLocaleString()} km across (~{(fpKm2 / 1e6).toFixed(1)}M km²)</span></div>
+                {bg !== "v3" && <div className="specRow"><span className="specL">Beam diameter (nadir)</span><span className="specV">~{g.beamD} km</span></div>}
+                <div className="specRow"><span className="specL">Simultaneous beams</span><span className="specV" style={{ whiteSpace: "normal" }}>{g.nLabel}</span></div>
+                {bg !== "v3" && <div className="specRow"><span className="specL">Spectrum per beam</span><span className="specV">{g.mhzL}</span></div>}
+                {bg !== "v3" && <div className="specRow"><span className="specL">Per-beam throughput</span><span className="specV">{g.perBeam}</span></div>}
+                {bg === "v2" && <div className="specRow"><span className="specL">Per-satellite aggregate</span><span className="specV" style={{ whiteSpace: "normal", color: C.amber }}>bracket: ~0.8 Gbps (64 beams, measured eff) → ~3.2 Gbps (64, claim-anchored) → tens of Gbps if the beam count is in the hundreds — undisclosed</span></div>}
+                {bg === "gen1" && <div className="specRow"><span className="specL">Per-satellite aggregate</span><span className="specV">~0.1–0.3 Gbps class (measured per-beam × beam bracket)</span></div>}
+              </div>
             </div>
-          </div>
-        </div>
-        {bg === "v3" && (
-          <p className="body" style={{ fontSize: 13, color: C.dim, marginTop: 10 }}>
-            The lesson in the jump: beam capacity is set as much by <em>what's listening</em> as by the satellite. Swap the
-            fingernail phone antenna for a powered, steered dish and the same physics yields thousands of times more
-            throughput — GHz-wide Ku channels instead of MHz-wide PCS slivers. That's why V3 carries no phone radio as
-            specced and doesn't need one: it pours capacity into the dishes whose femtocells and households serve them
-            instead, while phone service scales on the dedicated D2C satellite line launching from 2027. D2C is a payload
-            and a product line — not a V-number.
-          </p>
-        )}
+          );
+        })()}
+        <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 10 }}>
+          Provenance: apertures and the 16× / "20×20 MHz beams" multipliers are company claims (MWC 2026); the
+          43-beam figure is AIAA's; simultaneous beam counts are <em>not disclosed</em> by SpaceX — everything labeled
+          bracket is honest arithmetic on the claims, not a spec. The V3 tab is deliberate context: swap the fingernail
+          phone antenna for a powered, steered dish and the same physics yields thousands of times more throughput —
+          which is why V3 carries no phone radio and doesn't need one; it backhauls the femtocell layer while phone
+          capacity scales on the dedicated D2C line. D2C is a payload and a product line — not a V-number.
+        </p>
       </div>
 
       <div className="card">
@@ -3111,7 +3109,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v35 · beam-size receipts</span>
+        <span className="buildTag">build v36 · per-satellite budget card</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
