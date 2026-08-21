@@ -2533,7 +2533,7 @@ function StitchPanel() {
     let bsat = 0, bd = 1e9;
     zsats.forEach(([zx, zy], si) => { const dd = Math.hypot(zx - pxy[0], zy - pxy[1]); if (dd < bd) { bd = dd; bsat = si; } });
     const sched = ((pi * 53 + hopN * 29 + bsat * 7) % 10) < 7; // scheduled dwell ~70% of hop intervals
-    const jx = (((pi * 31 + hopN * 13) % 7) - 3) * 1.2, jy = (((pi * 17 + hopN * 19) % 7) - 3) * 1.2;
+    const jx = (((pi * 31 + hopN * 13) % 9) - 4) * 3.2, jy = (((pi * 17 + hopN * 19) % 9) - 4) * 3.2;
     return { pxy, serving: bsat, lit: sched, hitPos: sched ? [pxy[0] + jx, pxy[1] + jy] : null, pi };
   });
   const litCount = phones.filter((p) => p.lit).length;
@@ -2576,10 +2576,11 @@ function StitchPanel() {
         <strong style={{ color: C.green }}>Zoom — the strip machine:</strong> three adjacent descending strips, face-on.
         Each satellite streams down its strip carrying its spot-beam cluster (beams to scale, a slider-set sample of the
         ~700 — slide it up and watch the patch saturate); each satellite's beams wear its color, so a phone's link
-        visibly changes color at handover. The dotted grid is Earth-fixed cells; the scheduler brings a dwell
-        to each active phone's cell most cycles — the beam appears <em>at the phone</em>, in the serving satellite's
-        color, and the solid line is the radio path up to that satellite; between dwells the phone idles on the paging
-        schedule — continuous coverage stitched from moving parts.
+        visibly changes color at handover. The dotted grid is Earth-fixed cells; the scheduler assigns one of the
+        serving satellite's beams to each active phone's cell most cycles — that beam is shown <em>highlighted</em>
+        (double ring, off-centerline, wherever the phone is), the solid line links phone → assigned beam, and a thin tie
+        runs beam → its satellite so the center stays trackable; between dwells the phone idles on the paging schedule —
+        continuous coverage stitched from moving parts.
       </p>
       <div className="tglRow" style={{ alignItems: "center", marginBottom: 6 }}>
         <label className="sliderL" style={{ flex: 1, minWidth: 150 }}>
@@ -2608,10 +2609,19 @@ function StitchPanel() {
             const sp = zsats[p.serving];
             return (
               <g key={p.pi}>
-                {p.lit && p.hitPos && <circle cx={p.hitPos[0]} cy={p.hitPos[1]} r={beamR + 2.5} fill={scol} opacity="0.35" stroke={scol} strokeWidth="1" />}
-                {p.lit && sp
-                  ? <line x1={p.pxy[0]} y1={p.pxy[1]} x2={sp[0]} y2={sp[1]} stroke={scol} strokeWidth="1.4" opacity="0.9" />
-                  : sp && <line x1={p.pxy[0]} y1={p.pxy[1]} x2={sp[0]} y2={sp[1]} stroke={C.dim} strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />}
+                {p.lit && p.hitPos && sp && (
+                  <g>
+                    {/* thin tie: assigned beam back to its satellite (keeps the center trackable) */}
+                    <line x1={p.hitPos[0]} y1={p.hitPos[1]} x2={sp[0]} y2={sp[1]} stroke={scol} strokeWidth="0.8" opacity="0.45" />
+                    {/* solid link: phone to its assigned beam */}
+                    <line x1={p.pxy[0]} y1={p.pxy[1]} x2={p.hitPos[0]} y2={p.hitPos[1]} stroke={scol} strokeWidth="1.7" />
+                    {/* the assigned beam, highlighted: filled + double ring */}
+                    <circle cx={p.hitPos[0]} cy={p.hitPos[1]} r={beamR + 1} fill={scol} opacity="0.95" />
+                    <circle cx={p.hitPos[0]} cy={p.hitPos[1]} r={beamR + 4} fill="none" stroke={scol} strokeWidth="1.4" opacity="0.85" />
+                    <circle cx={p.hitPos[0]} cy={p.hitPos[1]} r={beamR + 7.5} fill="none" stroke={scol} strokeWidth="0.8" opacity="0.4" />
+                  </g>
+                )}
+                {!p.lit && sp && <line x1={p.pxy[0]} y1={p.pxy[1]} x2={sp[0]} y2={sp[1]} stroke={C.dim} strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />}
                 <rect x={p.pxy[0] - 5} y={p.pxy[1] - 8} width="10" height="16" rx="2" fill={p.lit ? scol : "none"} fillOpacity="0.4" stroke={p.lit ? scol : C.dim} strokeWidth="1.5" />
                 <text x={p.pxy[0] + 9} y={p.pxy[1] - 10} fill={p.lit ? scol : C.dim} fontSize="8.5" fontFamily="var(--mono)">P{p.pi + 1}{p.lit ? " · lit" : ""}</text>
               </g>
@@ -2649,10 +2659,10 @@ function StitchPanel() {
         this instant</strong> (beams drawn to scale; the count slider sets the sample) — it covers the rest of its share
         by discretely re-pointing them every dwell interval, which is why they jump rather than sweep. The dotted grid
         is Earth-fixed cells. Phones sit in the gaps between strips — the genuinely contested ground. Beams come to phones, not the other way
-        around: the scheduler places a dwell on each active phone's own cell most cycles (the small colored disc that
-        appears at the phone), and the solid line is the radio path up to the serving satellite; between dwells a dim
-        dashed line marks the satellite responsible while the phone idles on the paging schedule. Handover = the colors
-        change.
+        around: most cycles the scheduler assigns one of the serving satellite's beams to the phone's own cell — drawn
+        highlighted with a double ring, off-centerline wherever the phone sits — with the solid line linking phone to
+        that beam and a thin tie linking the beam back to its satellite; between dwells a dim dashed line marks the
+        satellite responsible while the phone idles on the paging schedule. Handover = the colors change.
       </Info>
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
         Model (derived, schematic): CONUS boundary from Natural Earth (public domain), equirectangular at 38°N; two
@@ -3371,7 +3381,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v46 · bracket framing site-wide</span>
+        <span className="buildTag">build v47 · highlighted assigned beams</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
