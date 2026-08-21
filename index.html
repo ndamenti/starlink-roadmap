@@ -2410,6 +2410,13 @@ function SawtoothPanel() {
 
 function StitchPanel() {
   const [fleet, setFleet] = useState(2000);
+  const [spd, setSpd] = useState(60);
+  const [t, setT] = useState(0);
+  useEffect(() => {
+    if (spd === 0) return;
+    const id = setInterval(() => setT((x) => x + 0.1), 100);
+    return () => clearInterval(id);
+  }, [spd]);
   const h = 330, Re = 6371, EARTH = 510e6, US = 8.1e6;
   const areaPer = EARTH / fleet;
   const spacing = 1.075 * Math.sqrt(areaPer);
@@ -2421,18 +2428,51 @@ function StitchPanel() {
   const beamArea = Math.PI * 2.35 * 2.35;
   const beamsNeeded = areaPer / beamArea;
   const duty = Math.min(700 / beamsNeeded, 1) * 100;
-  const satsUS = fleet * (US / EARTH) * 1.3; // ×1.3: 53°-inclined planes crowd mid-latitudes
-  const usCapGbps = satsUS * Math.min(700, beamsNeeded) * 0.05; // 50 Mbps claim-anchored per beam
-  // schematic US map: rough polygon, km coordinates → px
-  const k = 0.185, ox = 30, oy = 40;
-  const usPath = "M 60,930 L 60,330 L 340,220 L 700,150 L 1100,90 L 1600,60 L 2100,60 L 2600,120 L 3050,60 L 3400,90 L 3800,220 L 4150,320 L 4260,560 L 4100,700 L 4000,980 L 4150,1300 L 4000,1560 L 3700,1500 L 3400,1620 L 3000,1560 L 2600,1620 L 2300,1560 L 2050,1750 L 1900,2100 L 1750,1900 L 1500,1620 L 1100,1500 L 700,1360 L 340,1220 L 150,1080 Z";
-  const scaledPath = usPath.replace(/([\d.]+),([\d.]+)/g, (m, x, y) => `${(ox + (+x) * k).toFixed(1)},${(oy + (+y) * k * 0.9).toFixed(1)}`);
-  // hex lattice over the bounding box, clipped to the US path
+  const satsUS = fleet * (US / EARTH) * 1.3;
+  const usCapGbps = satsUS * Math.min(700, beamsNeeded) * 0.05;
+  // CONUS outline: Natural Earth 110m boundary, projected to km (x: lon·cos38°·111.32 from 125.5°W; y: km south of 49.8°N)
+  const CONUS = "M 233,89 L 2662,89 L 2662,46 L 2692,46 L 2707,107 L 2734,126 L 2885,150 L 2970,185 L 3041,170 L 3178,198 L 3256,167 L 3564,323 L 3587,374 L 3628,366 L 3650,410 L 3687,424 L 3676,443 L 3768,496 L 3804,693 L 3718,859 L 3755,904 L 4084,772 L 4064,705 L 4104,687 L 4270,687 L 4298,644 L 4442,534 L 4737,533 L 4745,506 L 4811,483 L 4869,346 L 4935,262 L 4965,291 L 5023,272 L 5062,304 L 5062,456 L 5135,556 L 4858,681 L 4797,772 L 4796,831 L 4825,890 L 4862,893 L 4852,852 L 4879,877 L 4872,909 L 4616,955 L 4543,987 L 4672,966 L 4698,987 L 4575,1021 L 4519,1021 L 4522,1007 L 4495,1038 L 4521,1043 L 4502,1123 L 4438,1209 L 4432,1180 L 4384,1147 L 4424,1227 L 4425,1269 L 4347,1401 L 4367,1321 L 4322,1278 L 4312,1186 L 4295,1234 L 4313,1304 L 4255,1287 L 4316,1323 L 4320,1429 L 4345,1436 L 4366,1586 L 4310,1669 L 4220,1702 L 4162,1767 L 4118,1774 L 4074,1815 L 4061,1853 L 3965,1925 L 3874,2044 L 3861,2123 L 3876,2200 L 3944,2374 L 3986,2551 L 3958,2738 L 3932,2752 L 3889,2738 L 3875,2689 L 3841,2664 L 3741,2439 L 3759,2366 L 3666,2211 L 3632,2194 L 3543,2245 L 3430,2160 L 3331,2174 L 3253,2161 L 3150,2186 L 3183,2283 L 3166,2298 L 3133,2281 L 3101,2302 L 3037,2299 L 2971,2240 L 2895,2254 L 2831,2228 L 2703,2262 L 2488,2446 L 2467,2573 L 2488,2664 L 2454,2667 L 2323,2608 L 2279,2478 L 2153,2273 L 2091,2229 L 2019,2231 L 1964,2319 L 1891,2285 L 1846,2252 L 1795,2132 L 1666,2009 L 1514,2009 L 1514,2055 L 1270,2056 L 937,1923 L 946,1901 L 734,1922 L 720,1865 L 663,1801 L 622,1788 L 612,1756 L 428,1691 L 417,1630 L 332,1518 L 259,1363 L 262,1338 L 156,1208 L 143,1117 L 97,1056 L 113,868 L 85,783 L 119,678 L 140,476 L 125,327 L 71,180 L 82,158 L 209,196 L 256,301 L 277,272 L 233,89 Z";
+  const MW = 5140, MH = 2760; // map extent, km
+  const kpx = 880 / MW, ox = 10, oy = 8;
+  const P = (km) => km * kpx;
+  // ground motion: 53°-inclined tracks at ~38°N → azimuth ~±50° from north; v_ground ≈ 7.3 km/s; t is in real seconds × spd
+  const vKm = 7.3 * spd * 0.1 * 10; // km moved per t-unit at current speed (t steps = 0.1 s real)
+  const ang = (50 * Math.PI) / 180;
+  const dirs = [[Math.sin(ang), Math.cos(ang)], [Math.sin(ang), -Math.cos(ang)]]; // descending & ascending families
+  const off = (t * 7.3 * spd) % spacing;
   const sats = [];
-  const sPx = spacing * k;
-  for (let row = 0; row * sPx * 0.866 < 420; row++) {
-    for (let col = -1; col * sPx < 880; col++) {
-      sats.push([ox - 10 + col * sPx + (row % 2 ? sPx / 2 : 0), oy + row * sPx * 0.866]);
+  const sPx = spacing * kpx;
+  for (let fam = 0; fam < 2; fam++) {
+    const [dx, dy] = dirs[fam];
+    // lattice aligned to track direction: rows are parallel tracks (cross-track spacing = spacing), sats along-track every spacing·2 (two families interleave)
+    for (let row = -8; row < 40; row++) {
+      for (let col = -8; col < 40; col++) {
+        const along = col * spacing * 2 + (fam ? spacing : 0) + off;
+        const cross = row * spacing + (fam ? spacing / 2 : 0);
+        const x = along * dx + cross * dy + (fam ? 0 : 0);
+        const y = along * dy * (fam ? 1 : 1) - cross * dx;
+        const yy = fam ? y : y; // both families share frame; dy sign differs via dirs
+        if (x > -200 && x < MW + 200 && yy > -200 && yy < MH + 200) sats.push([x, yy, fam]);
+      }
+    }
+  }
+  // zoom strip: 3 adjacent tracks, window 3.4×spacing wide × 2·spacing tall, watch cell at center
+  const zw = 460, zh = 300;
+  const zSpan = 3.4 * spacing;
+  const zk = zw / zSpan;
+  const zTracks = [-1, 0, 1];
+  const cell = [zw / 2, zh / 2];
+  let best = null, bestD = 1e9;
+  const zsats = [];
+  for (const tr of zTracks) {
+    const phase = tr === 0 ? 0 : spacing;
+    for (let n = -3; n < 5; n++) {
+      const along = n * spacing * 2 + phase + off;
+      const zx = zw / 2 + tr * spacing * zk;
+      const zy = zh / 2 + (along % (spacing * 2) + spacing * 2) % (spacing * 2) * zk - spacing * zk;
+      zsats.push([zx, zy]);
+      const dd = Math.hypot(zx - cell[0], zy - cell[1]);
+      if (dd < bestD) { bestD = dd; best = [zx, zy]; }
     }
   }
   return (
@@ -2440,44 +2480,65 @@ function StitchPanel() {
       <div className="eyebrow" style={{ color: C.green }}>Panel 6 · The stitching — satellite adjacency over the US as the fleet grows <Src k="fleet" topic="derived" /></div>
       <p className="body" style={{ marginBottom: 10 }}>
         Every cell is served by whichever satellite sees it steepest, so the ground is partitioned into per-satellite
-        service patches whose size is set purely by fleet count. Grow the fleet and each patch shrinks — which retires
-        the low-elevation, elliptical, rationed beams from service entirely: <strong>the "channel path" narrows</strong>.
-        Drag the slider and watch the stitching tighten.
+        service patches whose size is set purely by fleet count. Satellites cross the map on ~53°-inclined tracks
+        (northeast-bound and southeast-bound families interleaved) at ~7.3 km/s ground speed — the lattice never stands
+        still; the <em>pattern</em> is what persists. Grow the fleet and each patch shrinks, retiring the low-elevation
+        elliptical beams from service: the channel path narrows.
       </p>
-      <label className="sliderL">
-        D2C fleet (global): <strong>{fleet.toLocaleString()}</strong> satellites — ~{satsUS.toFixed(0)} over the continental US at any instant
-        <input type="range" min="650" max="15000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
-      </label>
-      <svg viewBox="0 0 900 460" style={{ width: "100%", display: "block" }} role="img" aria-label="Schematic continental US with the serving-satellite lattice and per-satellite service patches at the selected fleet size">
-        <defs><clipPath id="usClip"><path d={scaledPath} /></clipPath></defs>
-        <path d={scaledPath} fill="rgba(91,168,255,0.05)" stroke={C.line} strokeWidth="1.2" />
+      <div className="tglRow" style={{ alignItems: "center", marginBottom: 6 }}>
+        <label className="sliderL" style={{ flex: 2, minWidth: 260 }}>
+          D2C fleet (global): <strong>{fleet.toLocaleString()}</strong> — ~{satsUS.toFixed(0)} over CONUS at any instant
+          <input type="range" min="650" max="15000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
+        </label>
+        <label className="sliderL" style={{ flex: 1, minWidth: 180 }}>
+          Time speed: <strong>{spd === 0 ? "paused" : "×" + spd}</strong>
+          <input type="range" min="0" max="300" step="10" value={spd} onChange={(e) => setSpd(+e.target.value)} />
+        </label>
+      </div>
+      <svg viewBox="0 0 900 505" style={{ width: "100%", display: "block" }} role="img" aria-label="Continental US with the moving serving-satellite lattice and per-satellite service patches">
+        <defs><clipPath id="usClip"><path d={CONUS} transform={`translate(${ox},${oy}) scale(${kpx})`} /></clipPath></defs>
+        <path d={CONUS} transform={`translate(${ox},${oy}) scale(${kpx})`} fill="rgba(91,168,255,0.05)" stroke={C.line} strokeWidth={1.2 / kpx} vectorEffect="non-scaling-stroke" />
         <g clipPath="url(#usClip)">
-          {sats.map(([sx, sy], i) => (
-            <g key={i}>
-              <circle cx={sx} cy={sy} r={rServe * k} fill="none" stroke={tone} strokeWidth="0.8" opacity="0.45" />
-              <circle cx={sx} cy={sy} r="2.2" fill={tone} />
+          {sats.map(([sx, sy, fam], i) => (
+            <g key={i} transform={`translate(${ox + P(sx)},${oy + P(sy)})`}>
+              <circle r={rServe * kpx} fill="none" stroke={tone} strokeWidth="0.7" opacity="0.4" />
+              <circle r="2" fill={fam ? tone : C.blue} opacity="0.9" />
             </g>
           ))}
         </g>
-        <text x="450" y="452" textAnchor="middle" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">
-          schematic map · dots = serving satellites (nadirs) · circles = each one's service patch (~{Math.round(2 * rServe).toLocaleString()} km across)
+        <text x="450" y="498" textAnchor="middle" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">
+          Natural Earth CONUS boundary · dots = satellite nadirs (blue NE-bound · green SE-bound) · circles = service patches (~{Math.round(2 * rServe).toLocaleString()} km)
         </text>
       </svg>
-      <div className="statGrid" style={{ marginTop: 10 }}>
-        <div className="stat"><div className="statL">Satellite spacing</div><div className="statV">~{Math.round(spacing).toLocaleString()} km</div></div>
-        <div className="stat"><div className="statL">Worst-case serving elevation (patch edge)</div><div className="statV" style={{ color: tone }}>~{Math.max(eEdge, 25).toFixed(0)}° → {regime === 1 ? "all reuse-1, near-circular beams" : regime === 2 ? "transition at edges" : "rationed, elliptical edges"}</div></div>
-        <div className="stat"><div className="statL">Beam positions per patch vs ~700 available</div><div className="statV">~{Math.round(beamsNeeded).toLocaleString()} → duty ~{duty < 10 ? duty.toFixed(1) : duty.toFixed(0)}%</div></div>
-        <div className="stat"><div className="statL">US aggregate (claim-anchored ceiling)</div><div className="statV" style={{ color: C.amber }}>~{usCapGbps >= 1000 ? (usCapGbps / 1000).toFixed(1) + " Tbps" : Math.round(usCapGbps) + " Gbps"}</div></div>
+      <div className="split" style={{ alignItems: "start", marginTop: 12 }}>
+        <svg viewBox={`0 0 ${zw} ${zh}`} style={{ width: "100%", display: "block", background: C.panel2, borderRadius: 8 }} role="img" aria-label="Zoomed view of three adjacent orbital tracks with a watched cell handing over between passing satellites">
+          <text x={zw / 2} y="16" textAnchor="middle" fill={C.dim} fontSize="9" fontFamily="var(--mono)">ZOOM · three adjacent tracks · ▼ direction of travel</text>
+          {zTracks.map((tr) => (
+            <line key={tr} x1={zw / 2 + tr * spacing * zk} y1="24" x2={zw / 2 + tr * spacing * zk} y2={zh - 10} stroke={C.line} strokeDasharray="3 5" />
+          ))}
+          {zsats.map(([zx, zy], i) => <circle key={i} cx={zx} cy={zy} r="4" fill={C.green} opacity="0.9" />)}
+          {best && <line x1={cell[0]} y1={cell[1]} x2={best[0]} y2={best[1]} stroke={C.amber} strokeWidth="1.4" strokeDasharray="4 3" />}
+          <rect x={cell[0] - 5} y={cell[1] - 5} width="10" height="10" fill="none" stroke={C.amber} strokeWidth="1.5" />
+          <text x={cell[0] + 10} y={cell[1] - 8} fill={C.amber} fontSize="9" fontFamily="var(--mono)">watched cell → serving sat (nearest ≈ steepest)</text>
+          <text x={zw / 2} y={zh - 0} textAnchor="middle" fill={C.dim} fontSize="8.5" fontFamily="var(--mono)"> </text>
+        </svg>
+        <div>
+          <div className="stat"><div className="statL">Satellite spacing</div><div className="statV">~{Math.round(spacing).toLocaleString()} km</div></div>
+          <div className="stat" style={{ marginTop: 8 }}><div className="statL">Worst-case serving elevation (patch edge)</div><div className="statV" style={{ color: tone }}>~{Math.max(eEdge, 25).toFixed(0)}° → {regime === 1 ? "all reuse-1, near-circular beams" : regime === 2 ? "transition at edges" : "rationed, elliptical edges"}</div></div>
+          <div className="stat" style={{ marginTop: 8 }}><div className="statL">Beam positions per patch vs ~700 available</div><div className="statV">~{Math.round(beamsNeeded).toLocaleString()} → duty ~{duty < 10 ? duty.toFixed(1) : duty.toFixed(0)}%</div></div>
+          <div className="stat" style={{ marginTop: 8 }}><div className="statL">US aggregate (claim-anchored ceiling)</div><div className="statV" style={{ color: C.amber }}>~{usCapGbps >= 1000 ? (usCapGbps / 1000).toFixed(1) + " Tbps" : Math.round(usCapGbps) + " Gbps"}</div></div>
+        </div>
       </div>
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
-        Model (derived, schematic): hex partition of the globe by fleet count (×1.3 mid-latitude crowding for 53° planes);
-        patch-edge elevation from spherical geometry at 330 km; beams-per-patch = patch area ÷ 4.7 km beams; duty = ~700
-        available beams ÷ positions to cover (below 100%, coverage is time-shared by hopping — even at 15,000 satellites
-        it's ~3:1, which is why Earth-fixed cells and paging schedules exist at every fleet size). US capacity = satellites
-        over the US × beams × 50 Mbps claim-anchored — a ceiling, not a forecast. The stitching story in one line: at 650
-        satellites a patch is ~900 km wide and its edges are rationed ellipses; at 15,000 it's ~190 km and the worst beam
-        any phone ever sees is a ~74°, near-circular, full-menu beam. Fleet growth doesn't just add capacity — it deletes
-        the bad geometry.
+        Model (derived, schematic): CONUS boundary from Natural Earth (public domain), equirectangular at 38°N; hex
+        partition of the globe by fleet count (×1.3 mid-latitude crowding for 53° planes); patch-edge elevation from
+        spherical geometry at 330 km; duty = ~700 available beams ÷ positions to cover — even at 15,000 satellites it's
+        ~3:1, which is why Earth-fixed cells and hopping schedules exist at every fleet size. The zoom shows the machine
+        in motion: the watched cell's serving satellite recedes, a neighbor on the same or adjacent track takes over —
+        at real speed a handover every ~1–2 minutes at 15,000 satellites, every ~2–3 at 650. US capacity = satellites
+        over CONUS × beams × 50 Mbps claim-anchored — a ceiling, not a forecast. At 650 satellites a patch is ~900 km
+        with rationed elliptical edges; at 15,000 it's ~190 km and the worst beam any phone sees is ~74° and
+        near-circular. Fleet growth doesn't just add capacity — it deletes the bad geometry.
       </p>
     </div>
   );
@@ -3186,7 +3247,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v38 · US stitching panel + edge-ellipse specs</span>
+        <span className="buildTag">build v39 · real CONUS + transit animations</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
