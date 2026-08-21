@@ -1047,6 +1047,46 @@ function SpectrumTab({ cfg, setCfg }) {
 
 /* ------------------------- PHYSICS TAB ------------------------- */
 
+function SpeedLadder({ dlMHz }) {
+  const B = dlMHz > 0 ? dlMHz : 20;
+  const RUNGS = [
+    { se: 0.62, name: "Measured today", what: "UPM crowdsourced measurement of the live service (mean ~0.52\u20130.62 bps/Hz; high SINR rarely observed)", status: "MEASURED FACT", tone: C.green },
+    { se: 2.48, name: "Claim-anchored average", what: "measured \u00D7 the claimed 4\u00D7 \u2014 this site's per-beam planning number, shared by everyone in the cell", status: "PLANNING ESTIMATE", tone: C.blue },
+    { se: 7.5, name: "SpaceX's official peak", what: "\u201C150 Mbps per user\u201D (Pica, ITU Feb 2026) \u2014 exactly the standard 20 MHz LTE/NR 2\u00D72 / 64QAM peak: one user, beam center, whole channel, briefly", status: "COMPANY CLAIM", tone: C.amber },
+    { se: 16, name: "The 16 bps/Hz figure", what: "the NR 256QAM 2-layer waveform ceiling (also \u2248 the dish service's 300 Mbps \u00F7 20 MHz) \u2014 no SpaceX D2C statement claims it, and the link budget can't reach it", status: "NOT A D2C CLAIM", tone: C.red },
+  ];
+  return (
+    <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
+      <div className="eyebrow" style={{ color: C.green }}>The speed ladder — measured vs claimed vs ceiling <Src k="speeds" topic="measured" /></div>
+      <p className="body" style={{ marginBottom: 10 }}>
+        Every throughput number in this debate is real <em>somewhere</em> — the question is which quantity it measures.
+        Spectral efficiency (bits per second per Hz) is the honest common currency. The ladder below applies each rung to
+        the currently configured satellite downlink ({B} MHz):
+      </p>
+      {RUNGS.map((r, i) => (
+        <div key={i} className="evt" style={{ borderLeft: `2px solid ${r.tone}`, paddingLeft: 12, marginBottom: 8 }}>
+          <div className="evtHead" style={{ gap: 10 }}>
+            <span style={{ fontFamily: "var(--mono)", fontSize: 13, color: r.tone }}>{r.se} bps/Hz → ~{Math.round(r.se * B)} Mbps</span>
+            <span style={{ fontFamily: "var(--mono)", fontSize: 9, letterSpacing: "0.08em", color: r.tone, border: `1px solid ${r.tone}`, borderRadius: 3, padding: "1px 6px", opacity: 0.9 }}>{r.status}</span>
+          </div>
+          <div className="evtBody"><strong style={{ color: C.text }}>{r.name}.</strong> {r.what}</div>
+        </div>
+      ))}
+      <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 8 }}>
+        The physics test: spectral efficiency is bought with SINR. 256QAM (the 16 bps/Hz rung) needs ~28–30 dB at the
+        phone; the FCC milestone ladder SpaceX itself negotiated benchmarks this service at <strong>5 dB SINR, 90%
+        availability</strong> — a ~25 dB gap no power waiver or aperture jump closes as an operating point. Dual-stream
+        MIMO from one satellite additionally requires polarization multiplexing to a randomly oriented handset (a rank-1
+        line-of-sight channel otherwise). Note what SpaceX's aggressive numbers actually claim: "20×
+        throughput, 100× capacity" are <em>capacity multipliers</em> (beams × MHz × efficiency summed
+        per satellite), not per-Hz efficiency — and their official 7.5 bps/Hz peak is the tell that their engineers
+        claimed the 64QAM ceiling, not the 256QAM one. Peak-to-average of ~3× (150 peak vs ~50 shared) matches every
+        terrestrial LTE network ever deployed: 150 is the sprint, 50 is the marathon pace.
+      </p>
+    </div>
+  );
+}
+
 function PhysicsTab({ cfg, setCfg }) {
   const [env, setEnv] = useState("rural");
   const [users, setUsers] = useState(ENVS.rural.users);
@@ -1069,6 +1109,7 @@ function PhysicsTab({ cfg, setCfg }) {
   return (
     <div>
       <ConfigLab cfg={cfg} setCfg={setCfg} compact />
+      <SpeedLadder dlMHz={z.satDLMHz} />
 
       <div className="card">
         <div className="eyebrow">Pick the terrain — everything below responds</div>
@@ -1500,6 +1541,11 @@ const SRC = {
   ],
   scs: [
     { t: "Broadband Breakfast — DA 25-197 power waiver", u: "https://broadbandbreakfast.com/fcc-backs-spacexs-direct-to-cell-service-at-higher-power-levels/", k: "claim" },
+  ],
+  speeds: [
+    { t: "Teslarati — Pica (ITU): \u201Cpeak speeds of 150Mbps per user\u201D", u: "https://www.teslarati.com/spacex-starlink-direct-to-cell-150mbps-target/", k: "claim" },
+    { t: "UPM measurements — mean spectral efficiency ~0.52 bps/Hz; ~3.1 Mbps/beam today", u: "https://arxiv.org/html/2506.00283v8", k: "primary" },
+    { t: "The Register — \u201C20\u00D7 throughput / 100-fold capacity\u201D (capacity multipliers, not per-Hz claims)", u: "https://www.theregister.com/2025/09/09/spacex_echostar_spectrum_deal/", k: "claim" },
   ],
   auctions: [
     { t: "Mobile World Live — Auction 113 analysis", u: "https://www.mobileworldlive.com/verizon/analysis-aws-3-auction-turned-on-echostar-bidding-strategy/", k: "claim" },
@@ -3016,7 +3062,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v33 · tested: H-UL year-aware + SPLIT legend</span>
+        <span className="buildTag">build v34 · speed ladder</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
