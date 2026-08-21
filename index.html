@@ -692,6 +692,14 @@ function StoryTab({ phase, setPhase }) {
           <em> company claims</em>, and <em>our derived estimates</em> are flagged as such throughout — and the ⓘ buttons
           expand plain-language explainers wherever the engineering gets thick.
         </p>
+        <p className="body" style={{ marginTop: 8, borderLeft: `2px solid ${C.green}`, paddingLeft: 12 }}>
+          <strong style={{ color: C.green }}>How to read the numbers here:</strong> almost every load-bearing figure on
+          this site is a <em>bracket</em>, not a point — measured vs. claimed throughput (0.62 → 2.48 → 7.5 bps/Hz),
+          guaranteed vs. typical serving elevation, sourced vs. derived beam counts, floor vs. ceiling capacity. The
+          endpoints are labeled everywhere. Most arguments about this topic are two people each holding one end of the
+          same bracket and mistaking it for the whole answer — so when someone quotes you a single number, ask which end
+          it is.
+        </p>
       </div>
       <div className="card" style={{ paddingBottom: 4 }}>
         <Trajectory phase={phase} setPhase={setPhase} />
@@ -1061,7 +1069,7 @@ function SpeedLadder({ dlMHz }) {
       <p className="body" style={{ marginBottom: 10 }}>
         Every throughput number in this debate is real <em>somewhere</em> — the question is which quantity it measures.
         Spectral efficiency (bits per second per Hz) is the honest common currency. The ladder below applies each rung to
-        the currently configured satellite downlink ({B} MHz):
+        the currently configured satellite downlink ({B} MHz). When someone quotes you a single number, find its rung:
       </p>
       {RUNGS.map((r, i) => (
         <div key={i} className="evt" style={{ borderLeft: `2px solid ${r.tone}`, paddingLeft: 12, marginBottom: 8 }}>
@@ -1348,6 +1356,18 @@ function NetworkTab() {
 function VerdictTab() {
   return (
     <div>
+      <div className="card" style={{ borderLeft: `2px solid ${C.green}`, marginBottom: 16 }}>
+        <p className="body" style={{ margin: 0 }}>
+          <strong style={{ color: C.green }}>Read this debate as a bracket, not a contradiction.</strong> Nearly every
+          bull-vs-bear disagreement below is two sides holding opposite ends of the same labeled range: bears price the
+          measured 0.62 bps/Hz, bulls the claimed 2.48; bears see today's ~4 Mbps service, bulls the 150 Mbps peak
+          target; bears count the guaranteed-elevation floor, bulls the typical steep-sky case; bears see 5 MHz of
+          H-block downlink, bulls a 25 MHz NR-NTN endgame. The truth of this business is a migration <em>along</em> each
+          bracket — satellites, handsets, and standards moving numbers from the bear end toward the bull end on
+          schedules this site dates. So for each quote below, ask: which end is this voice holding, and what has to
+          happen for reality to move?
+        </p>
+      </div>
       <div className="split">
         <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
           <div className="eyebrow" style={{ color: C.green }}>The bull case <Src k="nextgen" topic="analysts" /></div>
@@ -3351,7 +3371,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v45 · typical-vs-guaranteed + scheduled dwells</span>
+        <span className="buildTag">build v46 · bracket framing site-wide</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
