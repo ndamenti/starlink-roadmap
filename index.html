@@ -2449,6 +2449,11 @@ function StitchPanel() {
   const beamsNeeded = areaPer / beamArea;
   const duty = Math.min(700 / beamsNeeded, 1) * 100;
   const satsUS = fleet * (US / EARTH) * 1.3;
+  // guaranteed floor: invert Panel 1's calibrated model (3.3× Walker overlap) — largest mask this fleet guarantees everywhere, always
+  const capf = (e) => { const er = (e * Math.PI) / 180; return (1 - Math.cos(Math.acos((Re / (Re + h)) * Math.cos(er)) - er)) / 2; };
+  let gLo = 25, gHi = 89;
+  for (let i = 0; i < 40; i++) { const mid = (gLo + gHi) / 2; if (3.3 / capf(mid) > fleet) gHi = mid; else gLo = mid; }
+  const guarE = gLo;
   const usCapGbps = satsUS * Math.min(700, beamsNeeded) * 0.05;
   const CONUS = "M 233,89 L 2662,89 L 2662,46 L 2692,46 L 2707,107 L 2734,126 L 2885,150 L 2970,185 L 3041,170 L 3178,198 L 3256,167 L 3564,323 L 3587,374 L 3628,366 L 3650,410 L 3687,424 L 3676,443 L 3768,496 L 3804,693 L 3718,859 L 3755,904 L 4084,772 L 4064,705 L 4104,687 L 4270,687 L 4298,644 L 4442,534 L 4737,533 L 4745,506 L 4811,483 L 4869,346 L 4935,262 L 4965,291 L 5023,272 L 5062,304 L 5062,456 L 5135,556 L 4858,681 L 4797,772 L 4796,831 L 4825,890 L 4862,893 L 4852,852 L 4879,877 L 4872,909 L 4616,955 L 4543,987 L 4672,966 L 4698,987 L 4575,1021 L 4519,1021 L 4522,1007 L 4495,1038 L 4521,1043 L 4502,1123 L 4438,1209 L 4432,1180 L 4384,1147 L 4424,1227 L 4425,1269 L 4347,1401 L 4367,1321 L 4322,1278 L 4312,1186 L 4295,1234 L 4313,1304 L 4255,1287 L 4316,1323 L 4320,1429 L 4345,1436 L 4366,1586 L 4310,1669 L 4220,1702 L 4162,1767 L 4118,1774 L 4074,1815 L 4061,1853 L 3965,1925 L 3874,2044 L 3861,2123 L 3876,2200 L 3944,2374 L 3986,2551 L 3958,2738 L 3932,2752 L 3889,2738 L 3875,2689 L 3841,2664 L 3741,2439 L 3759,2366 L 3666,2211 L 3632,2194 L 3543,2245 L 3430,2160 L 3331,2174 L 3253,2161 L 3150,2186 L 3183,2283 L 3166,2298 L 3133,2281 L 3101,2302 L 3037,2299 L 2971,2240 L 2895,2254 L 2831,2228 L 2703,2262 L 2488,2446 L 2467,2573 L 2488,2664 L 2454,2667 L 2323,2608 L 2279,2478 L 2153,2273 L 2091,2229 L 2019,2231 L 1964,2319 L 1891,2285 L 1846,2252 L 1795,2132 L 1666,2009 L 1514,2009 L 1514,2055 L 1270,2056 L 937,1923 L 946,1901 L 734,1922 L 720,1865 L 663,1801 L 622,1788 L 612,1756 L 428,1691 L 417,1630 L 332,1518 L 259,1363 L 262,1338 L 156,1208 L 143,1117 L 97,1056 L 113,868 L 85,783 L 119,678 L 140,476 L 125,327 L 71,180 L 82,158 L 209,196 L 256,301 L 277,272 L 233,89 Z";
   const MW = 5140, MH = 2760;
@@ -2501,15 +2506,15 @@ function StitchPanel() {
       beams.push([zx + rr * Math.cos(a), zy + rr * Math.sin(a), si]);
     }
   });
-  // phones sit in the gaps between strips (tracks lie at 0.1875 / 0.5 / 0.8125 of width)
+  // phones sit in the gaps between strips; the SCHEDULER brings a dwell to each active phone's cell most cycles
   const PH_SPOTS = [[0.345, 0.30], [0.655, 0.40], [0.305, 0.66], [0.695, 0.72], [0.36, 0.50]];
   const phones = PH_SPOTS.slice(0, nph).map(([fx, fy], pi) => {
     const pxy = [zw * fx, zh * fy];
     let bsat = 0, bd = 1e9;
     zsats.forEach(([zx, zy], si) => { const dd = Math.hypot(zx - pxy[0], zy - pxy[1]); if (dd < bd) { bd = dd; bsat = si; } });
-    let hit = null, hitPos = null;
-    for (const [bx, by, si] of beams) { if (Math.hypot(bx - pxy[0], by - pxy[1]) < beamR + 4) { hit = si; hitPos = [bx, by]; break; } }
-    return { pxy, serving: hit !== null ? hit : bsat, lit: hit !== null, hitPos, pi };
+    const sched = ((pi * 53 + hopN * 29 + bsat * 7) % 10) < 7; // scheduled dwell ~70% of hop intervals
+    const jx = (((pi * 31 + hopN * 13) % 7) - 3) * 1.2, jy = (((pi * 17 + hopN * 19) % 7) - 3) * 1.2;
+    return { pxy, serving: bsat, lit: sched, hitPos: sched ? [pxy[0] + jx, pxy[1] + jy] : null, pi };
   });
   const litCount = phones.filter((p) => p.lit).length;
   return (
@@ -2551,9 +2556,10 @@ function StitchPanel() {
         <strong style={{ color: C.green }}>Zoom — the strip machine:</strong> three adjacent descending strips, face-on.
         Each satellite streams down its strip carrying its spot-beam cluster (beams to scale, a slider-set sample of the
         ~700 — slide it up and watch the patch saturate); each satellite's beams wear its color, so a phone's link
-        visibly changes color at handover. The dotted grid is Earth-fixed cells; phones fill with their serving
-        satellite's color while a beam dwells on them, with the solid link pointing at the dwelling beam itself —
-        continuous coverage stitched from moving parts.
+        visibly changes color at handover. The dotted grid is Earth-fixed cells; the scheduler brings a dwell
+        to each active phone's cell most cycles — the beam appears <em>at the phone</em>, in the serving satellite's
+        color, and the solid line is the radio path up to that satellite; between dwells the phone idles on the paging
+        schedule — continuous coverage stitched from moving parts.
       </p>
       <div className="tglRow" style={{ alignItems: "center", marginBottom: 6 }}>
         <label className="sliderL" style={{ flex: 1, minWidth: 150 }}>
@@ -2582,9 +2588,10 @@ function StitchPanel() {
             const sp = zsats[p.serving];
             return (
               <g key={p.pi}>
-                {p.lit && p.hitPos
-                  ? <line x1={p.pxy[0]} y1={p.pxy[1]} x2={p.hitPos[0]} y2={p.hitPos[1]} stroke={scol} strokeWidth="1.6" />
-                  : sp && <line x1={p.pxy[0]} y1={p.pxy[1]} x2={sp[0]} y2={sp[1]} stroke={C.dim} strokeWidth="1" strokeDasharray="4 3" opacity="0.55" />}
+                {p.lit && p.hitPos && <circle cx={p.hitPos[0]} cy={p.hitPos[1]} r={beamR + 2.5} fill={scol} opacity="0.35" stroke={scol} strokeWidth="1" />}
+                {p.lit && sp
+                  ? <line x1={p.pxy[0]} y1={p.pxy[1]} x2={sp[0]} y2={sp[1]} stroke={scol} strokeWidth="1.4" opacity="0.9" />
+                  : sp && <line x1={p.pxy[0]} y1={p.pxy[1]} x2={sp[0]} y2={sp[1]} stroke={C.dim} strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />}
                 <rect x={p.pxy[0] - 5} y={p.pxy[1] - 8} width="10" height="16" rx="2" fill={p.lit ? scol : "none"} fillOpacity="0.4" stroke={p.lit ? scol : C.dim} strokeWidth="1.5" />
                 <text x={p.pxy[0] + 9} y={p.pxy[1] - 10} fill={p.lit ? scol : C.dim} fontSize="8.5" fontFamily="var(--mono)">P{p.pi + 1}{p.lit ? " · lit" : ""}</text>
               </g>
@@ -2594,11 +2601,25 @@ function StitchPanel() {
         </svg>
         <div>
           <div className="stat"><div className="statL">Satellite spacing</div><div className="statV">~{Math.round(spacing).toLocaleString()} km</div></div>
-          <div className="stat" style={{ marginTop: 8 }}><div className="statL">Worst-case serving elevation (patch edge)</div><div className="statV" style={{ color: tone }}>~{Math.max(eEdge, 25).toFixed(0)}° → {regime === 1 ? "all reuse-1, near-circular beams" : regime === 2 ? "transition at edges" : "rationed, elliptical edges"}</div></div>
+          <div className="stat" style={{ marginTop: 8 }}><div className="statL">Serving elevation — typical vs guaranteed</div>
+            <div className="statV" style={{ color: tone }}>typical ~{Math.max(eEdge, 25).toFixed(0)}° <span style={{ color: C.dim, fontSize: 11 }}>(ideal lattice, patch edge)</span></div>
+            <div className="statV" style={{ fontSize: 13, marginTop: 2 }}>guaranteed ~{Math.max(guarE, 25).toFixed(0)}° <span style={{ color: C.dim, fontSize: 11 }}>(Panel 1's calibrated floor — everywhere, always)</span></div>
+          </div>
           <div className="stat" style={{ marginTop: 8 }}><div className="statL">Beam positions per patch vs ~700 available</div><div className="statV">~{Math.round(beamsNeeded).toLocaleString()} → duty ~{duty < 10 ? duty.toFixed(1) : duty.toFixed(0)}%</div></div>
           <div className="stat" style={{ marginTop: 8 }}><div className="statL">US aggregate (claim-anchored ceiling)</div><div className="statV" style={{ color: C.amber }}>~{usCapGbps >= 1000 ? (usCapGbps / 1000).toFixed(1) + " Tbps" : Math.round(usCapGbps) + " Gbps"}</div></div>
         </div>
       </div>
+      <Info label="why this panel and Panel 1 quote different elevations for the same fleet">
+        They answer different questions, and together they bracket reality. Panel 1 asks: how many satellites
+        <em> guarantee</em> that every point, at every instant, has a satellite above the mask — using a 3.3× overlap
+        factor calibrated to the real fleet (650 satellites ≈ continuous 25°), which bakes in genuine constellation
+        waste: inclination bunching, imperfect phasing, the bad moments. This panel asks: in an idealized perfect hex
+        lattice (with 1.3× mid-latitude crowding), how steep is the <em>typical</em> patch edge — zero waste assumed.
+        Divide the two models' implied service areas and the entire gap is ~3.3 ÷ 1.3: at 5,000 satellites, typical
+        serving elevation ≈ 57° while the guaranteed-everywhere floor ≈ 43°. Your phone usually lives near the first
+        number and occasionally visits the second — which is exactly the variance story Panel 5's sawtooth animates.
+        Neither number is wrong; quoting either alone would be.
+      </Info>
       <Info label="what exactly am I looking at in the strip view?">
         A face-on window of ground about three satellite-spacings wide. The dashed vertical lines are adjacent orbital
         strips (descending family, face-on). Each large faint circle is a passing satellite's <strong>assigned service
@@ -2607,9 +2628,11 @@ function StitchPanel() {
         share's size. The colored dots inside a share are a <strong>sample of the spot beams that satellite is pointing
         this instant</strong> (beams drawn to scale; the count slider sets the sample) — it covers the rest of its share
         by discretely re-pointing them every dwell interval, which is why they jump rather than sweep. The dotted grid
-        is Earth-fixed cells. Phones sit in the gaps between strips — the genuinely contested ground — and when a beam
-        dwells on one, the solid colored line points at <em>that beam</em>; between dwells, a dim dashed line marks the
-        satellite currently responsible for it. Handover = the colors change.
+        is Earth-fixed cells. Phones sit in the gaps between strips — the genuinely contested ground. Beams come to phones, not the other way
+        around: the scheduler places a dwell on each active phone's own cell most cycles (the small colored disc that
+        appears at the phone), and the solid line is the radio path up to the serving satellite; between dwells a dim
+        dashed line marks the satellite responsible while the phone idles on the paging schedule. Handover = the colors
+        change.
       </Info>
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
         Model (derived, schematic): CONUS boundary from Natural Earth (public domain), equirectangular at 38°N; two
@@ -3328,7 +3351,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v44 · live 25° reference circle</span>
+        <span className="buildTag">build v45 · typical-vs-guaranteed + scheduled dwells</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
