@@ -3333,7 +3333,7 @@ function ServiceabilityTab() {
   const subsPerFem = (perFemMbps / minMbps) / (activePct / 100);
   const femSubCap = femtos * subsPerFem;
   const servedFrac = strategy === "blanket"
-    ? Cf * (1 - hostile / 100) + 0.9 * (hostile / 100)
+    ? Cf * (1 - 0.8 * (hostile / 100)) // pure-cellular: indoor usage (80%) served only in penetrable stock — no WiFi crutch; that's this strategy's premise
     : 0.9 * 0.8 + Cf * 0.2; // WiFi indoors (90% home-internet × 80% indoor share) + sidewalk femto × 20% outdoor share
   const peopleFem = Math.min(popM * servedFrac, femSubCap);
   // hybrid: femto-served metros + satellite everywhere else
@@ -3544,9 +3544,11 @@ function ServiceabilityTab() {
           low-E metallized glass — costs 25–40+ dB, a wall no consumer-power outdoor network climbs at any density
           (recovering 30 dB would take ~1,000× the power). The slider is the hostile share of the building stock
           (default 40% for urban America's mix; Phoenix ≠ Seattle, so it's exposed). It caps the <em>blanket</em>
-          strategy: served = coverage × (1 − hostile) + 0.9 × hostile, the 0.9 being home-WiFi rescue at national
-          broadband penetration. It deliberately does <em>not</em> touch the sidewalk + WiFi strategy — there, all
-          indoor service already rides the customer's WiFi, so building materials are irrelevant by design. Drag it
+          strategy, which is modeled as <strong>pure cellular</strong> — no WiFi crutch, because native indoor service
+          without WiFi dependency is the only reason to pay the blanket's 10×+ box count: served = coverage ×
+          (1 − 0.8 × hostile), the 0.8 being the indoor share of usage. It deliberately does <em>not</em> touch the
+          sidewalk + WiFi strategy — there, all indoor service already rides the customer's WiFi, so building materials
+          are irrelevant by design. Drag it
           right and watch one strategy decay while the other holds: that asymmetry is the argument. One honest caveat:
           the 0.9 assumes hostile-construction households have broadband at the national rate; in the poorest urban
           pockets both paths can fail together — an equity footnote worth carrying.
@@ -3576,7 +3578,7 @@ function ServiceabilityTab() {
             <div className="statV" style={{ color: C.blue, fontSize: 30, fontWeight: 700 }}>{femtos >= 995e3 ? (femtos / 1e6).toFixed(1) + "M" : Math.round(femtos / 1e3) + "k"}
               <span style={{ fontSize: 12, color: C.dim, fontWeight: 400 }}> boxes · ~{Math.round(lam)} per km² · {Math.round(rFem * 1000)} m cells</span></div>
           </div>
-          <div className="stat"><div className="statL">People served in overlay metros</div><div className="statV" style={{ fontSize: 22 }}>{(peopleFem / 1e6).toFixed(0)}M <span style={{ fontSize: 12, color: C.dim }}>of {(popM / 1e6).toFixed(0)}M ({(servedFrac * 100).toFixed(0)}% — {strategy === "sidewalk" ? "WiFi carries indoors" : "femto blanket + WiFi in hostile stock"})</span></div></div>
+          <div className="stat"><div className="statL">People served in overlay metros</div><div className="statV" style={{ fontSize: 22 }}>{(peopleFem / 1e6).toFixed(0)}M <span style={{ fontSize: 12, color: C.dim }}>of {(popM / 1e6).toFixed(0)}M ({(servedFrac * 100).toFixed(0)}% — {strategy === "sidewalk" ? "WiFi carries indoors" : "pure-cellular blanket: hostile stock goes unserved indoors"})</span></div></div>
           <div className="stat"><div className="statL">Capacity headroom per femto</div><div className="statV" style={{ fontSize: 22 }}>{perFemMbps.toFixed(0)} Mbps → ~{Math.round(subsPerFem)} subs <span style={{ fontSize: 12, color: C.dim }}>· network cap ~{(femSubCap / 1e6).toFixed(0)}M ({(femSubCap / Math.max(popM, 1) * 100).toFixed(0)}% of metro pop) — coverage binds, not capacity</span></div></div>
         </div>
         <div style={{ overflowX: "auto", marginTop: 10 }}>
@@ -3878,7 +3880,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v57 · femto explainers ×3</span>
+        <span className="buildTag">build v58 · hostile slider bites (pure-cellular blanket)</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
