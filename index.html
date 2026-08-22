@@ -704,6 +704,7 @@ function StoryTab({ phase, setPhase }) {
           <button className="hiliteBtn" onClick={() => window.__navTo("physics", "phy-ladder")}>▸ The speed ladder — fact vs claim</button>
           <button className="hiliteBtn" onClick={() => window.__navTo("coverage", "cov-6-stitching")}>▸ The strip machine — watch the network run</button>
           <button className="hiliteBtn" onClick={() => window.__navTo("coverage", "cov-1b-receipts")}>▸ Beam-size receipts — the evidence chain</button>
+          <button className="hiliteBtn" onClick={() => window.__navTo("serviceability", "svc-top")}>▸ Serviceability — who can this network carry?</button>
         </div>
       </div>
       <div className="card" style={{ paddingBottom: 4 }}>
@@ -1572,6 +1573,11 @@ const SRC = {
   ],
   scs: [
     { t: "Broadband Breakfast — DA 25-197 power waiver", u: "https://broadbandbreakfast.com/fcc-backs-spacexs-direct-to-cell-service-at-higher-power-levels/", k: "claim" },
+  ],
+  serve: [
+    { t: "Census Bureau \u2014 county population estimates, 2024 vintage (CO-EST2024)", u: "https://www2.census.gov/programs-surveys/popest/datasets/2020-2024/counties/totals/co-est2024-alldata.csv", k: "primary" },
+    { t: "US county boundaries (Census-derived GeoJSON)", u: "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json", k: "primary" },
+    { t: "ScienceDirect \u2014 dimensioning: ~0.6 Mbps busy-hour/sub vs 10 Mbps experience \u2248 17\u00d7 oversubscription", u: "https://www.sciencedirect.com/topics/computer-science/oversubscription", k: "claim" },
   ],
   speeds: [
     { t: "Teslarati — Pica (ITU): \u201Cpeak speeds of 150Mbps per user\u201D", u: "https://www.teslarati.com/spacex-starlink-direct-to-cell-150mbps-target/", k: "claim" },
@@ -2455,6 +2461,22 @@ function SawtoothPanel() {
   );
 }
 
+const CONUS_PATH = "M 233,89 L 2662,89 L 2662,46 L 2692,46 L 2707,107 L 2734,126 L 2885,150 L 2970,185 L 3041,170 L 3178,198 L 3256,167 L 3564,323 L 3587,374 L 3628,366 L 3650,410 L 3687,424 L 3676,443 L 3768,496 L 3804,693 L 3718,859 L 3755,904 L 4084,772 L 4064,705 L 4104,687 L 4270,687 L 4298,644 L 4442,534 L 4737,533 L 4745,506 L 4811,483 L 4869,346 L 4935,262 L 4965,291 L 5023,272 L 5062,304 L 5062,456 L 5135,556 L 4858,681 L 4797,772 L 4796,831 L 4825,890 L 4862,893 L 4852,852 L 4879,877 L 4872,909 L 4616,955 L 4543,987 L 4672,966 L 4698,987 L 4575,1021 L 4519,1021 L 4522,1007 L 4495,1038 L 4521,1043 L 4502,1123 L 4438,1209 L 4432,1180 L 4384,1147 L 4424,1227 L 4425,1269 L 4347,1401 L 4367,1321 L 4322,1278 L 4312,1186 L 4295,1234 L 4313,1304 L 4255,1287 L 4316,1323 L 4320,1429 L 4345,1436 L 4366,1586 L 4310,1669 L 4220,1702 L 4162,1767 L 4118,1774 L 4074,1815 L 4061,1853 L 3965,1925 L 3874,2044 L 3861,2123 L 3876,2200 L 3944,2374 L 3986,2551 L 3958,2738 L 3932,2752 L 3889,2738 L 3875,2689 L 3841,2664 L 3741,2439 L 3759,2366 L 3666,2211 L 3632,2194 L 3543,2245 L 3430,2160 L 3331,2174 L 3253,2161 L 3150,2186 L 3183,2283 L 3166,2298 L 3133,2281 L 3101,2302 L 3037,2299 L 2971,2240 L 2895,2254 L 2831,2228 L 2703,2262 L 2488,2446 L 2467,2573 L 2488,2664 L 2454,2667 L 2323,2608 L 2279,2478 L 2153,2273 L 2091,2229 L 2019,2231 L 1964,2319 L 1891,2285 L 1846,2252 L 1795,2132 L 1666,2009 L 1514,2009 L 1514,2055 L 1270,2056 L 937,1923 L 946,1901 L 734,1922 L 720,1865 L 663,1801 L 622,1788 L 612,1756 L 428,1691 L 417,1630 L 332,1518 L 259,1363 L 262,1338 L 156,1208 L 143,1117 L 97,1056 L 113,868 L 85,783 L 119,678 L 140,476 L 125,327 L 71,180 L 82,158 L 209,196 L 256,301 L 277,272 L 233,89 Z";
+
+/* Serviceability data: Census 2024 county populations rasterized onto the site's 40 km CONUS grid
+   (equirectangular at 38°N, same frame as Panel 6). hex: 255 = no data; else log-encoded density. */
+const US_DENS = { w: 129, h: 70, cell: 40, hex: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8a8a8a8a5f5f5f5f5f506d6d6264645a5a5a6f545454544c4c40585858434343383842423d3d3d4747434346464c4c51515166474a4a5959515160604848ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff84ff848484845f5f5f5f506d6d6264645a5a6f6f6f5454544c4c405858584343433838424242545447476d6d6d56564c4c4c51514760605e5e56566060484851ff5175ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7bffffffa1a1a1a1735f5f5f5f506d6d627474575a6f6f6f6f51515151404242424343383838424242545454546d6d6d565677774c515353604e4e7e565656566a6a515151757575ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6c6c6c6ca9a1a1a1737372725757579d9d90585757576e6e6f6f4d4d4d4242424243383838384242343458585857575756545454543f4e51514e4e7e7e6a616a6a6a6a6a6a75757556565050ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7a8383a9b2b26f737272795757579d9d9058575457577d4e6f6f6f767642424d4d4d4d282424243434525258575747475d5d543f3f4e4e574f4b61615d5d616a6a6a6a6a7575755656ffffffffffff51ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7a83a1a6a6a66f6f6f7979646464707067585858547d7d7d4e6f6f76763e3e3e4d4d2828242424243452523c453a47475d4c4c82824462625d5d8c8c827272727067676a75757556ffffffffff7979ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff626262ffffffffffffff727878787881816f796464647070707a525252527d7d484e6f6f5c39393e3e364e4e4e4444444f4f34343c453a72726c6c6c82824462625d5d8c8c827272726781815f7b7bff6565ffff5555796179ffffffffff70ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6262626262ffffffffff72728a785e5e8181818e8e867d5650787e525249496f6f484e4e5f5c5c394242364e4e4e3737444f4f4f46463131314941416c5048464651515b5b65607474746781815f70707765656b5f67556262797961615c5c707070ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6753537c6262ffffffffff7d7d868a5e5e6767678e8e7d7d5650785f494949496f6f48687e5f5c7e5c4848588383834c37444f4f4f2d464b4b494949415050484b4b55555555656064808073757b7670706f69696b5f71716262787976765cffffff70ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6753537c6262ffffffffff72aeaead5e7d674b445a737373674b4b4b494949496f4646464d4d4d7e5c5c485883834c4c4c443131312d2d30303c3c3c4343434545484870575761586c6b6b8d8d8b8a8f7e6f69696565767661757570ffffff82ff77ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6753537c6265ffffffffff72929298987d654b445a5a7367674b4b494949494947474646464d4d7e5c485859594c4c4c4c443131312d2d30303c3c3c4049495d5d5151705757656567677f798d97ae8f7e7f6a6a6f6f7771717b75ffffffffff82776e6effffffffffffffffffffffffffffffffffffffffffffffffffffff756d6753537c7c65ffffffffff7f8e9d98986565653939444444595959525151515147474646464d4d7e565656565653536868686863634d4d57576161614049494d4d494954547b7b5d60707f79859dbeab8f80838375888888667b7bffffffffff7d7e6d7effffffffffffffffffffffffffffffffffffff7a75847a857a7a6c756d67677c7c776565ffffffff7f91818181696969393944444459595f5f51513b3b3b4747464646467e595656565653535368686863634d4d7961616161404848424249496b6b67675d79796d6a73a4a4ad85767c7075898888847da6ffffff809677726a6b6bffffffffffffffffffffffffffffffff7a7a7a75849c817a7d6c75756d6780777765ffffffffff878781818784846262624444445151515f5156563b3b3b402f2f2f5e5e595956565653535349494963634d4d796161617c3c4848487149496b6b5b7d7d64796d7c85898f827b7b7c707078777b9d9090ffffff7d82747c797dffffffffffffffffffffffffffffffff87877a7a756e7e88888080807599858affffffffffffffff718787878784848462623737375151517b56566363633b404077778e76595956564b4b515149494963634e4e7c7c7c7c7c43433b4a4a5b5b5355546f676f656d738989887e9b86869a80787779909099ffffff81717b807fff7a7affffffffffffffffffffffffffff87707c4e6e6e7e817d8080809f9f85ffffffffffffffffff7b71718766663c3c3c37373737515151a4a663633f636340408585858559595555554b4b5149494963634e4e5b5bffff4343424252525b5b5360649b9b6f766974746f7c817373787a768787868a9ea2ffffff7f82858d9298837cffffffffffffffffffffffffffff8e70954e4e858583889390a098ffffffffffffffffffff7b7b71717171663c3c3c3737373751515145a66363715757777373737385594747555555556b6b6b6b51513a3a5555ffff4e4e5d5d5252545460677d6a8f7e73766b6a6e8676727671747d77a5a592acffffffff9fae8a8599aa9098ffffffffffffffffa28bb4b492a8a8957c8b8b9c85818ca593a0ffffffffffffffffffffff6a7b71718766663c3c3c3737373751515145454563717d57635b5b545454594747475555556b6b6b6b51513a3a325a5a493c3c3c3c3c3e40555067667a7777707a6771716d738274717d7d7583999995a9ffffffa7ae8d918faab8bcffffffffffffffffb0848b94888ba88b8282b0a99a818ca5a5b9ffffffffffffffffffffff6a818187876666663c3c3c373737515151454545457f7f64645b5b87545c59474747555555476b6b6b5155555a326464493c3c3c3c3c4b4055555f6866888f6c6c6d80747674997a7793937986a896a7b9ffffff91918d96a7a0c4ffffffffffffffff8d827e7e8480988a808277a98a909e8aa9bedaffffffffffffffffffffffff6a8187876666663c3c3c373737515151454545457f7f6464555573735c59595454545454474747476355555a3264644949383c3b35353d50435f836c6d6772727a6b7e9585727a9f7a7779798493b2cfffffff8ea59699998f9cffffffffffff9f8d8d827e7e84978a9c9c7777938a90adada9bdadffffffffffffffffffffffff755d5d5d5d5d49494987874747474747515151515151636363638f8f4d59595454545454474747476355555a7f7f503e3e342f405555555e54608074856971706e96b0b08078769b78a187877e93a5cfffffa9a58c8d868fb6ffffffffffb29187877c7c7c6b7a7a807e7e848893a1ffffffffb2b3a7a7ffffffffffffffffffff7a5d5d5d5d5d494949878747474747475151515151516363636363a34d6464545454545447474763637b7b7b5252603e5f5f696955555559675f686a77bc8b8b7269778b837b6d7c8a9f827a7a8a8fafb3a387928d8f8a8a9891919cc3c39a9f9386837a7a7d8a8a69a1a58da6a6a2ffffffffffff95ffffffffffffffffffffff7a58587f7f7f5c5c5c878747474747473e515151515167676767aa7172646442424f4f4f4f65399292928a8a8a66665551516969737381818e6e7477a37f7973627672706d887a7e8977856f767979737983768a8baa7e85918b8b8fa4b69fa79b8b8b8585927d9190a1959e9ccabfffffb7ffffffffffffffffffffffffffffff7a58587f7f7f5c5c5c87873f3f3f3f3e3e305151515167676767b9b9725d5d62624f4f4f4f65393992928a8a8a66665d5656404e4e556d6981666474a375687666626b68736f6b8371777b9d86927973727f828a94878a8e84938a9b8c948596bba08b969a7f82969696b59eb5d0e3b7ffffffffffffffffffffffffffffffff7a7a58727272725f5f5c87873f3f3f3f3e3e305151515167676767a1a1785d5d62624f4f4f4f65626292928a8a734848564747526b5c5c5a585b5f6268746a6e7373696762627e6069716c7b727e7b988873a288839e81898e8b94a78f8494799a9ba0a0969a7f89a6a3a7bdb3bbb8ffffffffffffffffffffffffffffffffffffff75757572728f5f5f5f87875a5a5a5a3e3e303d3d3d3d67676767a1a1a15d5d62624a4a4a4a7979627ba5a6a6a64848564e4e4b50505c5a55515d5d5d666a6d637d736b70706f67848671797c999598888287a5c29e9489b5a08bc28990868f8b839385857f9898a8a8a9adc1aab0ffffffffffffffffffffffffffffffffffffffff757572728f8f5151876c5a5a5a5a3e3e303d3d3d3d5555555555704c6a6a62627272727279798062aea66d6d4b52525b5b5f4e4e4e5a54616868687878717b9780716864806a726d6d82997f758a759c8896a87d8eb0aba4868f85798a8a7c95817e8887a0a5a3a99db896a5ffffffffffffffffffffffffffffffffffffffffff75807070958d9e9ea278785a5a3e3e3e303d3d3d3d4949494949704c4c4c4e4e8080805a6d6d6262a6a66d6d4b52525b5b5f4e4e4e5a54566161688e78a0969cb68178789d7a7a8c6c8280778677787f82a1988685bfa6888d8d788f996f747e6d727b9a9dbfb9ff91a0ffa0ffffffffffffffffffffffffffffffffffffffffff759f809a959e8d8d447841415151515151513d3d3d4949494968684c4c4c4e4e8080765a5a5a71627ea1a14b4b3d3d46464d4d4d517960638787726063729cb8b68584777b81728aaeaea17777757c86878c8b8b7eaa818a7f8f83827772738675628a988ec4bfff8fa0ffffffffffffffffffffffffffffffffffffffffffffffff9f9fa89abb858544564141415151515151512f2f505050504a3f3f3f3f48487171715a5a5a71797986865f3a3a3a45505f4a4d4d5576697a7a68527c727f849478767b9772768ea1a2877484737e7a8c8082a18279847e758c8f9497736b755b8c8c7f94aaa1ff819d9dffffffffffffffffffffffffffffffffffffffffffffffffa6a8bbaa7f7474565641232351515151512f2f717171713e3e3e3e3e48485c5c5c37374b4b4b6086865f5454604e4e57774949615980808468525a696a6d706b76847e6d8678a18a807f89768495808088bf9194867f8a7c877e9783786161889494a284879d8585ffffffffffffffffffffffffffffffffffffffffffffffffffffc1c1aaa2747468565623235151512f2f2f2f7171713e3e3e3e3e4848484d4d4d4a3f4b4b4b5757516b5454604e4e575e787857698080a980805a5d74737478817980867078937b7c8a936b7b8b9a7b968f7d8899857a897e867d8f78797b85788c899c7288ff82ffffffffffffffffffffffffffffffffffffffffffffffffffffbabaa293686888964848235151512f2f2f2f8a8a8a4b4b4b4b484848486a6a7a7a3f6868515151515151434351516956564953546161707878556c7685716ca686777260606e76927c7c747c897d81817d8c878173757c877b79927f6c8dba807ab1b18f94ffffffffffffffffffffffffffffffffffffffffffffffffffffffffaaba9393888896964848485151512f2f2f2f8a8a8a4b4b4b48484848486a6a7a7a66665c515151515151434353535f7a56494b54545f7078785a7f78798c85966c6c7e60676b6b8b6e9c8c7c8c819d8a7c848c927d75837e82876e8e7e88847376829374c5ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9181969696968d8d48484851519f9f9f9f6e6e6e6161616167675c5c7373735f5f5f5f6d5252523f3f41416565655050516d5e5e567f7171716e70847f7f858a687e676e84847a77858c788c818a857a7e7d8a85807d7d8c7a7a847b84847d7f7778b49cbaffffffffffffffffffffffffffffffffffffffffffffffffffffffff919181968e8d8d8d48484848519f9f9f9f6e6e6e6161616167675c5c7373735f5f5f5f6d5252523f3f5a5a515b5b6652516d6262836c6c7171928482a27f7f85877178787373778283827d8f929e857d827e888b8a8fa585848a918d95828e94857981807dffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9191968e8d8d8d48484848489f9f9f6e6e6e616161616167675c5c6a6a6a6a7e7e5f4b4b4b2a2a2a53537473733d53515757646f8790888894857a9e73636868757876957e86868a807b7ea7ab9e888c7e9cb3988f8588969396a0b1a4b694978c74ff62ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8a8a8f8f8f8f8f8e8e8e8e8e9f9f6e6e6e616161616167675c5c6a6a6a6a7e7e895c5c5c5c2a2a4242905e5e735b5077776498b67b6f828888838d777c88737e8176787e91799782727f978f928d7d85889c768fa58da4a49fa0978fbaa0999e805d5dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8a8a8a8f8f8f8f8e8e8e8e8e8e9f6e6e6e796161616167675c5c6a5d5d5d7e7e895c5c5c5c5c514242905e5e735b7567677282a98c7c6e7771799c787888998888667687b6857c80738881868984ad918585888ba28f9aadad959494a8859a929278ff88ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9595a68f8f8f8e8e8e8e8e8e8e6e6e6e797979616167675c5c5d5d5d5daa88595945454551516969954a4a545058626272828a8a8279796a7967677270a88c686a6aa480708a7e929298a98080a5908689809daea793a6a57e8b92a885859d928cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9595a6a6c3c38e8e8e8e8e8e8e6e6e6e797979796167675c5c3535354e4e885959453939617a6762626147526558798f8f817a7a826c61617974679292978c6d6672808b808784818099a9808c89969591949f9f8c8178998382917b7b899dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa6c3c38e8e8e8e8e8e8e8e5555797979686867675c5c3535354e4e4e4e575739396161636a7a5a5a3f445a6a61635f84846d6c61616e776e7582788787727a6b758b977f7d7c908c987f989db6a98f83819484aa8c7c96838298b6ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcca2a2a2a2a2a2a2555555a9a9a9a96868685c5c3535354e4e4e4e5757676767615375a35c5c4a2656566665748181827f83686e72766b75656a6b797a6f80737f7f768a8a9398788fc2c6a19c727984a5a594807aa3a3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb0a2a2a2a2a2a2555555a9a9a9a98c6868645b3535505050505757576767676f5375a3a35c4a2656566666748181957f72688d8d866b78617272837a7f74718f8f7297aba08e7e9da2b08086628aac9688889a7a89ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb0b0b07e7e7e557e7ea9a98c8c8c8c64645b6060605050506767676767676f656b5f5f5b3b445d4871668b8bb6ba92817c807968787b7b7171836f7275786c6c68977ca06e83957e8e8995777879717aa09a9affffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb0b0b07e7e7e7e7e7ea9a98c8c8c8c6464644260605085856767676d6d6d6f6d6d6b377057577454677999c4c6c69c878788899484707479765175757c82686a686786869383a06d8aac737a7b7673837ca5ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7e7e7e9090909090907272724260646485856767676d6d6d6f6a6a5d7b666e6e956e727e959f9d9d9c899da7899c6e6e767b796d9c9c807c8d6a71677c8e9f798c7b78a78485798094839effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9090909090907272724260646485856767676d6d6d6f64989943465565655e6d7e717e7e8282838284787970776c70796f7c808075746b7168686b9f6e77678487767688818fadffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff90907e7e7272724242ffffffffb23b3b3636591264989943468965655e7e67679d9d75758382877873737b7b68756a85777f8c756c70716a7581777a6c8c7977887c8276ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3b3b36365959535d4f5046898954615a7b8aa474756e70708e6b707c7c8d6875696f7b8096716c70716a7c8a8b98737e8a7f767e7f98ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3b363b59535353533f3f49494c585a8383a4777379797281746a7c7c80807c7f7787889683a295a7989b897e8381848b9d636f6f8bffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff463b3b4753532b3f3f4d4d55587583b9ad77797f8e8181746a7a79808b7bb49a9d88a399a29595989b8980748aa6777778829595ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff464647472b2b6d6d383881777771b992798592afaf8d879b98828bb486809a9d9dffffffffffffffff9b748585736e8882b8b8ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff46464747472b6d6d383857798aa3a68d777492c6c68c9e5151518080878489b18affffffffffffffffff7875ffff6e84a0a4a9ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff464747ffffff6d4e4e6f7f7fbe9f7173747eb6b1ffffffffffffffff86868971ffffffffffffffffffffffffff757fa08d9fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff47ffffffffff4e4e6f7f7f87877473717e9f9fffffffffffffffffffff89ff71ffffffffffffffffffffffffffff9e9ea8a8ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff806170708073648f717a7affffffffffffffffffffffffffffffffffffffffffffffffffffffffa0a5bca8ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff805f5959347c64637cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb3a5bcbcaaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8a595934698effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbba6a6a1aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8a8a8a5ca6a6ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbba6a6a1a2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8a8a5c7b7bffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb17f8e81aeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6c586227ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa06c6c9d9dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff84ac2727ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb57e7eafafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffacaca8ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9a7ebebeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa8ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9a9abbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff88bbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff88ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" };
+const DENS_CELLS = (() => {
+  const cells = [];
+  for (let i = 0; i < US_DENS.w * US_DENS.h; i++) {
+    const v = parseInt(US_DENS.hex.slice(i * 2, i * 2 + 2), 16);
+    if (v === 255) continue;
+    const d = Math.pow(10, (v / 254) * 6.5 - 2); // people per km²
+    cells.push({ gx: i % US_DENS.w, gy: Math.floor(i / US_DENS.w), d });
+  }
+  return cells;
+})();
+
 function StitchPanel() {
   const [fleet, setFleet] = useState(2000);
   const [spd, setSpd] = useState(60);
@@ -2486,7 +2508,7 @@ function StitchPanel() {
   for (let i = 0; i < 40; i++) { const mid = (gLo + gHi) / 2; if (3.3 / capf(mid) > fleet) gHi = mid; else gLo = mid; }
   const guarE = gLo;
   const usCapGbps = satsUS * Math.min(700, beamsNeeded) * 0.05;
-  const CONUS = "M 233,89 L 2662,89 L 2662,46 L 2692,46 L 2707,107 L 2734,126 L 2885,150 L 2970,185 L 3041,170 L 3178,198 L 3256,167 L 3564,323 L 3587,374 L 3628,366 L 3650,410 L 3687,424 L 3676,443 L 3768,496 L 3804,693 L 3718,859 L 3755,904 L 4084,772 L 4064,705 L 4104,687 L 4270,687 L 4298,644 L 4442,534 L 4737,533 L 4745,506 L 4811,483 L 4869,346 L 4935,262 L 4965,291 L 5023,272 L 5062,304 L 5062,456 L 5135,556 L 4858,681 L 4797,772 L 4796,831 L 4825,890 L 4862,893 L 4852,852 L 4879,877 L 4872,909 L 4616,955 L 4543,987 L 4672,966 L 4698,987 L 4575,1021 L 4519,1021 L 4522,1007 L 4495,1038 L 4521,1043 L 4502,1123 L 4438,1209 L 4432,1180 L 4384,1147 L 4424,1227 L 4425,1269 L 4347,1401 L 4367,1321 L 4322,1278 L 4312,1186 L 4295,1234 L 4313,1304 L 4255,1287 L 4316,1323 L 4320,1429 L 4345,1436 L 4366,1586 L 4310,1669 L 4220,1702 L 4162,1767 L 4118,1774 L 4074,1815 L 4061,1853 L 3965,1925 L 3874,2044 L 3861,2123 L 3876,2200 L 3944,2374 L 3986,2551 L 3958,2738 L 3932,2752 L 3889,2738 L 3875,2689 L 3841,2664 L 3741,2439 L 3759,2366 L 3666,2211 L 3632,2194 L 3543,2245 L 3430,2160 L 3331,2174 L 3253,2161 L 3150,2186 L 3183,2283 L 3166,2298 L 3133,2281 L 3101,2302 L 3037,2299 L 2971,2240 L 2895,2254 L 2831,2228 L 2703,2262 L 2488,2446 L 2467,2573 L 2488,2664 L 2454,2667 L 2323,2608 L 2279,2478 L 2153,2273 L 2091,2229 L 2019,2231 L 1964,2319 L 1891,2285 L 1846,2252 L 1795,2132 L 1666,2009 L 1514,2009 L 1514,2055 L 1270,2056 L 937,1923 L 946,1901 L 734,1922 L 720,1865 L 663,1801 L 622,1788 L 612,1756 L 428,1691 L 417,1630 L 332,1518 L 259,1363 L 262,1338 L 156,1208 L 143,1117 L 97,1056 L 113,868 L 85,783 L 119,678 L 140,476 L 125,327 L 71,180 L 82,158 L 209,196 L 256,301 L 277,272 L 233,89 Z";
+  const CONUS = CONUS_PATH;
   const MW = 5140, MH = 2760;
   const kpx = 880 / MW, ox = 10, oy = 8;
   // Two complete interleaved families, both spanning the whole map: NE-bound (ascending) and SE-bound (descending)
@@ -3246,11 +3268,148 @@ function RegTab() {
 
 /* ------------------------- APP ------------------------- */
 
+/* ------------------------- SERVICEABILITY TAB ------------------------- */
+
+function ServiceabilityTab() {
+  /* anchor for deep links */
+  const [mhz, setMhz] = useState(20);
+  const [fleet, setFleet] = useState(5000);
+  const [minMbps, setMinMbps] = useState(3);
+  const [activePct, setActivePct] = useState(10);
+  const [effMode, setEffMode] = useState("claim");
+  const [layer, setLayer] = useState("serve");
+  const eff = effMode === "claim" ? 2.48 : 0.62;
+  const perBeam = eff * mhz;
+  const satCapMbps = 700 * perBeam;
+  const areaPer = 510e6 / fleet;
+  const satsUS = fleet * (8.1 / 510) * 1.3;
+  const servDens = satCapMbps / areaPer / minMbps / (activePct / 100); // servable subscribers per km²
+  const feederFlag = satCapMbps > 100000;
+  // national aggregation over the census raster
+  const CELLA = US_DENS.cell * US_DENS.cell;
+  let popTot = 0, popServ = 0, landFull = 0;
+  for (const c of DENS_CELLS) {
+    const p = c.d * CELLA;
+    popTot += p;
+    const fr = Math.min(1, servDens / c.d);
+    popServ += p * fr;
+    if (fr >= 0.999) landFull++;
+  }
+  const natPct = (popServ / popTot) * 100;
+  const landPct = (landFull / DENS_CELLS.length) * 100;
+  // map geometry: same frame as Panel 6
+  const MW = 5140, kpx = 880 / MW, ox = 10, oy = 8;
+  const cpx = US_DENS.cell * kpx;
+  const densColor = (d) => {
+    const mi = d * 2.59; // people per sq mile
+    return mi < 1 ? "#142A45" : mi < 10 ? "#1F4B7A" : mi < 50 ? "#3D7AB5" : mi < 250 ? "#E6B357" : mi < 1000 ? "#E67E4C" : "#D64545";
+  };
+  const servColor = (fr) => (fr >= 0.999 ? "#2FBF71" : fr >= 0.5 ? "#A8C94C" : fr >= 0.2 ? "#E6B357" : fr >= 0.05 ? "#E67E4C" : "#D64545");
+  const DLEG = [["<1", "#142A45"], ["1–10", "#1F4B7A"], ["10–50", "#3D7AB5"], ["50–250", "#E6B357"], ["250–1k", "#E67E4C"], ["≥1k", "#D64545"]];
+  const SLEG = [["100%", "#2FBF71"], ["50–99%", "#A8C94C"], ["20–50%", "#E6B357"], ["5–20%", "#E67E4C"], ["<5%", "#D64545"]];
+  return (
+    <div id="svc-top">
+      <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
+        <div className="eyebrow" style={{ color: C.amber }}>Serviceability — what share of America can this network actually carry? <Src k="serve" topic="derived" /></div>
+        <p className="body" style={{ marginBottom: 12 }}>
+          The satellite layer's capacity is finite and spreads over each satellite's whole service patch — so the honest
+          question is not "is there signal?" but <strong>"what population density saturates the network?"</strong> This
+          panel divides per-satellite capacity by patch area to get a servable subscriber density, then holds it against
+          the real population of every 40 km cell of the continental US (Census 2024, county-level). Every input is a
+          slider; every number inherits the site's measured-vs-claimed bracket.
+        </p>
+        <div className="tglRow" style={{ marginBottom: 8 }}>
+          <button className={"genBtn" + (effMode === "measured" ? " on" : "")} onClick={() => setEffMode("measured")}>Measured efficiency · 0.62 bps/Hz</button>
+          <button className={"genBtn" + (effMode === "claim" ? " on" : "")} onClick={() => setEffMode("claim")}>Claim-anchored · 2.48 bps/Hz (4×)</button>
+        </div>
+        <div className="tglRow" style={{ alignItems: "center" }}>
+          <label className="sliderL" style={{ flex: 1, minWidth: 200 }}>
+            DL spectrum: <strong>{mhz} MHz</strong> <span style={{ color: C.dim, fontSize: 11 }}>{mhz <= 20 ? "(n252 owned)" : mhz <= 30 ? "(+H-block, NTN era ~2029+)" : mhz <= 45 ? "(+AWS-3 from orbit, waiver path)" : "(hypothetical future spectrum)"}</span>
+            <input type="range" min="20" max="80" step="5" value={mhz} onChange={(e) => setMhz(+e.target.value)} />
+          </label>
+          <label className="sliderL" style={{ flex: 1, minWidth: 200 }}>
+            D2C fleet: <strong>{fleet.toLocaleString()}</strong> <span style={{ color: C.dim, fontSize: 11 }}>(~{satsUS.toFixed(0)} over CONUS)</span>
+            <input type="range" min="650" max="15000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
+          </label>
+        </div>
+        <div className="tglRow" style={{ alignItems: "center" }}>
+          <label className="sliderL" style={{ flex: 1, minWidth: 200 }}>
+            Min speed per active user: <strong>{minMbps} Mbps</strong>
+            <input type="range" min="0.5" max="10" step="0.5" value={minMbps} onChange={(e) => setMinMbps(+e.target.value)} />
+          </label>
+          <label className="sliderL" style={{ flex: 1, minWidth: 200 }}>
+            Subscribers active (busy hour): <strong>{activePct}%</strong> <span style={{ color: C.dim, fontSize: 11 }}>(~{Math.round(100 / activePct)}:1 oversub)</span>
+            <input type="range" min="3" max="30" step="1" value={activePct} onChange={(e) => setActivePct(+e.target.value)} />
+          </label>
+        </div>
+        <p className="body" style={{ fontSize: 13, color: C.dim, margin: "6px 0 10px" }}>
+          Chain: {mhz} MHz × {eff} bps/Hz = <strong style={{ color: C.text }}>{perBeam.toFixed(0)} Mbps/beam</strong> × ~700 beams =
+          <strong style={{ color: C.text }}> ~{(satCapMbps / 1000).toFixed(1)} Gbps/satellite</strong> ÷ ~{Math.round(areaPer / 1000)}k km² patch ÷ {minMbps} Mbps ÷ {activePct}% active =
+          <strong style={{ color: C.amber }}> ~{servDens.toFixed(1)} servable subscribers/km²</strong> (~{(servDens * 2.59).toFixed(1)}/sq mi).
+          {feederFlag && <span style={{ color: C.red }}> ⚠ ~{(satCapMbps / 1000).toFixed(0)} Gbps/satellite approaches feeder/power class limits (~100 Gbps) — treat as a ceiling on a ceiling.</span>}
+        </p>
+        <div className="statGrid" style={{ marginTop: 4 }}>
+          <div className="stat"><div className="statL">Population servable at these settings</div><div className="statV" style={{ color: natPct >= 50 ? C.green : C.amber, fontSize: 20 }}>{natPct.toFixed(0)}% <span style={{ fontSize: 12, color: C.dim }}>of 336M ({(popServ / 1e6).toFixed(0)}M people)</span></div></div>
+          <div className="stat"><div className="statL">Land area fully green (100% servable)</div><div className="statV" style={{ fontSize: 20 }}>{landPct.toFixed(0)}%<span style={{ fontSize: 12, color: C.dim }}> of CONUS cells</span></div></div>
+        </div>
+      </div>
+      <div className="card">
+        <div className="tglRow" style={{ marginBottom: 8 }}>
+          <button className={"genBtn" + (layer === "plain" ? " on" : "")} onClick={() => setLayer("plain")}>Plain map</button>
+          <button className={"genBtn" + (layer === "dens" ? " on" : "")} onClick={() => setLayer("dens")}>Population density</button>
+          <button className={"genBtn" + (layer === "serve" ? " on" : "")} onClick={() => setLayer("serve")}>% of population servable</button>
+        </div>
+        <svg viewBox="0 0 900 505" style={{ width: "100%", display: "block" }} role="img" aria-label="Continental US heatmap of population density or percent of population servable by the configured satellite network">
+          <defs><clipPath id="svcClip"><path d={CONUS_PATH} transform={`translate(${ox},${oy}) scale(${880 / 5140})`} /></clipPath></defs>
+          <g clipPath="url(#svcClip)">
+            {layer !== "plain" && DENS_CELLS.map((c, i) => {
+              const fill = layer === "dens" ? densColor(c.d) : servColor(Math.min(1, servDens / c.d));
+              return <rect key={i} x={ox + c.gx * cpx} y={oy + c.gy * cpx} width={cpx + 0.4} height={cpx + 0.4} fill={fill} opacity="0.85" />;
+            })}
+          </g>
+          <path d={CONUS_PATH} transform={`translate(${ox},${oy}) scale(${880 / 5140})`} fill={layer === "plain" ? "rgba(91,168,255,0.05)" : "none"} stroke={C.line} strokeWidth={1.2 / (880 / 5140)} vectorEffect="non-scaling-stroke" />
+          <g>
+            {(layer === "dens" ? DLEG : layer === "serve" ? SLEG : []).map(([lab, col], i) => (
+              <g key={i} transform={`translate(${16 + i * 92}, 486)`}>
+                <rect width="12" height="12" fill={col} rx="2" />
+                <text x="17" y="10" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">{lab}{layer === "dens" && i === 0 ? " /mi²" : ""}</text>
+              </g>
+            ))}
+          </g>
+        </svg>
+        <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 8 }}>
+          {layer === "dens"
+            ? "Census 2024 county populations rasterized to 40 km cells (people per square mile) — the raster reconstructs 99% of national population."
+            : layer === "serve"
+            ? "Each cell: servable density ÷ actual density, capped at 100%. Green = orbit can carry everyone here; red = single-digit percentages — femtocell country."
+            : "Toggle a layer above — population density, or the share of each cell's population the configured network can carry."}
+        </p>
+      </div>
+      <div className="card">
+        <div className="eyebrow">Model, provenance, and honest limits</div>
+        <p className="body" style={{ fontSize: 13 }}>
+          Servable density = per-satellite capacity (700 beams × MHz × bps/Hz, the Panel 1b / budget-card chain) ÷ service
+          patch area (510M km² ÷ fleet) ÷ minimum busy-hour rate ÷ active fraction — the per-<em>patch</em> constraint, not
+          per-beam: a beam's 17 concurrent users only exist where it dwells, and duty cycles run 5–35%. The uniform-spread
+          assumption is conservative for rural cells (real schedulers chase demand) and roughly right where demand exceeds
+          supply. Busy-hour active share defaults to 10% (~10:1 oversubscription; industry dimensioning runs ~17:1 at
+          comparable rate targets). Population: Census 2024 county estimates on the site's 40 km grid — deliberately
+          coarser than census blocks because service patches span 200–900 km; block-level precision would be false. The
+          verdict this map renders at almost any setting: <strong>the satellite layer is a rural-coverage machine — the
+          green is real and vast in area, the red is where the femtocell layer earns its place in the hybrid
+          architecture.</strong>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 const TABS = [
   { id: "story", label: "The Story" },
   { id: "spectrum", label: "Spectrum" },
   { id: "physics", label: "Physics & Capacity" },
   { id: "coverage", label: "Coverage" },
+  { id: "serviceability", label: "Serviceability" },
   { id: "tech", label: "Technology" },
   { id: "network", label: "The Hybrid Network" },
   { id: "reg", label: "Regulatory & Standards" },
@@ -3501,7 +3660,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v53 · sub-nav + unified beam constant</span>
+        <span className="buildTag">build v54 · Serviceability tab</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
@@ -3518,6 +3677,7 @@ function StarlinkMobileRoadmap() {
         {tab === "spectrum" && <SpectrumTab cfg={cfg} setCfg={setCfg} />}
         {tab === "physics" && <PhysicsTab cfg={cfg} setCfg={setCfg} />}
         {tab === "coverage" && <CoverageTab />}
+        {tab === "serviceability" && <ServiceabilityTab />}
         {tab === "tech" && <TechTab />}
         {tab === "network" && <NetworkTab />}
         {tab === "reg" && <RegTab />}
