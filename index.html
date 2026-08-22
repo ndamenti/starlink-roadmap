@@ -1575,6 +1575,8 @@ const SRC = {
     { t: "Broadband Breakfast — DA 25-197 power waiver", u: "https://broadbandbreakfast.com/fcc-backs-spacexs-direct-to-cell-service-at-higher-power-levels/", k: "claim" },
   ],
   serve: [
+    { t: "3GPP LTE-Advanced targets \u2014 urban DL avg SE: 2.4 (2\u00d72) / 2.6 (4\u00d72) / 3.7 (4\u00d74) bps/Hz/cell", u: "https://www.cse.wustl.edu/~jain/cse574-10/ftp/lte-adv/index.html", k: "primary" },
+    { t: "ITU IMT-2020 \u2014 indoor hotspot 9 / dense urban 7.8 bps/Hz DL (massive-MIMO assumptions)", u: "https://5ghub.us/5g-spectrum-efficiency/", k: "claim" },
     { t: "Census Bureau \u2014 county population estimates, 2024 vintage (CO-EST2024)", u: "https://www2.census.gov/programs-surveys/popest/datasets/2020-2024/counties/totals/co-est2024-alldata.csv", k: "primary" },
     { t: "US county boundaries (Census-derived GeoJSON)", u: "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json", k: "primary" },
     { t: "ScienceDirect \u2014 dimensioning: ~0.6 Mbps busy-hour/sub vs 10 Mbps experience \u2248 17\u00d7 oversubscription", u: "https://www.sciencedirect.com/topics/computer-science/oversubscription", k: "claim" },
@@ -3525,11 +3527,49 @@ function ServiceabilityTab() {
             <input type="range" min="20" max="60" step="5" value={hostile} onChange={(e) => setHostile(+e.target.value)} />
           </label>
         </div>
+        <Info label="is 3 bps/Hz the right small-cell efficiency?">
+          It's the defensible middle of a documented bracket. 3GPP's own LTE-Advanced urban targets: 2.4 bps/Hz/cell
+          average with 2×2 MIMO, 2.6 with 4×2, 3.7 with 4×4 — our 3 is "a good 4×2 box." Below it, reality: measured
+          macro networks run ~1.5–2.2, but small cells beat macro because short links mean high SINR and high-order
+          modulation. Above it, the ceiling: ITU's 9 bps/Hz indoor-hotspot figure assumes 32-antenna massive-MIMO base
+          stations, not consumer hardware — and a dense reuse-1 femto grid pays a self-interference tax that caps
+          consumer boxes near ~4.5. Honest bracket: 2 (interference-limited 2×2) to ~4.5 (coordinated 4×4); the slider's
+          top end is for stress-testing. Note the symmetry with the satellite layer: the femto 3 sits <em>above</em> its
+          measured baseline (conservative), while the satellite 2.48 sits 4× above its measured baseline (aggressive) —
+          same currency, opposite epistemic postures.
+        </Info>
+        <Info label="the hostile-construction slider — buildings no outdoor signal enters">
+          Building entry loss is bimodal, not smooth. Penetrable stock (wood-frame, ordinary glass) costs ~8–15 dB — an
+          outdoor femto's signal survives. Hostile stock — concrete block, metal mesh screens, foil-backed sheathing,
+          low-E metallized glass — costs 25–40+ dB, a wall no consumer-power outdoor network climbs at any density
+          (recovering 30 dB would take ~1,000× the power). The slider is the hostile share of the building stock
+          (default 40% for urban America's mix; Phoenix ≠ Seattle, so it's exposed). It caps the <em>blanket</em>
+          strategy: served = coverage × (1 − hostile) + 0.9 × hostile, the 0.9 being home-WiFi rescue at national
+          broadband penetration. It deliberately does <em>not</em> touch the sidewalk + WiFi strategy — there, all
+          indoor service already rides the customer's WiFi, so building materials are irrelevant by design. Drag it
+          right and watch one strategy decay while the other holds: that asymmetry is the argument. One honest caveat:
+          the 0.9 assumes hostile-construction households have broadband at the national rate; in the poorest urban
+          pockets both paths can fail together — an equity footnote worth carrying.
+        </Info>
         <div className="tglRow" style={{ marginBottom: 8 }}>
           <button className={"genBtn" + (depMode === "planned" ? " on" : "")} onClick={() => setDepMode("planned")}>Planned grid ×1.0</button>
           <button className={"genBtn" + (depMode === "organic" ? " on" : "")} onClick={() => setDepMode("organic")}>Organic (Poisson) ×{(-Math.log(1 - covT / 100) / (covT / 100)).toFixed(1)}</button>
           <button className={"genBtn" + (depMode === "clustered" ? " on" : "")} onClick={() => setDepMode("clustered")}>Clustered organic ×{(1.4 * -Math.log(1 - covT / 100) / (covT / 100)).toFixed(1)}</button>
         </div>
+        <Info label="the three deployment buttons — the price of disorder">
+          Same radio, same radius, same coverage target — the multiplier is purely <em>where the boxes end up</em>.
+          <strong> Planned ×1.0</strong>: engineered placement, minimal overlap, the theoretical minimum (and mostly a
+          fiction for consumer hardware — SpaceX doesn't choose which rooftops exist). <strong>Organic (Poisson)</strong>:
+          boxes appear wherever subscribers sign up; random placement double-covers some streets while leaving holes, and
+          drowning the holes means overbuilding everywhere — covered fraction = 1 − e^(−density·πr²), so 90% costs ×2.6,
+          and the penalty is nonlinear in the target (80% → ×2.0, 95% → ×3.7): the last few percent are brutally
+          expensive. <strong>Clustered organic</strong>: adoption isn't even random — it clumps by neighborhood and
+          demographics, clumps redundantly cover each other while gaps persist; ×1.4 over Poisson is a planning-grade
+          estimate, the softest number of the three. The strategic read: the 3× spread between the buttons means
+          placement discipline is worth more boxes than most radio parameters — a company that can steer the femto to
+          map holes (or ship it with targeted dishes) moves from ×3.6 toward ×1.0 and saves millions of units. Placement
+          policy is a hardware-budget lever.
+        </Info>
         <div className="statGrid">
           <div className="stat" style={{ borderColor: C.blue }}>
             <div className="statL">Femtocells required — top {nMetros} metros, {covT}% outdoor, {depMode}</div>
@@ -3838,7 +3878,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v56 · femtocell overlay + hybrid hero</span>
+        <span className="buildTag">build v57 · femto explainers ×3</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
