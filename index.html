@@ -700,6 +700,11 @@ function StoryTab({ phase, setPhase }) {
           same bracket and mistaking it for the whole answer — so when someone quotes you a single number, ask which end
           it is.
         </p>
+        <div className="hilite">
+          <button className="hiliteBtn" onClick={() => window.__navTo("physics", "phy-ladder")}>▸ The speed ladder — fact vs claim</button>
+          <button className="hiliteBtn" onClick={() => window.__navTo("coverage", "cov-6-stitching")}>▸ The strip machine — watch the network run</button>
+          <button className="hiliteBtn" onClick={() => window.__navTo("coverage", "cov-1b-receipts")}>▸ Beam-size receipts — the evidence chain</button>
+        </div>
       </div>
       <div className="card" style={{ paddingBottom: 4 }}>
         <Trajectory phase={phase} setPhase={setPhase} />
@@ -1116,10 +1121,15 @@ function PhysicsTab({ cfg, setCfg }) {
 
   return (
     <div>
-      <ConfigLab cfg={cfg} setCfg={setCfg} compact />
-      <SpeedLadder dlMHz={z.satDLMHz} />
+      <SubNav items={[
+        { id: "phy-lab", label: "Configuration Lab" },
+        { id: "phy-ladder", label: "Speed ladder" },
+        { id: "phy-terrain", label: "Terrain & delivery" },
+      ]} />
+      <div id="phy-lab"><ConfigLab cfg={cfg} setCfg={setCfg} compact /></div>
+      <div id="phy-ladder"><SpeedLadder dlMHz={z.satDLMHz} /></div>
 
-      <div className="card">
+      <div className="card" id="phy-terrain">
         <div className="eyebrow">Pick the terrain — everything below responds</div>
         <div className="tglRow">
           {Object.entries(ENVS).map(([k, v]) => (
@@ -1900,7 +1910,7 @@ function BeamSizeLab() {
         </svg>
       </div>
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
-        Model: beamwidth ≈ λ/D (half-power convention varies by taper; treat sizes as ±30% estimates); spot at elevation ε
+        Model: beamwidth ≈ λ/D — this k = 1 convention is the site-wide canonical beam size, used identically by the budget card, the Stitching panel, and Serviceability (half-power conventions vary by taper; treat sizes as ±30% estimates); spot at elevation ε
         widens by the longer slant (h/sin ε) and stretches 1/sin ε along the look direction; scan loss not included. Preset
         notes: today's D2C payload ~25 m² per Musk's 2022 description; 2027 ≈ 5× → ~125 m² (derived); AST Block 2 ≈ 223 m²
         — click its two presets back-to-back: the identical panel paints ~12 km spots on 850 MHz partner low-band but
@@ -1932,7 +1942,7 @@ function BeamReceipts() {
     { k: "INPUT · frequency", tone: "#C79BFF", t: "Phone-band: 1.9–2.2 GHz → wavelength 14–16 cm", d: "PCS G-block (1990–1995 DL) today; n252 (2180–2200 DL) for the owned network. Wavelength = c/f — arithmetic, not opinion.", s: "primary (FCC band plan)" },
     { k: "INPUT · altitude", tone: "#C79BFF", t: "~530 km today · 326–335 km dedicated constellation", d: "Gen2 authorization; FCC DA 25-1018 for the dedicated D2C shell. Beam is a cone: spot diameter scales linearly with distance.", s: "primary (FCC)" },
     { k: "PHYSICS", tone: "#6BDB8F", t: "Diffraction: beamwidth ≈ wavelength ÷ antenna size", d: "The non-negotiable exchange rate for any aperture — laser pointers to radio telescopes. Taper conventions move the constant between ~0.9 and ~1.2; nothing moves it 10\u00d7.", s: "textbook" },
-    { k: "ARITHMETIC", tone: C.amber, t: "Gen1: 0.157 m ÷ 5 m ≈ 1.8° → ~16 km at nadir from 530 km", d: "Off-nadir smear (1/sin ε + slant) stretches edge beams to ~30–50 km ellipses. The 2027 hardware: 0.15 m ÷ 11.2 m ≈ 0.77° → ~4.5–5.5 km from 330 km. Every input above is sourced; this row is multiplication.", s: "derived" },
+    { k: "ARITHMETIC", tone: C.amber, t: "Gen1: 0.157 m ÷ 5 m ≈ 1.8° → ~16 km at nadir from 530 km", d: "Off-nadir smear (1/sin ε + slant) stretches edge beams to ~30–50 km ellipses. The 2027 hardware: 0.15 m ÷ 11.2 m ≈ 0.77° → ~4.4 km from 330 km (taper conventions ±30%; the site uses θ = λ/D everywhere). Every input above is sourced; this row is multiplication.", s: "derived" },
     { k: "CROSS-CHECK 1", tone: C.blue, t: "An independent system lands on the same order", d: "AST's 223 m² panel — 3\u00d7 SpaceX's next-gen linear size — still paints ~12 km spots on 850 MHz and ~5 km at 2 GHz. Different company, same equation, same kilometers. If sub-km beams were buildable, the biggest antenna in orbit would have them.", s: "corroboration" },
     { k: "CROSS-CHECK 2", tone: C.blue, t: "SpaceX's own capacity claims only add up with km-scale beams", d: "\u201c100\u00d7 data density\u201d decomposes as more beams \u00d7 smaller beams \u00d7 better efficiency. Going ~16 km → ~5 km is ~10\u00d7 by area; \u00d74 efficiency and more simultaneous beams covers the rest. Sub-km beams would imply ~1,000\u00d7+ density — a claim SpaceX conspicuously does not make.", s: "consistency" },
   ];
@@ -2466,7 +2476,7 @@ function StitchPanel() {
   const eEdge = (Math.atan2(Math.cos(lamD) - Re / (Re + h), Math.sin(lamD)) * 180) / Math.PI;
   const regime = eEdge >= 60 ? 1 : eEdge >= 42 ? 2 : 3;
   const tone = regime === 1 ? C.green : regime === 2 ? C.amber : "#C79BFF";
-  const beamArea = Math.PI * 2.35 * 2.35;
+  const beamArea = Math.PI * 2.2 * 2.2; // 4.4 km ⌀ — Panel 1b convention (θ = λ/D), unified site-wide
   const beamsNeeded = areaPer / beamArea;
   const duty = Math.min(700 / beamsNeeded, 1) * 100;
   const satsUS = fleet * (US / EARTH) * 1.3;
@@ -2506,7 +2516,7 @@ function StitchPanel() {
   const trks = Array.from({ length: nstr }, (_, i) => i - (nstr - 1) / 2);
   const zk = zw / zSpanKm;
   const zHKm = zh / zk;
-  const beamR = Math.max(2.35 * zk, 1.1);
+  const beamR = Math.max(2.2 * zk, 1.1);
   const patchPx = rServe * zk;
   const zoff = (t * 7.3 * zspd) % spacing;
   const PAL = ["#FFB04C", "#5BA8FF", "#C79BFF", "#6BDB8F", "#FF9ECF", "#4DD0E1"];
@@ -2703,7 +2713,7 @@ function StitchPanel() {
         Model (derived, schematic): CONUS boundary from Natural Earth (public domain), equirectangular at 38°N; two
         interleaved hex lattices (ascending + descending families) netting the fleet's density, ×1.3 mid-latitude
         crowding for 53° planes; patch-edge elevation from spherical geometry at 330 km; duty = ~700 available beams ÷
-        positions to cover — even at 15,000 satellites it's ~3:1, which is why the zoom's phones blink between lit and
+        positions to cover (4.4 km beams, Panel 1b convention) — even at 15,000 satellites it's ~3:1, which is why the zoom's phones blink between lit and
         between-dwells: Earth-fixed cells and hopping schedules exist at every fleet size. Handover cadence at real
         speed: every ~1–2 minutes at 15,000 satellites, ~2–3 at 650. US capacity = satellites over CONUS × beams ×
         50 Mbps claim-anchored — a ceiling, not a forecast. Fleet growth doesn't just add capacity — it deletes the bad
@@ -2863,10 +2873,57 @@ function NtnPanel() {
   );
 }
 
+function SubNav({ items }) {
+  const [cur, setCur] = useState(items[0].id);
+  useEffect(() => {
+    const onScroll = () => {
+      let best = items[0].id, bestY = -1e9;
+      for (const it of items) {
+        const el = document.getElementById(it.id);
+        if (!el) continue;
+        const y = el.getBoundingClientRect().top;
+        if (y < 120 && y > bestY) { bestY = y; best = it.id; }
+      }
+      setCur(best);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [items]);
+  const go = (id) => {
+    const el = document.getElementById(id);
+    if (el) { el.scrollIntoView({ behavior: "smooth", block: "start" }); try { history.replaceState(null, "", "#" + id); } catch (e) {} }
+  };
+  return (
+    <nav className="subnav" aria-label="Section navigation">
+      {items.map((it) => (
+        <button key={it.id} className={"subpill" + (cur === it.id ? " on" : "")} onClick={() => go(it.id)}>{it.label}</button>
+      ))}
+    </nav>
+  );
+}
+
+function NextLink({ to, label }) {
+  return <button className="nextlink" onClick={() => { const el = document.getElementById(to); if (el) el.scrollIntoView({ behavior: "smooth" }); }}>next: {label} ↓</button>;
+}
+
+const COV_SECTIONS = [
+  { id: "cov-intro", label: "Intro" },
+  { id: "cov-1-reach", label: "1 · Reach" },
+  { id: "cov-1b-lab", label: "1b · Beam lab" },
+  { id: "cov-1b-receipts", label: "Receipts" },
+  { id: "cov-2-beammap", label: "2 · Beam map" },
+  { id: "cov-3-reuse", label: "3 · Adaptive reuse" },
+  { id: "cov-4-ntn", label: "4 · NTN" },
+  { id: "cov-5-sawtooth", label: "5 · Sawtooth" },
+  { id: "cov-6-stitching", label: "6 · Stitching" },
+];
+
 function CoverageTab() {
   return (
     <div>
-      <div className="card">
+      <SubNav items={COV_SECTIONS} />
+      <div className="card" id="cov-intro">
         <div className="eyebrow">The inversion that makes D2C possible</div>
         <p className="body">
           A Starlink dish tracks satellites with its own phased array. A phone has a fingernail-sized omnidirectional antenna
@@ -2878,14 +2935,14 @@ function CoverageTab() {
           moving constellation fakes a stationary network, and what changes when phones finally learn satellites exist.
         </p>
       </div>
-      <FootprintPanel />
-      <BeamSizeLab />
-      <BeamReceipts />
-      <BeamMap />
-      <AdaptiveReusePanel />
-      <NtnPanel />
-      <SawtoothPanel />
-      <StitchPanel />
+      <div id="cov-1-reach"><FootprintPanel /><NextLink to="cov-1b-lab" label="Beam-size lab" /></div>
+      <div id="cov-1b-lab"><BeamSizeLab /><NextLink to="cov-1b-receipts" label="The receipts" /></div>
+      <div id="cov-1b-receipts"><BeamReceipts /><NextLink to="cov-2-beammap" label="Beam map" /></div>
+      <div id="cov-2-beammap"><BeamMap /><NextLink to="cov-3-reuse" label="Adaptive reuse" /></div>
+      <div id="cov-3-reuse"><AdaptiveReusePanel /><NextLink to="cov-4-ntn" label="NTN" /></div>
+      <div id="cov-4-ntn"><NtnPanel /><NextLink to="cov-5-sawtooth" label="Sawtooth" /></div>
+      <div id="cov-5-sawtooth"><SawtoothPanel /><NextLink to="cov-6-stitching" label="The stitching" /></div>
+      <div id="cov-6-stitching"><StitchPanel /></div>
     </div>
   );
 }
@@ -3012,7 +3069,7 @@ function TechTab() {
         {(() => {
           const G = {
             gen1: { alt: 530, mask: 25, beamD: 16, nBeams: 48, nLabel: "~43–48 downlink (converging secondary sources: AIAA \u201cup to 43\u201d; payload teardown 3 DL antennas \u00d7 8 beams \u00d7 2 polarizations = 48). No SpaceX primary. Early service ran far fewer active LTE carriers — a config fact once misread as beam capability.", ap: "~25 m² (Musk, Aug 2022)", mhz: 5, mhzL: "5 MHz leased G-block DL", perBeam: "~3.1 Mbps (UPM-measured)", tone: C.dim },
-            v2: { alt: 330, mask: 25, beamD: 4.7, nBeams: 700, nLabel: "undisclosed — ~700-class derived (16\u00d7 the ~43\u201348 Gen1 beams). Residual ambiguity: MWC\u2019s \u201c20\u00d720 MHz beams\u201d could parse as twenty 20-MHz beams; the count is genuinely not public.", ap: "~125 m² (5\u00d7 claim, derived)", mhz: 20, mhzL: "20 MHz owned n252 DL per beam (the \u201c20\u00d720 MHz beams\u201d claim)", perBeam: "~12 Mbps at measured efficiency \u2192 ~50 Mbps claim-anchored", tone: C.amber },
+            v2: { alt: 330, mask: 25, beamD: 4.4, nBeams: 700, nLabel: "undisclosed — ~700-class derived (16\u00d7 the ~43\u201348 Gen1 beams). Residual ambiguity: MWC\u2019s \u201c20\u00d720 MHz beams\u201d could parse as twenty 20-MHz beams; the count is genuinely not public.", ap: "~125 m² (5\u00d7 claim, derived)", mhz: 20, mhzL: "20 MHz owned n252 DL per beam (the \u201c20\u00d720 MHz beams\u201d claim)", perBeam: "~12 Mbps at measured efficiency \u2192 ~50 Mbps claim-anchored", tone: C.amber },
             v3: { alt: 350, mask: 25, beamD: 3, nBeams: 0, nLabel: "different product: GHz-wide Ku beams to dish antennas (real gain, powered, steered) — 1 Tbps/satellite claim. No phone radio as specced; it backhauls the femtocells that serve phones instead.", ap: "Ku/E-band arrays", mhz: 0, mhzL: "", perBeam: "", tone: C.blue },
           };
           const g = G[bg];
@@ -3050,7 +3107,7 @@ function TechTab() {
                 <div className="specRow"><span className="specL">Altitude · mask</span><span className="specV">{alt} km · {g.mask}°</span></div>
                 <div className="specRow"><span className="specL">Footprint (steerable)</span><span className="specV">~{Math.round(fpKm).toLocaleString()} km across (~{(fpKm2 / 1e6).toFixed(1)}M km²)</span></div>
                 {bg !== "v3" && <div className="specRow"><span className="specL">Beam diameter (nadir)</span><span className="specV">~{g.beamD} km</span></div>}
-                {bg === "v2" && <div className="specRow"><span className="specL">Beam at the 25° edge</span><span className="specV" style={{ whiteSpace: "normal" }}>~10 × 24 km ellipse (2.4:1, ecc. ≈ 0.91, ~11× nadir area): 2.15× slant widening × 2.37× oblique stretch</span></div>}
+                {bg === "v2" && <div className="specRow"><span className="specL">Beam at the 25° edge</span><span className="specV" style={{ whiteSpace: "normal" }}>~9.5 × 22 km ellipse (2.4:1, ecc. ≈ 0.91, ~11× nadir area): 2.15× slant widening × 2.37× oblique stretch</span></div>}
                 <div className="specRow"><span className="specL">Simultaneous beams</span><span className="specV" style={{ whiteSpace: "normal" }}>{g.nLabel}</span></div>
                 {bg !== "v3" && <div className="specRow"><span className="specL">Spectrum per beam</span><span className="specV">{g.mhzL}</span></div>}
                 {bg !== "v3" && <div className="specRow"><span className="specL">Per-beam throughput</span><span className="specV">{g.perBeam}</span></div>}
@@ -3200,8 +3257,24 @@ const TABS = [
   { id: "verdict", label: "Bull v Bear" },
 ];
 
+const HASH_TAB = { cov: "coverage", phy: "physics", svc: "serviceability" };
 function StarlinkMobileRoadmap() {
-  const [tab, setTab] = useState("story");
+  const [tab, setTab] = useState(() => {
+    try {
+      const h = (window.location.hash || "").slice(1);
+      const pre = h.split("-")[0];
+      if (HASH_TAB[pre]) return HASH_TAB[pre];
+    } catch (e) {}
+    return "story";
+  });
+  useEffect(() => {
+    window.__navTo = (t, id) => { setTab(t); setTimeout(() => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: "smooth" }); }, 250); };
+    try {
+      const h = (window.location.hash || "").slice(1);
+      if (h && HASH_TAB[h.split("-")[0]]) setTimeout(() => { const el = document.getElementById(h); if (el) el.scrollIntoView({ behavior: "smooth" }); }, 600);
+    } catch (e) {}
+    return () => { delete window.__navTo; };
+  }, []);
   const [phase, setPhase] = useState(0);
   const [cfg, setCfg] = useState({ ...SCENARIOS[2].cfg, terrEff: 3 });
   return (
@@ -3235,6 +3308,18 @@ function StarlinkMobileRoadmap() {
         .tab:focus-visible, button:focus-visible { outline: 2px solid ${C.blue}; outline-offset: 2px; }
         .wrap { max-width: 1120px; margin: 0 auto; }
         .card { background: ${C.panel}; border: 1px solid ${C.line}; border-radius: 8px; padding: 20px 22px; margin-bottom: 16px; }
+        .subnav { position: sticky; top: 0; z-index: 40; background: ${C.ink}F2; backdrop-filter: blur(6px);
+          display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 0 10px; margin-bottom: 14px; border-bottom: 1px solid ${C.line}; }
+        .subpill { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em; color: ${C.dim};
+          background: ${C.panel2}; border: 1px solid ${C.line}; border-radius: 999px; padding: 6px 11px; cursor: pointer; white-space: nowrap; }
+        .subpill:hover { color: ${C.text}; border-color: ${C.dim}; }
+        .subpill.on { color: ${C.amber}; border-color: ${C.amber}; background: ${C.amberDim}; }
+        .nextlink { display: block; text-align: right; font-family: var(--mono); font-size: 11px; color: ${C.blue};
+          background: none; border: none; cursor: pointer; margin: -8px 0 16px auto; padding: 4px; }
+        .nextlink:hover { color: ${C.amber}; }
+        .hilite { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        .hiliteBtn { font-family: var(--mono); font-size: 11px; color: ${C.amber}; background: ${C.amberDim};
+          border: 1px solid ${C.amber}; border-radius: 6px; padding: 8px 12px; cursor: pointer; }
         .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
         @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
         .eyebrow { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: ${C.dim}; margin-bottom: 10px; }
@@ -3416,7 +3501,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v52 · hexagonal beam grid</span>
+        <span className="buildTag">build v53 · sub-nav + unified beam constant</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
