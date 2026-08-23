@@ -3314,13 +3314,15 @@ function ServiceabilityTab() {
   const servDens = satCapMbps / areaPer / minMbps / (activePct / 100); // servable subscribers per km²
   const feederFlag = satCapMbps > 100000;
   // national aggregation over the census raster
+  const satVacatesMetros = band === "2ghz" && (femMhz === 25 || femMhz === 45); // split modes: satellite DL leaves town
   const CELLA = US_DENS.cell * US_DENS.cell;
   const cellsIn = stSel < 0 ? DENS_CELLS : DENS_CELLS.filter((c) => c.si === stSel);
   let popTot = 0, popServ = 0, landFull = 0;
   for (const c of cellsIn) {
     const p = c.d * CELLA;
     popTot += p;
-    const fr = Math.min(1, servDens / c.d);
+    const inSelMetro = c.mi >= 0 && c.mi < nMetros;
+    const fr = satVacatesMetros && inSelMetro ? 0 : Math.min(1, servDens / c.d);
     popServ += p * fr;
     if (fr >= 0.999) landFull++;
   }
@@ -3460,9 +3462,10 @@ function ServiceabilityTab() {
           <g clipPath={stSel >= 0 ? "url(#svcStClip)" : "url(#svcClip)"}>
             {layer !== "plain" && cellsIn.map((c, i) => {
               const inMetro = c.mi >= 0 && c.mi < nMetros;
+              const satFr = satVacatesMetros && inMetro ? 0 : Math.min(1, servDens / c.d);
               const fill = layer === "dens" ? densColor(c.d)
-                : layer === "hybrid" ? servColor(inMetro ? servedFrac : Math.min(1, servDens / c.d))
-                : servColor(Math.min(1, servDens / c.d));
+                : layer === "hybrid" ? servColor(inMetro ? servedFrac : satFr)
+                : servColor(satFr);
               return <rect key={i} x={ox + c.gx * cpx} y={oy + c.gy * cpx} width={cpx + 0.4} height={cpx + 0.4} fill={fill} opacity="0.85" stroke={layer === "hybrid" && inMetro ? C.blue : "none"} strokeWidth={layer === "hybrid" && inMetro ? 0.35 : 0} />;
             })}
           </g>
@@ -3509,7 +3512,7 @@ function ServiceabilityTab() {
           <button className={"genBtn" + (strategy === "sidewalk" ? " on" : "")} onClick={() => setStrategy("sidewalk")}>Sidewalk femto + WiFi indoors (SpaceX-likely)</button>
           <button className={"genBtn" + (strategy === "blanket" ? " on" : "")} onClick={() => setStrategy("blanket")}>Indoor-grade femto blanket</button>
           <button className={"genBtn" + (band === "2ghz" ? " on" : "")} onClick={() => { setBand("2ghz"); if (![5, 25, 45].includes(femMhz)) setFemMhz(5); }}>2 GHz owned</button>
-          <button className={"genBtn" + (band === "35" ? " on" : "")} onClick={() => { setBand("35"); if (femMhz < 20) setFemMhz(20); }}>3.5 GHz acquired</button>
+          <button className={"genBtn" + (band === "35" ? " on" : "")} onClick={() => { setBand("35"); if (![5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100].includes(femMhz)) setFemMhz(20); }}>3.5 GHz acquired</button>
         </div>
         <div className="tglRow" style={{ alignItems: "center" }}>
           <label className="sliderL" style={{ flex: 1, minWidth: 180 }}>
@@ -3519,13 +3522,17 @@ function ServiceabilityTab() {
           <div style={{ flex: 1.4, minWidth: 260 }}>
             <div className="sliderL" style={{ marginBottom: 4 }}>Femto DL spectrum: <strong>{femMhz} MHz</strong> <span style={{ color: C.dim, fontSize: 11 }}>(depends on what the satellite keeps)</span></div>
             {band === "2ghz" ? (
-              <div className="tglRow" style={{ gap: 4 }}>
-                <button className={"genBtn" + (femMhz === 5 ? " on" : "")} onClick={() => setFemMhz(5)} title="Satellite keeps n252 nationwide; only the H-block DL is free">5 · H-block only</button>
-                <button className={"genBtn" + (femMhz === 25 ? " on" : "")} onClick={() => setFemMhz(25)} title="Split-mode: satellite vacates metro DL; + AWS-4 as n70 DL">25 · split-mode</button>
-                <button className={"genBtn" + (femMhz === 45 ? " on" : "")} onClick={() => setFemMhz(45)} title="Max split: + 2180–2200 repurposed as terrestrial SDL in metros">45 · max split</button>
+              <div>
+                <div className="tglRow" style={{ gap: 4 }}>
+                  <button className={"genBtn" + (femMhz === 5 ? " on" : "")} onClick={() => setFemMhz(5)} title="Satellite transmits everywhere, metros included; only the H-block DL is free for femtos">5 · coexist (H only)</button>
+                  <button className={"genBtn" + (femMhz === 25 ? " on" : "")} onClick={() => setFemMhz(25)} title="END-STATE: requires mature femto coverage first — see the cold-start explainer. Satellite stops transmitting DL over these metros; vacancy frees 2000–2020 as n70 DL">25 · handoff (end-state)</button>
+                  <button className={"genBtn" + (femMhz === 45 ? " on" : "")} onClick={() => setFemMhz(45)} title="END-STATE: the full 2030s split. Handoff plus 2180–2200 repurposed as terrestrial SDL inside metros">45 · max (end-state)</button>
+                </div>
+                {satVacatesMetros && <div style={{ fontSize: 11, color: C.amber, fontFamily: "var(--mono)", marginTop: 4 }}>END-STATE scenario: satellite DL vacates the top-{nMetros} metros — realistic only after femto coverage matures (cold-start explainer below); orbit-alone number and satellite map exclude them</div>}
+                {femMhz === 5 && mhz > 20 && <div style={{ fontSize: 11, color: C.red, fontFamily: "var(--mono)", marginTop: 4 }}>⚠ satellite DL &gt;20 MHz includes the H-block from orbit — contested with this preset; drop satellite to 20 MHz or pick a handoff preset</div>}
               </div>
             ) : (
-              <input type="range" min="20" max="100" step="20" value={femMhz} onChange={(e) => setFemMhz(+e.target.value)} />
+              <input type="range" min="5" max="100" step="5" value={femMhz} onChange={(e) => setFemMhz(+e.target.value)} />
             )}
           </div>
         </div>
@@ -3551,16 +3558,33 @@ function ServiceabilityTab() {
             </div>
           )}
         </div>
-        <Info label="why femto spectrum depends on what the satellite keeps">
-          The same owned blocks sit on both sides of the network: n252 satellite service is 2000–2020 up / 2180–2200
-          down. If the satellite operates n252 <em>nationwide</em>, the only uncontested 2 GHz femto downlink is the
-          H-block's 5 MHz — the conservative default here. The split-mode doctrine (Spectrum tab) unlocks more: the
-          satellite vacates metro downlink, freeing 2000–2020 as n70-class DL (25 MHz total), and at maximum even
-          2180–2200 as supplemental terrestrial DL (45 MHz) — the same MHz doing different jobs in different places,
-          with guard-zone coordination at the seams. The 3.5 GHz path sidesteps the coupling entirely: acquired
-          spectrum (CBRS/C-band class) owes the satellite nothing — but pays the propagation tax (smaller cells, ~2.7×
-          the boxes). At 5 MHz, watch the capacity stat: femto capacity stops being free, and the binding constraint
-          can flip from coverage to spectrum — the panel tells you which is binding at your settings.
+        <Info label="the three 2 GHz presets — what each one does to both sides of the network">
+          Each preset is a decision about <em>where the satellite transmits downlink</em>, and it moves numbers on both
+          sides of this page. <strong>5 · coexist:</strong> satellite operates n252 everywhere, metros included; femtos
+          get only the H-block's 5 MHz; the orbit-alone number still credits the satellite its (tiny) metro service.
+          <strong>25 · metro handoff:</strong> the satellite stops transmitting DL over the selected metros — so the
+          orbit-alone hero and the satellite map now show those metros as unserved-by-orbit — and the vacancy frees
+          2000–2020 to run as terrestrial n70 DL inside them (25 MHz total). Rural satellite capacity is unchanged:
+          leaving town costs the countryside nothing, because geography partitions the same MHz — that's the split-mode
+          doctrine from the Spectrum tab. <strong>45 · max handoff:</strong> the same, plus 2180–2200 itself repurposed
+          as extra terrestrial DL inside metros while remaining satellite DL everywhere else, guard zones at the seams.
+          The 3.5 GHz path sidesteps the whole coupling — acquired spectrum owes the satellite nothing — but pays the
+          propagation tax (~2.7× the boxes). And at 5 MHz, watch the capacity stat: the binding constraint can flip
+          from coverage to spectrum; the panel tells you which is binding at your settings.
+        </Info>
+        <Info label="the cold-start problem — why handoff is an end-state and roaming is the bridge">
+          The handoff presets skip a hard middle: femto coverage needs millions of boxes, boxes come from subscribers,
+          and subscribers need non-spotty coverage — a two-sided cold start. The obvious escape — seed femtos on the
+          existing dish base, so boxes precede mobile subscribers — is weaker than it looks: Starlink broadband is
+          rural-skewed by its own value proposition, so the metro dish base is thin exactly where femtos are needed.
+          The realistic sequencing: <strong>near-term femto spectrum is the 5 MHz H-block coexist or acquired C-band
+          (5–20 MHz, clean of any satellite coupling)</strong>, with metro capacity bridged by an <strong>urban roaming
+          agreement</strong> while density builds. The plumbing exists — SpaceX already provides T-Mobile rural satellite
+          coverage under the G-block lease, and urban roaming is that trade's natural reciprocal leg — and the precedent
+          is pointed: DISH/Boost ran on AT&T roaming while building its own network, the classic attacker's playbook,
+          and SpaceX bought its spectrum from that very company. Every attacker carrier starts on someone else's towers;
+          the question is only sequencing. The tell to watch: the July 2027 Upper C-band auction — bidding means buying
+          the clean femto band; sitting out means betting the bridge carries them to the 2 GHz handoff end-state.
         </Info>
         <Info label="is 3 bps/Hz the right small-cell efficiency?">
           It's the defensible middle of a documented bracket. 3GPP's own LTE-Advanced urban targets: 2.4 bps/Hz/cell
@@ -3915,7 +3939,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v60 · realistic spectrum coupling + beam crossover</span>
+        <span className="buildTag">build v62 · cold-start doctrine: end-state labels + roaming bridge</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
