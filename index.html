@@ -1813,7 +1813,10 @@ function FootprintPanel() {
         ground a satellite is <em>lighting this instant</em> inside its share, hopping to cover the rest. Reach ⊇ share ⊇
         lit beams. The satellite-count ladder on this panel is derived from reach — Earth's area ÷ one footprint (× a
         constellation overlap factor) — which is why the fleet number is an <em>output</em> of this circle, never an
-        input to it.
+        input to it. One more independence worth stating: reach — and therefore the satellite count for coverage — is
+        <em>frequency-independent</em>: it's pure visibility geometry (altitude + mask). Moving from the leased G-block
+        (1.99 GHz) to owned n252 (2.19 GHz) shrinks the <em>beams</em> ~10% (a capacity effect, Panel 1b) and costs
+        ~1.2 dB of extra path loss (a link-margin nibble), but the footprint — and the ~650 — doesn't move.
       </Info>
       <Info label="why more satellites ≠ smaller beams (how coverage becomes capacity)">
         A common misreading of the ladder: that launching more satellites shrinks the beams. It doesn't — beam size is
@@ -2746,7 +2749,11 @@ function StitchPanel() {
         Model (derived, schematic): CONUS boundary from Natural Earth (public domain), equirectangular at 38°N; two
         interleaved hex lattices (ascending + descending families) netting the fleet's density, ×1.3 mid-latitude
         crowding for 53° planes; patch-edge elevation from spherical geometry at 330 km; duty = ~700 available beams ÷
-        positions to cover (4.4 km beams, Panel 1b convention) — even at 15,000 satellites it's ~3:1, which is why the zoom's phones blink between lit and
+        positions to cover (4.4 km beams, Panel 1b convention). Note the crossover this implies: up to ~48,000
+        satellites, crowding is absorbed by duty cycle (all 700 beams stay busy inside their shrinking patch — the
+        Voronoi assignment prevents neighbor overlap); beyond that — Gen3's 100,000-satellite scale — a patch physically
+        can't hold 700 beams, and active beams per satellite must fall to patch ÷ beam-area (~330 at 100k). Even at
+        15,000 satellites it's ~3:1, which is why the zoom's phones blink between lit and
         between-dwells: Earth-fixed cells and hopping schedules exist at every fleet size. Handover cadence at real
         speed: every ~1–2 minutes at 15,000 satellites, ~2–3 at 650. US capacity = satellites over CONUS × beams ×
         50 Mbps claim-anchored — a ceiling, not a forecast. Fleet growth doesn't just add capacity — it deletes the bad
@@ -3292,7 +3299,7 @@ function ServiceabilityTab() {
   const [stSel, setStSel] = useState(-1);
   const [nMetros, setNMetros] = useState(10);
   const [band, setBand] = useState("2ghz");
-  const [femMhz, setFemMhz] = useState(20);
+  const [femMhz, setFemMhz] = useState(5);
   const [femEff, setFemEff] = useState(3);
   const [covT, setCovT] = useState(90);
   const [depMode, setDepMode] = useState("organic");
@@ -3300,8 +3307,9 @@ function ServiceabilityTab() {
   const [strategy, setStrategy] = useState("sidewalk");
   const eff = effMode === "claim" ? 2.48 : 0.62;
   const perBeam = eff * mhz;
-  const satCapMbps = 700 * perBeam;
   const areaPer = 510e6 / fleet;
+  const beamsUsable = Math.min(700, areaPer / (Math.PI * 2.2 * 2.2)); // beyond ~48k satellites a patch can't hold 700 beams
+  const satCapMbps = beamsUsable * perBeam;
   const satsUS = fleet * (8.1 / 510) * 1.3;
   const servDens = satCapMbps / areaPer / minMbps / (activePct / 100); // servable subscribers per km²
   const feederFlag = satCapMbps > 100000;
@@ -3500,18 +3508,26 @@ function ServiceabilityTab() {
         <div className="tglRow" style={{ marginBottom: 6 }}>
           <button className={"genBtn" + (strategy === "sidewalk" ? " on" : "")} onClick={() => setStrategy("sidewalk")}>Sidewalk femto + WiFi indoors (SpaceX-likely)</button>
           <button className={"genBtn" + (strategy === "blanket" ? " on" : "")} onClick={() => setStrategy("blanket")}>Indoor-grade femto blanket</button>
-          <button className={"genBtn" + (band === "2ghz" ? " on" : "")} onClick={() => setBand("2ghz")}>2 GHz owned</button>
-          <button className={"genBtn" + (band === "35" ? " on" : "")} onClick={() => setBand("35")}>3.5 GHz acquired</button>
+          <button className={"genBtn" + (band === "2ghz" ? " on" : "")} onClick={() => { setBand("2ghz"); if (![5, 25, 45].includes(femMhz)) setFemMhz(5); }}>2 GHz owned</button>
+          <button className={"genBtn" + (band === "35" ? " on" : "")} onClick={() => { setBand("35"); if (femMhz < 20) setFemMhz(20); }}>3.5 GHz acquired</button>
         </div>
         <div className="tglRow" style={{ alignItems: "center" }}>
           <label className="sliderL" style={{ flex: 1, minWidth: 180 }}>
             Metro areas: <strong>top {nMetros}</strong> <span style={{ color: C.dim, fontSize: 11 }}>({(popM / 1e6).toFixed(0)}M people · {(areaM / 1000).toFixed(0)}k km²)</span>
             <input type="range" min="5" max="40" step="1" value={nMetros} onChange={(e) => setNMetros(+e.target.value)} />
           </label>
-          <label className="sliderL" style={{ flex: 1, minWidth: 180 }}>
-            Femto DL spectrum: <strong>{femMhz} MHz</strong> <span style={{ color: C.dim, fontSize: 11 }}>{femMhz <= 20 ? "(n70/n66 splits)" : femMhz <= 30 ? "(+H-block terrestrial)" : femMhz <= 45 ? "(+AWS-3 terrestrial)" : "(acquired mid-band)"}</span>
-            <input type="range" min="20" max="60" step="5" value={femMhz} onChange={(e) => setFemMhz(+e.target.value)} />
-          </label>
+          <div style={{ flex: 1.4, minWidth: 260 }}>
+            <div className="sliderL" style={{ marginBottom: 4 }}>Femto DL spectrum: <strong>{femMhz} MHz</strong> <span style={{ color: C.dim, fontSize: 11 }}>(depends on what the satellite keeps)</span></div>
+            {band === "2ghz" ? (
+              <div className="tglRow" style={{ gap: 4 }}>
+                <button className={"genBtn" + (femMhz === 5 ? " on" : "")} onClick={() => setFemMhz(5)} title="Satellite keeps n252 nationwide; only the H-block DL is free">5 · H-block only</button>
+                <button className={"genBtn" + (femMhz === 25 ? " on" : "")} onClick={() => setFemMhz(25)} title="Split-mode: satellite vacates metro DL; + AWS-4 as n70 DL">25 · split-mode</button>
+                <button className={"genBtn" + (femMhz === 45 ? " on" : "")} onClick={() => setFemMhz(45)} title="Max split: + 2180–2200 repurposed as terrestrial SDL in metros">45 · max split</button>
+              </div>
+            ) : (
+              <input type="range" min="20" max="100" step="20" value={femMhz} onChange={(e) => setFemMhz(+e.target.value)} />
+            )}
+          </div>
         </div>
         <div className="tglRow" style={{ alignItems: "center" }}>
           <label className="sliderL" style={{ flex: 1, minWidth: 180 }}>
@@ -3535,6 +3551,17 @@ function ServiceabilityTab() {
             </div>
           )}
         </div>
+        <Info label="why femto spectrum depends on what the satellite keeps">
+          The same owned blocks sit on both sides of the network: n252 satellite service is 2000–2020 up / 2180–2200
+          down. If the satellite operates n252 <em>nationwide</em>, the only uncontested 2 GHz femto downlink is the
+          H-block's 5 MHz — the conservative default here. The split-mode doctrine (Spectrum tab) unlocks more: the
+          satellite vacates metro downlink, freeing 2000–2020 as n70-class DL (25 MHz total), and at maximum even
+          2180–2200 as supplemental terrestrial DL (45 MHz) — the same MHz doing different jobs in different places,
+          with guard-zone coordination at the seams. The 3.5 GHz path sidesteps the coupling entirely: acquired
+          spectrum (CBRS/C-band class) owes the satellite nothing — but pays the propagation tax (smaller cells, ~2.7×
+          the boxes). At 5 MHz, watch the capacity stat: femto capacity stops being free, and the binding constraint
+          can flip from coverage to spectrum — the panel tells you which is binding at your settings.
+        </Info>
         <Info label="is 3 bps/Hz the right small-cell efficiency?">
           It's the defensible middle of a documented bracket. 3GPP's own LTE-Advanced urban targets: 2.4 bps/Hz/cell
           average with 2×2 MIMO, 2.6 with 4×2, 3.7 with 4×4 — our 3 is "a good 4×2 box." Below it, reality: measured
@@ -3587,7 +3614,7 @@ function ServiceabilityTab() {
               <span style={{ fontSize: 12, color: C.dim, fontWeight: 400 }}> boxes · ~{Math.round(lam)} per km² · {Math.round(rFem * 1000)} m cells</span></div>
           </div>
           <div className="stat"><div className="statL">People served in overlay metros</div><div className="statV" style={{ fontSize: 22 }}>{(peopleFem / 1e6).toFixed(0)}M <span style={{ fontSize: 12, color: C.dim }}>of {(popM / 1e6).toFixed(0)}M ({(servedFrac * 100).toFixed(0)}% — {strategy === "sidewalk" ? "WiFi carries indoors" : "pure-cellular blanket: hostile stock goes unserved indoors"})</span></div></div>
-          <div className="stat"><div className="statL">Capacity headroom per femto</div><div className="statV" style={{ fontSize: 22 }}>{perFemMbps.toFixed(0)} Mbps → ~{Math.round(subsPerFem)} subs <span style={{ fontSize: 12, color: C.dim }}>· network cap ~{(femSubCap / 1e6).toFixed(0)}M ({(femSubCap / Math.max(popM, 1) * 100).toFixed(0)}% of metro pop) — coverage binds, not capacity</span></div></div>
+          <div className="stat"><div className="statL">Capacity headroom per femto</div><div className="statV" style={{ fontSize: 22 }}>{perFemMbps.toFixed(0)} Mbps → ~{Math.round(subsPerFem)} subs <span style={{ fontSize: 12, color: femSubCap < popM * servedFrac ? C.red : C.dim }}>· network cap ~{(femSubCap / 1e6).toFixed(0)}M ({(femSubCap / Math.max(popM, 1) * 100).toFixed(0)}% of metro pop) — {femSubCap < popM * servedFrac ? "CAPACITY BINDS at this spectrum" : "coverage binds, not capacity"}</span></div></div>
         </div>
         <div style={{ overflowX: "auto", marginTop: 10 }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--mono)", fontSize: 11.5 }}>
@@ -3888,7 +3915,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v59 · hostile slider blanket-only + 50–90% coverage</span>
+        <span className="buildTag">build v60 · realistic spectrum coupling + beam crossover</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
