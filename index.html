@@ -1364,10 +1364,18 @@ function NetworkTab() {
 
 /* ------------------------- VERDICT TAB ------------------------- */
 
+const VER_SECTIONS = [
+  { id: "ver-how", label: "How to read this" },
+  { id: "ver-cases", label: "Bull v Bear" },
+  { id: "ver-watch", label: "Six things to watch" },
+];
+
 function VerdictTab() {
   return (
     <div>
-      <div className="card" style={{ borderLeft: `2px solid ${C.green}`, marginBottom: 16 }}>
+      <SubNav items={VER_SECTIONS} />
+      <div className="card" id="ver-how" style={{ borderLeft: `2px solid ${C.green}`, marginBottom: 16 }}>
+        <div className="eyebrow" style={{ color: C.green }}>The site's closing argument — "bull" = the optimistic case, "bear" = the pessimistic one</div>
         <p className="body" style={{ margin: 0 }}>
           <strong style={{ color: C.green }}>Read this debate as a bracket, not a contradiction.</strong> Nearly every
           bull-vs-bear disagreement below is two sides holding opposite ends of the same labeled range: bears price the
@@ -1379,7 +1387,7 @@ function VerdictTab() {
           happen for reality to move?
         </p>
       </div>
-      <div className="split">
+      <div className="split" id="ver-cases">
         <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
           <div className="eyebrow" style={{ color: C.green }}>The bull case <Src k="nextgen" topic="analysts" /></div>
           {QUOTES_BULL.map((q, i) => (
@@ -1393,7 +1401,7 @@ function VerdictTab() {
           ))}
         </div>
       </div>
-      <div className="card">
+      <div className="card" id="ver-watch">
         <div className="eyebrow">Six things that decide it — watch these</div>
         <div className="benchGrid">
           {BENCHMARKS.map((b, i) => (
@@ -3204,6 +3212,69 @@ function TechTab() {
 
 /* ------------------------- REGULATORY & STANDARDS TAB ------------------------- */
 
+const REG_RISKS = [
+  {
+    t: "n252 in handset silicon",
+    when: "First devices ~2027 · volume ~2029",
+    sev: "existential to the timeline",
+    sc: "red",
+    unlocks: "Every capacity number that isn't the leased 5 MHz G-block. Owned spectrum is worthless from orbit until phones can hear it.",
+    fails: "Service stays stuck at today's ~4 Mbps texting-class link on borrowed spectrum, and the 'fourth carrier' claim slips a full handset refresh cycle.",
+    moves: "The speed ladder — this is what migrates 0.62 toward 2.48 bps/Hz",
+    to: ["physics", "phy-ladder"], toLbl: "the speed ladder",
+  },
+  {
+    t: "GN Docket 25-340 — the deferred waivers",
+    when: "Pending at the FCC",
+    sev: "unlocks the wider satellite pipe",
+    sc: "amber",
+    unlocks: "Full AWS-4 satellite flexibility (§2.106) and licensed-earth-station treatment for handsets (§25.115).",
+    fails: "The satellite downlink stays capped near 20 MHz — the difference between the 20 and 45 MHz ends of the Serviceability slider, and roughly a 2× swing in people served.",
+    moves: "The satellite DL slider — 20 MHz vs 45 MHz",
+    to: ["serviceability", "svc-top"], toLbl: "Serviceability",
+  },
+  {
+    t: "Upper C-band auction — July 2027",
+    when: "Auction dated · resolves in one day",
+    sev: "the cleanest strategic tell",
+    sc: "amber",
+    unlocks: "Dual-purpose: clean mid-band femtocell spectrum in metros (uncoupled from anything the satellite needs) and terrestrial capacity that takes urban load off the constellation entirely.",
+    fails: "Femtos are left with the 5 MHz H-block coexist case in cities, making the urban roaming bridge load-bearing for years — and pushing metro capacity onto a partner's network.",
+    moves: "The femto spectrum presets — 5 MHz coexist vs an acquired 5–20 MHz band",
+    to: ["serviceability", "svc-top"], toLbl: "the femtocell overlay",
+  },
+  {
+    t: "Consummation by Nov 30, 2027 + $2.4B escrow",
+    when: "Hard deadline · litigation live",
+    sev: "existential to the asset",
+    sc: "red",
+    unlocks: "Clean title to the 65 MHz. Everything downstream assumes the transfer closes.",
+    fails: "EchoStar calls the escrow 'unprecedented' and involuntary; a litigated timeline puts the spectrum itself — not just the schedule — in play.",
+    moves: "The whole thesis: no spectrum, no fourth carrier",
+    to: ["spectrum", null], toLbl: "the Spectrum tab",
+  },
+  {
+    t: "Appendix C buildout milestones",
+    when: "2 / 4 / 9-year checkpoints",
+    sev: "use-it-or-lose-it",
+    sc: "red",
+    unlocks: "Continued license validity — SINR, availability, uplink throughput and spectral-efficiency tests over 90% of each BEA's geography.",
+    fails: "Miss all first-interim metrics and the final deadline accelerates a year; miss the final metrics and the license terminates automatically. Capital can't shortcut a coverage test.",
+    moves: "The fleet slider — this is the clock the launch cadence is racing",
+    to: ["coverage", "cov-6-stitching"], toLbl: "the stitching panel",
+  },
+  {
+    t: "Per-country licensing abroad",
+    when: "Rolling · market by market",
+    sev: "gates every non-US subscriber",
+    sc: "amber",
+    unlocks: "The global subscriber base. Every market is its own SCS-equivalent proceeding, generally on a local partner's spectrum.",
+    fails: "The addressable market collapses toward the US-only case — and the US alone is the hardest place to be a fourth carrier, with three incumbents already at scale.",
+    moves: "The denominator of the entire business case",
+    to: ["network", null], toLbl: "the hybrid-network tab",
+  },
+];
+
 const REG_SECURED = [
   { t: "Gen2 constellation authority — 15,000 satellites", d: "Dec 2022 grant of 7,500 + Jan 9, 2026 grant of 7,500 more; new 340–485 km shells; Ku/Ka/V/E/W-band for both FSS and MSS; the no-overlapping-beam restriction waived." },
   { t: "EchoStar transfer approved — DA 26-471 (May 12, 2026)", d: "65 MHz across all BEAs except PR/USVI via Spectrum Business Trust 2025-1; population-based buildout rules (§27.14(q)(r)(s)) waived in favor of Appendix C performance conditions." },
@@ -3234,10 +3305,68 @@ const STD_PIPE = [
   { t: "RF front-end universality", d: "Beyond the modem: filters, power amplifiers and antenna tuning per band, per OEM, per SKU — the unglamorous long pole of device support.", s: "part" },
 ];
 
+const REG_SECTIONS = [
+  { id: "reg-gates", label: "Two gates" },
+  { id: "reg-risks", label: "The six that decide it" },
+  { id: "reg-secured", label: "Secured / Pending" },
+  { id: "reg-standing", label: "Standing / Standards" },
+  { id: "reg-verdict", label: "→ The verdict" },
+];
+
+function RiskCard({ r }) {
+  const col = r.sc === "red" ? C.red : C.amber;
+  return (
+    <div className="card" style={{ borderLeft: `3px solid ${col}`, marginBottom: 12 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 10, marginBottom: 6 }}>
+        <strong style={{ color: C.text, fontSize: 15 }}>{r.t}</strong>
+        <span style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: col, border: `1px solid ${col}`, borderRadius: 999, padding: "2px 8px" }}>{r.sev}</span>
+        <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: C.dim, marginLeft: "auto" }}>{r.when}</span>
+      </div>
+      <p className="body" style={{ fontSize: 13.5, margin: "0 0 6px" }}><strong style={{ color: C.green }}>Unlocks:</strong> {r.unlocks}</p>
+      <p className="body" style={{ fontSize: 13.5, margin: "0 0 6px" }}><strong style={{ color: C.red }}>If it slips:</strong> {r.fails}</p>
+      <p className="body" style={{ fontSize: 12.5, color: C.dim, margin: 0 }}>
+        <strong style={{ color: C.amber }}>Moves:</strong> {r.moves} ·{" "}
+        <button className="nextlink" style={{ display: "inline", margin: 0, padding: 0 }}
+          onClick={() => window.__navTo(r.to[0], r.to[1] || "")}>see {r.toLbl} →</button>
+      </p>
+    </div>
+  );
+}
+
 function RegTab() {
   return (
     <div>
-      <div className="split">
+      <SubNav items={REG_SECTIONS} />
+      <div className="card" id="reg-gates" style={{ borderTop: `2px solid ${C.amber}` }}>
+        <div className="eyebrow" style={{ color: C.amber }}>Start here — two gates, both required</div>
+        <p className="body" style={{ marginBottom: 8 }}>
+          Everything on this tab passes through one of two independent gates. <strong>Regulation decides whether SpaceX
+          may transmit</strong> — FCC grants, waivers, buildout conditions, and a licence in every foreign market.
+          <strong> Standards decide whether any phone can hear it</strong> — a 3GPP band definition, then silicon in
+          shipping handsets. A band needs <em>both</em>, and today the two flagship bands are blocked at opposite gates:
+          n252 is standardised but in zero shipping phones, while the H-block sits in hundreds of millions of handsets
+          but has no satellite personality in 3GPP at all. That asymmetry is why the FCC column below is mostly won and
+          the silicon column is where the schedule risk lives — and no amount of launch cadence accelerates a chipset
+          roadmap or a consumer upgrade cycle.
+        </p>
+        <p className="body" style={{ fontSize: 13, color: C.dim, margin: 0 }}>
+          Below: the six items that actually decide the outcome, each with what it unlocks, what breaks if it slips, and
+          which number on this site it moves — then the full reference matrix, and a hand-off to the verdict.
+        </p>
+      </div>
+
+      <div id="reg-risks">
+        <div className="card" style={{ paddingBottom: 8 }}>
+          <div className="eyebrow">The six that decide it — ranked by what they'd cost</div>
+          <p className="body" style={{ fontSize: 13, color: C.dim, margin: 0 }}>
+            Red = existential or use-it-or-lose-it; amber = bounds the size of the prize. Each links to the panel that
+            quantifies it.
+          </p>
+        </div>
+        {REG_RISKS.map((r, i) => <RiskCard key={i} r={r} />)}
+      </div>
+
+      <div className="split" id="reg-secured">
         <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
           <div className="eyebrow" style={{ color: C.green }}>Secured — the authority already in hand <Src k="echostar" topic="echostar" /></div>
           {REG_SECURED.map((r, i) => (
@@ -3256,7 +3385,7 @@ function RegTab() {
         </div>
       </div>
 
-      <div className="split">
+      <div className="split" id="reg-standing">
         <div className="card" style={{ borderLeft: `2px solid ${C.red}` }}>
           <div className="eyebrow" style={{ color: C.red }}>Standing obligations — conditions that never go away <Src k="measured" topic="milestones" /></div>
           {REG_KEEP.map((r, i) => (
@@ -3273,11 +3402,25 @@ function RegTab() {
             </div>
           ))}
           <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 10 }}>
-            The pattern to hold onto: regulation decides whether SpaceX <em>may</em> transmit; standards decide whether any
-            phone can <em>hear</em> it. The FCC column is mostly won. The 3GPP-and-silicon column is where the schedule risk
-            lives — and it moves at the speed of chipset roadmaps and consumer upgrade cycles, which no amount of launch
-            cadence accelerates.
+            Read this column through the two-gate model: a band is usable only with a 3GPP definition <em>and</em> silicon
+            in shipping phones. n252 clears gate one and fails gate two (standardised, zero phones). The H-block clears
+            gate two and fails gate one (in every phone, no satellite personality in 3GPP — no work item even opened).
+            Neither is usable from orbit today, for opposite reasons, and only the second gate is on a timeline SpaceX
+            can't buy its way through.
           </p>
+        </div>
+      </div>
+      <div className="card" id="reg-verdict" style={{ borderTop: `2px solid ${C.green}`, marginTop: 4 }}>
+        <div className="eyebrow" style={{ color: C.green }}>So what? — how this tab feeds the verdict</div>
+        <p className="body" style={{ marginBottom: 10 }}>
+          Every item above is really a claim about <em>where along a bracket</em> reality will land. The bull case is
+          this tab's risks resolving on schedule — silicon ships, waivers grant, the auction is won, milestones are
+          met, foreign licences roll in. The bear case is any one of them slipping: each red item alone is enough to
+          reprice the business, and the amber ones set how big the prize is if it works. The next tab puts both sides in
+          their own words and lists what to watch.
+        </p>
+        <div className="hilite">
+          <button className="hiliteBtn" onClick={() => window.__navTo("verdict", "")}>▸ The verdict — bull v bear, and six things to watch</button>
         </div>
       </div>
     </div>
@@ -3692,10 +3835,10 @@ const TABS = [
   { id: "tech", label: "Technology" },
   { id: "network", label: "The Hybrid Network" },
   { id: "reg", label: "Regulatory & Standards" },
-  { id: "verdict", label: "Bull v Bear" },
+  { id: "verdict", label: "The Verdict — Bull v Bear" },
 ];
 
-const HASH_TAB = { cov: "coverage", phy: "physics", svc: "serviceability" };
+const HASH_TAB = { cov: "coverage", phy: "physics", svc: "serviceability", reg: "reg", ver: "verdict" };
 function StarlinkMobileRoadmap() {
   const [tab, setTab] = useState(() => {
     try {
@@ -3939,7 +4082,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v62 · cold-start doctrine: end-state labels + roaming bridge</span>
+        <span className="buildTag">build v63 · regulatory risk register + verdict stitching</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
