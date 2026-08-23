@@ -3313,6 +3313,19 @@ const REG_SECTIONS = [
   { id: "reg-verdict", label: "→ The verdict" },
 ];
 
+function SectionHead({ n, title, deck, color }) {
+  const col = color || C.amber;
+  return (
+    <div className="secHead" style={{ borderBottomColor: col }}>
+      <div className="secHeadRow">
+        <span className="secNum" style={{ color: col }}>{n}</span>
+        <span className="secTitle">{title}</span>
+      </div>
+      {deck && <div className="secDeck">{deck}</div>}
+    </div>
+  );
+}
+
 function RiskCard({ r }) {
   const col = r.sc === "red" ? C.red : C.amber;
   return (
@@ -3337,8 +3350,10 @@ function RegTab() {
   return (
     <div>
       <SubNav items={REG_SECTIONS} />
-      <div className="card" id="reg-gates" style={{ borderTop: `2px solid ${C.amber}` }}>
-        <div className="eyebrow" style={{ color: C.amber }}>Start here — two gates, both required</div>
+      <div id="reg-gates">
+        <SectionHead n="01" color={C.amber} title="Two gates — both required"
+          deck="How to read this whole tab: what SpaceX may transmit, and what any phone can actually hear." />
+      <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
         <p className="body" style={{ marginBottom: 8 }}>
           Everything on this tab passes through one of two independent gates. <strong>Regulation decides whether SpaceX
           may transmit</strong> — FCC grants, waivers, buildout conditions, and a licence in every foreign market.
@@ -3354,19 +3369,18 @@ function RegTab() {
           which number on this site it moves — then the full reference matrix, and a hand-off to the verdict.
         </p>
       </div>
+      </div>
 
       <div id="reg-risks">
-        <div className="card" style={{ paddingBottom: 8 }}>
-          <div className="eyebrow">The six that decide it — ranked by what they'd cost</div>
-          <p className="body" style={{ fontSize: 13, color: C.dim, margin: 0 }}>
-            Red = existential or use-it-or-lose-it; amber = bounds the size of the prize. Each links to the panel that
-            quantifies it.
-          </p>
-        </div>
+        <SectionHead n="02" color={C.red} title="The six that decide it"
+          deck="Ranked by what they would cost. Red = existential or use-it-or-lose-it; amber = bounds the size of the prize. Each card links to the panel that quantifies it." />
         {REG_RISKS.map((r, i) => <RiskCard key={i} r={r} />)}
       </div>
 
-      <div className="split" id="reg-secured">
+      <div id="reg-secured">
+        <SectionHead n="03" color={C.green} title="The scoreboard — secured v pending"
+          deck="The reference matrix: authority already in hand, against what still has to land." />
+      <div className="split">
         <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
           <div className="eyebrow" style={{ color: C.green }}>Secured — the authority already in hand <Src k="echostar" topic="echostar" /></div>
           {REG_SECURED.map((r, i) => (
@@ -3385,7 +3399,12 @@ function RegTab() {
         </div>
       </div>
 
-      <div className="split" id="reg-standing">
+      </div>
+
+      <div id="reg-standing">
+        <SectionHead n="04" color={C.blue} title="Living conditions & the device pipeline"
+          deck="Obligations that never expire, and the standards-plus-silicon gate that no launch cadence can accelerate." />
+      <div className="split">
         <div className="card" style={{ borderLeft: `2px solid ${C.red}` }}>
           <div className="eyebrow" style={{ color: C.red }}>Standing obligations — conditions that never go away <Src k="measured" topic="milestones" /></div>
           {REG_KEEP.map((r, i) => (
@@ -3410,8 +3429,12 @@ function RegTab() {
           </p>
         </div>
       </div>
-      <div className="card" id="reg-verdict" style={{ borderTop: `2px solid ${C.green}`, marginTop: 4 }}>
-        <div className="eyebrow" style={{ color: C.green }}>So what? — how this tab feeds the verdict</div>
+      </div>
+
+      <div id="reg-verdict">
+        <SectionHead n="05" color={C.green} title="So what? — how this tab feeds the verdict"
+          deck="Every item above is a claim about where along a bracket reality lands. Here is the hand-off to the closing argument." />
+      <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
         <p className="body" style={{ marginBottom: 10 }}>
           Every item above is really a claim about <em>where along a bracket</em> reality will land. The bull case is
           this tab's risks resolving on schedule — silicon ships, waivers grant, the auction is won, milestones are
@@ -3422,6 +3445,7 @@ function RegTab() {
         <div className="hilite">
           <button className="hiliteBtn" onClick={() => window.__navTo("verdict", "")}>▸ The verdict — bull v bear, and six things to watch</button>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -3889,6 +3913,12 @@ function StarlinkMobileRoadmap() {
         .tab:focus-visible, button:focus-visible { outline: 2px solid ${C.blue}; outline-offset: 2px; }
         .wrap { max-width: 1120px; margin: 0 auto; }
         .card { background: ${C.panel}; border: 1px solid ${C.line}; border-radius: 8px; padding: 20px 22px; margin-bottom: 16px; }
+        .secHead { margin: 30px 0 14px; padding-bottom: 10px; border-bottom: 2px solid ${C.line}; }
+        .secHeadRow { display: flex; align-items: center; gap: 11px; flex-wrap: wrap; }
+        .secNum { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; padding: 3px 8px;
+          border: 1px solid currentColor; border-radius: 4px; flex: none; }
+        .secTitle { font-size: 21px; font-weight: 700; color: ${C.text}; letter-spacing: -0.01em; line-height: 1.2; }
+        .secDeck { font-size: 12.5px; color: ${C.dim}; margin-top: 6px; max-width: 900px; }
         .subnav { position: sticky; top: 0; z-index: 40; background: ${C.ink}F2; backdrop-filter: blur(6px);
           display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 0 10px; margin-bottom: 14px; border-bottom: 1px solid ${C.line}; }
         .subpill { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em; color: ${C.dim};
@@ -4082,7 +4112,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v63 · regulatory risk register + verdict stitching</span>
+        <span className="buildTag">build v64 · numbered section headers</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
