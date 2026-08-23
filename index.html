@@ -2763,7 +2763,17 @@ function StitchPanel() {
             <div className="statV" style={{ color: tone }}>typical ~{Math.max(eEdge, 25).toFixed(0)}° <span style={{ color: C.dim, fontSize: 11 }}>(ideal lattice, patch edge)</span></div>
             <div className="statV" style={{ fontSize: 13, marginTop: 2 }}>guaranteed ~{Math.max(guarE, 25).toFixed(0)}° <span style={{ color: C.dim, fontSize: 11 }}>(Panel 1's calibrated floor — everywhere, always)</span></div>
           </div>
-          <div className="stat" style={{ marginTop: 8 }}><div className="statL">Beam positions per patch vs ~700 available</div><div className="statV">~{Math.round(beamsNeeded).toLocaleString()} → duty ~{duty < 10 ? duty.toFixed(1) : duty.toFixed(0)}%</div></div>
+          <div className="stat" style={{ marginTop: 8 }}>
+            <div className="statL">Beam positions per patch vs ~700 available <span style={{ color: C.dim }}>— how thinly beams spread, not a coverage gap</span></div>
+            <div className="statV">~{Math.round(beamsNeeded).toLocaleString()} → duty ~{duty < 10 ? duty.toFixed(1) : duty.toFixed(0)}%</div>
+          </div>
+          <div className="stat" style={{ marginTop: 8 }}>
+            <div className="statL">Reuse regime at the typical cell <span style={{ color: C.dim }}>— Panel 3's model at this fleet's elevation</span></div>
+            <div className="statV" style={{ color: eEdge >= 60 ? C.green : eEdge >= 42 ? C.amber : C.red }}>
+              {eEdge >= 60 ? "Reuse-1 · full 20 MHz" : eEdge >= 42 ? "Transitional · ~13 MHz" : "Reuse-3 · ~6.7 MHz"}
+              <span style={{ color: C.dim, fontSize: 11 }}> → ~{((eEdge >= 60 ? 20 : eEdge >= 42 ? 40 / 3 : 20 / 3) * 2.48 * Math.sin((Math.max(eEdge, 25) * Math.PI) / 180)).toFixed(0)} Mbps per cell</span>
+            </div>
+          </div>
           <div className="stat" style={{ marginTop: 8 }}><div className="statL">US aggregate (claim-anchored ceiling)</div><div className="statV" style={{ color: C.amber }}>~{usCapGbps >= 1000 ? (usCapGbps / 1000).toFixed(1) + " Tbps" : Math.round(usCapGbps) + " Gbps"}</div></div>
         </div>
       </div>
@@ -2777,6 +2787,21 @@ function StitchPanel() {
         serving elevation ≈ 57° while the guaranteed-everywhere floor ≈ 43°. Your phone usually lives near the first
         number and occasionally visits the second — which is exactly the variance story Panel 5's sawtooth animates.
         Neither number is wrong; quoting either alone would be.
+      </Info>
+      <Info label="duty cycle vs frequency reuse — two different things, don't fuse them">
+        These two stats answer different questions and it's easy to mistake one for the other.
+        <strong> Frequency reuse</strong> (Panel 3) asks <em>how much of the 20 MHz your cell may use</em>, and the answer
+        is set by elevation: high in the sky, beams land compact and circular, isolated from their neighbours — reuse-1,
+        the full pool, ~47–50 Mbps in that cell. Low toward the horizon, beams smear into ellipses that spill onto
+        neighbours — reuse-3, one lane, ~10 Mbps. Fleet size drives this <em>through elevation</em>: at 650 satellites the
+        typical cell sees the satellite at ~28° (reuse-3); at ~6,000 the typical cell crosses 60° into reuse-1; and by
+        ~15,000 even the <em>guaranteed</em> floor reaches it — full menu everywhere, always.
+        <strong> Duty cycle</strong> (this panel) asks something else entirely: <em>how thinly must one satellite's ~700
+        beams spread across the cells in its patch?</em> It is <strong>not</strong> a claim that your phone has service
+        31% of the time. Hopping runs on millisecond scheduling, and schedulers chase demand — most 4.4 km cells in a
+        patch are empty land, so beams park where users actually are. Duty is a way of stating <em>capacity per unit
+        area</em>: 700 beams × the per-cell rate, divided across the patch, which is exactly the arithmetic the
+        Serviceability tab runs. Reuse sets your cell's speed; duty sets how much total capacity exists to share.
       </Info>
       <Info label="what exactly am I looking at in the strip view?">
         A face-on window of ground about three satellite-spacings wide. The dashed vertical lines are adjacent orbital
@@ -4159,7 +4184,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v67 · seams section + single-line tab bar</span>
+        <span className="buildTag">build v68 · duty vs reuse clarified + reuse stat</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
