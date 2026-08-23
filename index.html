@@ -3520,12 +3520,20 @@ function ServiceabilityTab() {
           </label>
           <label className="sliderL" style={{ flex: 1, minWidth: 180 }}>
             Outdoor coverage target: <strong>{covT}%</strong>
-            <input type="range" min="80" max="95" step="1" value={covT} onChange={(e) => setCovT(+e.target.value)} />
+            <input type="range" min="50" max="90" step="1" value={covT} onChange={(e) => setCovT(+e.target.value)} />
           </label>
-          <label className="sliderL" style={{ flex: 1, minWidth: 180 }}>
-            Hostile construction: <strong>{hostile}%</strong> <span style={{ color: C.dim, fontSize: 11 }}>(blanket mode ceiling)</span>
-            <input type="range" min="20" max="60" step="5" value={hostile} onChange={(e) => setHostile(+e.target.value)} />
-          </label>
+          {strategy === "blanket" ? (
+            <label className="sliderL" style={{ flex: 1, minWidth: 180 }}>
+              Hostile construction: <strong>{hostile}%</strong> <span style={{ color: C.dim, fontSize: 11 }}>(share of buildings femto signal can't enter)</span>
+              <input type="range" min="20" max="60" step="5" value={hostile} onChange={(e) => setHostile(+e.target.value)} />
+            </label>
+          ) : (
+            <div style={{ flex: 1, minWidth: 180, alignSelf: "center", fontSize: 12, color: C.dim, fontFamily: "var(--mono)", padding: "8px 0" }}>
+              No wall-construction knob in this strategy: indoors, phones use <strong style={{ color: C.text }}>WiFi calling</strong> over
+              the customer's own router — the femto never has to punch through walls. Switch to the blanket strategy to
+              see construction bite.
+            </div>
+          )}
         </div>
         <Info label="is 3 bps/Hz the right small-cell efficiency?">
           It's the defensible middle of a documented bracket. 3GPP's own LTE-Advanced urban targets: 2.4 bps/Hz/cell
@@ -3538,21 +3546,21 @@ function ServiceabilityTab() {
           measured baseline (conservative), while the satellite 2.48 sits 4× above its measured baseline (aggressive) —
           same currency, opposite epistemic postures.
         </Info>
-        <Info label="the hostile-construction slider — buildings no outdoor signal enters">
-          Building entry loss is bimodal, not smooth. Penetrable stock (wood-frame, ordinary glass) costs ~8–15 dB — an
+        {strategy === "blanket" && <Info label="the hostile-construction slider — buildings no outdoor signal enters">
+          This slider exists only in the blanket strategy, because only here does the outdoor femto have to reach phones
+          <em> inside</em> buildings (in the sidewalk strategy, indoor phones use WiFi calling on the home router, so
+          walls are irrelevant). Building entry loss is bimodal, not smooth. Penetrable stock (wood-frame, ordinary glass) costs ~8–15 dB — an
           outdoor femto's signal survives. Hostile stock — concrete block, metal mesh screens, foil-backed sheathing,
           low-E metallized glass — costs 25–40+ dB, a wall no consumer-power outdoor network climbs at any density
           (recovering 30 dB would take ~1,000× the power). The slider is the hostile share of the building stock
           (default 40% for urban America's mix; Phoenix ≠ Seattle, so it's exposed). It caps the <em>blanket</em>
           strategy, which is modeled as <strong>pure cellular</strong> — no WiFi crutch, because native indoor service
           without WiFi dependency is the only reason to pay the blanket's 10×+ box count: served = coverage ×
-          (1 − 0.8 × hostile), the 0.8 being the indoor share of usage. It deliberately does <em>not</em> touch the
-          sidewalk + WiFi strategy — there, all indoor service already rides the customer's WiFi, so building materials
-          are irrelevant by design. Drag it
-          right and watch one strategy decay while the other holds: that asymmetry is the argument. One honest caveat:
-          the 0.9 assumes hostile-construction households have broadband at the national rate; in the poorest urban
-          pockets both paths can fail together — an equity footnote worth carrying.
-        </Info>
+          (1 − 0.8 × hostile), the 0.8 being the indoor share of usage. Drag it right and watch served-people fall while the box count holds still —
+          you can't buy through walls with more boxes; hostile stock is a ceiling, not a densification problem. The
+          escape hatch is the other strategy: hand indoors to WiFi and the wall problem disappears (along with the need
+          for 10× the boxes).
+        </Info>}
         <div className="tglRow" style={{ marginBottom: 8 }}>
           <button className={"genBtn" + (depMode === "planned" ? " on" : "")} onClick={() => setDepMode("planned")}>Planned grid ×1.0</button>
           <button className={"genBtn" + (depMode === "organic" ? " on" : "")} onClick={() => setDepMode("organic")}>Organic (Poisson) ×{(-Math.log(1 - covT / 100) / (covT / 100)).toFixed(1)}</button>
@@ -3880,7 +3888,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v58 · hostile slider bites (pure-cellular blanket)</span>
+        <span className="buildTag">build v59 · hostile slider blanket-only + 50–90% coverage</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
