@@ -2619,28 +2619,29 @@ function StitchPanel() {
   // (1 + 6 + 12 + 18 ...), contiguous and even, sized so the requested beam count fills the patch. Any partial
   // outer ring is spread evenly around its circumference. The cluster rides with its satellite; the schedule
   // re-points as a subtle half-cell lattice shift every few dwell intervals.
+  // Triangular (hex-packed) lattice, taking the n sites nearest the centre: every beam lands on a real
+  // lattice site, so the cluster stays round and evenly spaced at ANY count — no partial-ring artefacts.
   const hexPts = (n, R) => {
-    const rings = [];
-    let total = 1, k = 1;
-    while (total + 6 * k <= n) { rings.push([k, 6 * k]); total += 6 * k; k++; }
-    const rem = n - total;
-    const maxRing = rem > 0 ? k : k - 1;
-    const d = R / Math.max(maxRing, 1);
-    const pts = [[0, 0]];
-    for (const [ring, cnt] of rings) {
-      for (let i = 0; i < cnt; i++) {
-        const side = Math.floor(i / ring), tf = (i % ring) / ring;
-        const a1 = (Math.PI / 3) * side, a2 = (Math.PI / 3) * (side + 1);
-        pts.push([ring * d * ((1 - tf) * Math.cos(a1) + tf * Math.cos(a2)), ring * d * ((1 - tf) * Math.sin(a1) + tf * Math.sin(a2))]);
+    const cnt = Math.max(1, n);
+    const a = R * Math.sqrt((2 * Math.PI) / (cnt * Math.sqrt(3))); // spacing that makes n sites fill radius R
+    const rows = Math.ceil(R / (a * (Math.sqrt(3) / 2))) + 2;
+    const cols = Math.ceil(R / a) + 2;
+    const pts = [];
+    for (let j = -rows; j <= rows; j++) {
+      for (let i = -cols; i <= cols; i++) {
+        const x = (i + (j & 1 ? 0.5 : 0)) * a;
+        const y = j * a * (Math.sqrt(3) / 2);
+        pts.push([x, y, x * x + y * y]);
       }
     }
-    for (let i = 0; i < rem; i++) { const aa = (i / rem) * 2 * Math.PI + 0.26; pts.push([k * d * Math.cos(aa), k * d * Math.sin(aa)]); }
-    return pts;
+    pts.sort((p, q) => p[2] - q[2]);
+    return pts.slice(0, cnt).map(([x, y]) => [x, y, a]);
   };
   zsats.forEach(([zx, zy], si) => {
-    const shift = (Math.floor(hopN / 4) + si) % 2;
     const grid = hexPts(nb, patchPx * 0.82);
-    const sx = shift ? patchPx * 0.06 : 0, sy = shift ? patchPx * 0.035 : 0;
+    const cellA = grid.length ? grid[0][2] : 1;                     // lattice spacing for this beam count
+    const shift = (Math.floor(hopN / 4) + si) % 2;                  // re-point = half-cell lattice shift
+    const sx = shift ? cellA * 0.5 : 0, sy = shift ? cellA * (Math.sqrt(3) / 6) : 0;
     grid.forEach(([gx, gy]) => beams.push([zx + gx + sx, zy + gy + sy, si]));
   });
   // phones live in the GAPS between strips (guaranteed off-centerline at every strip count) — where handoffs are contested
@@ -2810,8 +2811,7 @@ function StitchPanel() {
         neighbors present it only serves the patch where it is the steepest option, and the fleet slider sets that
         share's size. The colored dots inside a share are a <strong>sample of the spot beams that satellite is pointing
         this instant</strong> (beams drawn to scale; the count slider sets the sample). Beam sites form a hexagonal
-        cell grid — a center beam plus concentric rings (1 + 6 + 12 …), the same contiguous layout terrestrial cellular
-        uses — sized to the beam-count slider, riding along with its satellite, and re-pointing as a subtle half-cell
+        cell grid — a triangular lattice, the same contiguous layout terrestrial cellular uses — sized to the beam-count slider so the cluster fills the patch at any count, riding along with its satellite, and re-pointing as a subtle half-cell
         lattice shift every few dwell intervals rather than shimmering frame-to-frame. The dotted grid
         is Earth-fixed cells. Phones sit in the gaps between strips — the genuinely contested ground. Beams come to phones, not the other way
         around: most cycles the scheduler assigns one of the serving satellite's beams to the phone's own cell — drawn
@@ -4184,7 +4184,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v69 · time sliders 0–100 (step 5)</span>
+        <span className="buildTag">build v70 · lattice beam grid (uniform at any count)</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
