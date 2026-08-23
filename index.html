@@ -2674,8 +2674,8 @@ function StitchPanel() {
           <input type="range" min="650" max="15000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
         </label>
         <label className="sliderL" style={{ flex: 1, minWidth: 180 }}>
-          Time speed: <strong>{spd === 0 ? "paused" : "×" + spd}</strong>
-          <input type="range" min="0" max="300" step="10" value={spd} onChange={(e) => setSpd(+e.target.value)} />
+          Time speed: <strong>{spd === 0 ? "paused" : "×" + spd}</strong> <span style={{ color: C.dim, fontSize: 11 }}>(0 = pause · 5 = near-real motion · 100 = max)</span>
+          <input type="range" min="0" max="100" step="5" value={spd} onChange={(e) => setSpd(+e.target.value)} />
         </label>
       </div>
       <svg viewBox="0 0 900 505" style={{ width: "100%", display: "block" }} role="img" aria-label="Continental US with two interleaved families of moving serving satellites and their service patches">
@@ -2708,8 +2708,8 @@ function StitchPanel() {
       </p>
       <div className="tglRow" style={{ alignItems: "center", marginBottom: 6 }}>
         <label className="sliderL" style={{ flex: 1, minWidth: 150 }}>
-          Strip time: <strong>{zspd === 0 ? "paused" : "×" + zspd}</strong>
-          <input type="range" min="0" max="300" step="10" value={zspd} onChange={(e) => setZspd(+e.target.value)} />
+          Strip time: <strong>{zspd === 0 ? "paused" : "×" + zspd}</strong> <span style={{ color: C.dim, fontSize: 11 }}>(0 = pause · 5 = near-real motion)</span>
+          <input type="range" min="0" max="100" step="5" value={zspd} onChange={(e) => setZspd(+e.target.value)} />
         </label>
         <label className="sliderL" style={{ flex: 1, minWidth: 150 }}>
           Beams shown / satellite: <strong>{nb}</strong> <span style={{ color: C.dim }}>of ~700</span>
@@ -4184,7 +4184,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v68 · duty vs reuse clarified + reuse stat</span>
+        <span className="buildTag">build v69 · time sliders 0–100 (step 5)</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
