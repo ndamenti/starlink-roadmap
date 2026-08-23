@@ -1291,7 +1291,7 @@ const NET_SECTIONS = [
   { id: "net-intro", label: "How to use this" },
   { id: "net-layers", label: "1 · Four layers" },
   { id: "net-packet", label: "2 · Follow a packet" },
-  { id: "net-costs", label: "3 · Backhaul & interference" },
+  { id: "net-costs", label: "3 · What the seams cost" },
 ];
 
 function NetworkTab() {
@@ -1361,7 +1361,6 @@ function NetworkTab() {
       <div id="net-packet">
         <SectionHead n="02" color={C.green} title="Follow a packet — two routes to the internet"
           deck="Switch between the rural and urban paths: same phone, same network, completely different plumbing." />
-      <div className="split">
         <div className="card">
           <div className="eyebrow">▸ Pick a route — the hop list below redraws <Src k="nextgen" topic="nextgen" /></div>
           <div className="tglRow" style={{ marginBottom: 12 }}>
@@ -1372,7 +1371,12 @@ function NetworkTab() {
             <div key={i} className="hop"><span className="hopN">{i + 1}</span>{s}</div>
           ))}
         </div>
-        <div id="net-costs">
+      </div>
+
+      <div id="net-costs">
+        <SectionHead n="03" color={C.red} title="What the seams cost — backhaul and interference"
+          deck="The two arguments that decide whether the hybrid design actually works: every femtocell spends its host dish's bandwidth, and the layers share spectrum with each other." />
+        <div className="split">
           <div className="card">
             <div className="eyebrow">The backhaul budget — the femtocell's hidden cost <Src k="v3" topic="v3" /></div>
             <p className="body">
@@ -1394,7 +1398,6 @@ function NetworkTab() {
             </p>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );
@@ -3889,15 +3892,15 @@ function ServiceabilityTab() {
 }
 
 const TABS = [
-  { id: "story", label: "The Story" },
+  { id: "story", label: "Story" },
   { id: "spectrum", label: "Spectrum" },
-  { id: "physics", label: "Physics & Capacity" },
+  { id: "physics", label: "Physics" },
   { id: "coverage", label: "Coverage" },
   { id: "serviceability", label: "Serviceability" },
   { id: "tech", label: "Technology" },
-  { id: "network", label: "The Hybrid Network" },
-  { id: "reg", label: "Regulatory & Standards" },
-  { id: "verdict", label: "The Verdict — Bull v Bear" },
+  { id: "network", label: "Hybrid Network" },
+  { id: "reg", label: "Regulatory" },
+  { id: "verdict", label: "The Verdict" },
 ];
 
 const HASH_TAB = { cov: "coverage", phy: "physics", svc: "serviceability", reg: "reg", ver: "verdict" };
@@ -3945,10 +3948,12 @@ function StarlinkMobileRoadmap() {
           border: 1px solid ${C.line}; border-radius: 6px; padding: 7px 12px; }
         .srcA:hover { border-color: ${C.amber}; }
         .buildTag { display: inline-block; margin-left: 10px; font-family: var(--mono); font-size: 9.5px; color: ${C.dim}; opacity: 0.7; }
-        .tabs { max-width: 1120px; margin: 22px auto 18px; display: flex; gap: 6px; flex-wrap: wrap;
-          border-bottom: 1px solid ${C.line}; }
-        .tab { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; color: ${C.dim};
-          background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 12px; cursor: pointer; }
+        .tabs { max-width: 1120px; margin: 22px auto 18px; display: flex; gap: 2px; flex-wrap: nowrap;
+          overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid ${C.line}; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab { font-family: var(--mono); font-size: clamp(10px, 1.02vw, 12px); letter-spacing: 0.04em; color: ${C.dim};
+          background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 9px; cursor: pointer;
+          white-space: nowrap; flex: none; }
         .tab:hover { color: ${C.text}; }
         .tab.on { color: ${C.amber}; border-bottom-color: ${C.amber}; }
         .tab:focus-visible, button:focus-visible { outline: 2px solid ${C.blue}; outline-offset: 2px; }
@@ -4154,7 +4159,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v66 · title 40px</span>
+        <span className="buildTag">build v67 · seams section + single-line tab bar</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
