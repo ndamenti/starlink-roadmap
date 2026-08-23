@@ -1287,15 +1287,46 @@ const PATHS = {
   ],
 };
 
+const NET_SECTIONS = [
+  { id: "net-intro", label: "How to use this" },
+  { id: "net-layers", label: "1 · Four layers" },
+  { id: "net-packet", label: "2 · Follow a packet" },
+  { id: "net-costs", label: "3 · Backhaul & interference" },
+];
+
 function NetworkTab() {
   const [sel, setSel] = useState("femto");
   const [path, setPath] = useState("urban");
   const L = LAYERS.find((l) => l.id === sel);
   return (
     <div>
+      <SubNav items={NET_SECTIONS} />
+      <div className="card" id="net-intro" style={{ borderTop: `2px solid ${C.blue}` }}>
+        <div className="eyebrow" style={{ color: C.blue }}>How to use this tab</div>
+        <p className="body" style={{ marginBottom: 8 }}>
+          Everything else on this site examines one piece of the system; this tab shows <strong>how the pieces work as a
+          single network</strong>. Two interactive controls, and both change the panel beside them:
+        </p>
+        <p className="body" style={{ fontSize: 13.5, marginBottom: 8 }}>
+          <strong style={{ color: C.blue }}>1 · The four layer buttons</strong> — pick a layer (satellites, broadband
+          constellation, rooftop femtocells, devices) and the panel to its right rewrites with that layer's job, its
+          frequencies, and why it exists. <strong style={{ color: C.blue }}>2 · The rural / urban switch</strong> —
+          traces an actual packet hop-by-hop from phone to internet, and the two routes are genuinely different
+          architectures, not the same path with different labels.
+        </p>
+        <p className="body" style={{ fontSize: 13, color: C.dim, margin: 0 }}>
+          What to take away: the satellite layer sells <em>coverage</em>, the ground layer sells <em>capacity</em>, and
+          the fights that decide the business — backhaul contention and self-interference — happen at the seams between
+          them, which the last section quantifies.
+        </p>
+      </div>
+
+      <div id="net-layers">
+        <SectionHead n="01" color={C.amber} title="One network, four layers"
+          deck="Click any layer on the left — the detail panel on the right responds. Amber = orbit, blue = ground." />
       <div className="split">
         <div className="card">
-          <div className="eyebrow">One network, four layers — click each <Src k="femto" topic="femto" /></div>
+          <div className="eyebrow">▸ Click a layer to explore it <Src k="femto" topic="femto" /></div>
           <div className="stack">
             {LAYERS.map((l) => (
               <button key={l.id} onClick={() => setSel(l.id)}
@@ -1308,6 +1339,7 @@ function NetworkTab() {
           </div>
         </div>
         <div className="card" style={{ borderLeft: `2px solid ${L.tone === "space" ? C.amber : C.blue}` }}>
+          <div className="eyebrow" style={{ color: C.dim, fontSize: 10 }}>Now viewing · layer {LAYERS.findIndex((l) => l.id === sel) + 1} of {LAYERS.length}</div>
           <div className="eyebrow" style={{ color: L.tone === "space" ? C.amber : C.blue }}>{L.name}</div>
           <h3 className="h3">{L.head}</h3>
           <div className="freqChips">
@@ -1324,9 +1356,14 @@ function NetworkTab() {
         </div>
       </div>
 
+      </div>
+
+      <div id="net-packet">
+        <SectionHead n="02" color={C.green} title="Follow a packet — two routes to the internet"
+          deck="Switch between the rural and urban paths: same phone, same network, completely different plumbing." />
       <div className="split">
         <div className="card">
-          <div className="eyebrow">Follow a packet <Src k="nextgen" topic="nextgen" /></div>
+          <div className="eyebrow">▸ Pick a route — the hop list below redraws <Src k="nextgen" topic="nextgen" /></div>
           <div className="tglRow" style={{ marginBottom: 12 }}>
             <button className={"envBtn" + (path === "rural" ? " on" : "")} onClick={() => setPath("rural")}>Rural: satellite-direct</button>
             <button className={"envBtn" + (path === "urban" ? " on" : "")} onClick={() => setPath("urban")}>Urban: femtocell + backhaul</button>
@@ -1335,7 +1372,7 @@ function NetworkTab() {
             <div key={i} className="hop"><span className="hopN">{i + 1}</span>{s}</div>
           ))}
         </div>
-        <div>
+        <div id="net-costs">
           <div className="card">
             <div className="eyebrow">The backhaul budget — the femtocell's hidden cost <Src k="v3" topic="v3" /></div>
             <p className="body">
@@ -1357,6 +1394,7 @@ function NetworkTab() {
             </p>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -3895,9 +3933,12 @@ function StarlinkMobileRoadmap() {
             ${C.ink};
           color: ${C.text}; font-family: var(--disp); padding: 28px clamp(14px, 4vw, 44px) 60px; }
         .hdr { max-width: 1120px; margin: 0 auto 22px; }
-        .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; color: ${C.amber}; text-transform: uppercase; }
-        .title { font-size: clamp(26px, 4.4vw, 44px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.06; margin: 10px 0 8px; }
+        .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; color: ${C.dim}; text-transform: uppercase; }
+        .title { font-size: clamp(38px, 6.4vw, 68px); font-weight: 800; letter-spacing: -0.03em; line-height: 1.0; margin: 4px 0 4px; }
         .title em { font-style: normal; color: ${C.amber}; }
+        .deck { font-size: clamp(15px, 1.9vw, 20px); font-weight: 500; color: ${C.text}; opacity: 0.72;
+          letter-spacing: -0.01em; line-height: 1.25; margin: 0 0 10px; max-width: 760px; }
+        .deck em { font-style: normal; color: ${C.amber}; opacity: 0.95; }
         .sub { color: ${C.dim}; font-size: 14px; max-width: 720px; line-height: 1.55; }
         .srcA { display: inline-block; margin-top: 12px; font-family: var(--mono); font-size: 11.5px;
           letter-spacing: 0.08em; color: ${C.amber}; text-decoration: none;
@@ -4104,15 +4145,16 @@ function StarlinkMobileRoadmap() {
       `}</style>
 
       <header className="hdr">
-        <div className="kicker">Starlink Mobile · Interactive Roadmap · Data as of Aug 2026</div>
-        <h1 className="title">From texts in a field to a <em>fourth carrier</em></h1>
+        <h1 className="title">Starlink <em>Mobile</em></h1>
+        <div className="kicker">Interactive Roadmap · Data as of Aug 2026</div>
+        <p className="deck">From texts in a field to a fourth carrier.</p>
         <p className="sub">
           How SpaceX plans to turn 65 MHz of EchoStar spectrum, a 5G constellation, and millions of rooftop dishes
           into a phone service — phase by phase, with the physics, the mode-switch, the configuration lab, and the
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v64 · numbered section headers</span>
+        <span className="buildTag">build v65 · header emphasis + hybrid-network guidance</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
