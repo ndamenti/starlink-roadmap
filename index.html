@@ -701,6 +701,7 @@ function StoryTab({ phase, setPhase }) {
           it is.
         </p>
         <div className="hilite">
+          <button className="hiliteBtn" onClick={() => window.__navTo("video", "")}>▸ Watch the film — 5:50</button>
           <button className="hiliteBtn" onClick={() => window.__navTo("physics", "phy-ladder")}>▸ The speed ladder — fact vs claim</button>
           <button className="hiliteBtn" onClick={() => window.__navTo("coverage", "cov-6-stitching")}>▸ The strip machine — watch the network run</button>
           <button className="hiliteBtn" onClick={() => window.__navTo("coverage", "cov-1b-receipts")}>▸ Beam-size receipts — the evidence chain</button>
@@ -3371,6 +3372,54 @@ const STD_PIPE = [
   { t: "RF front-end universality", d: "Beyond the modem: filters, power amplifiers and antenna tuning per band, per OEM, per SKU — the unglamorous long pole of device support.", s: "part" },
 ];
 
+const VIDEO_CHAPTERS = [
+  ["0:00", 0.0, "The pitch — and the discovery tool"],
+  ["0:34", 34.2, "Spectrum & the density dilemma"],
+  ["1:46", 106.4, "The physics wall"],
+  ["2:23", 142.9, "Coverage & the strip machine"],
+  ["2:52", 172.4, "Fleet growth & frequency reuse"],
+  ["3:53", 233.5, "Serviceability — the capstone"],
+  ["4:55", 295.3, "What could break it"],
+  ["5:31", 330.7, "The verdict"],
+];
+
+function VideoTab() {
+  const seek = (t) => {
+    const v = document.getElementById("roadmap-video");
+    if (v) { v.currentTime = t; v.play(); }
+  };
+  return (
+    <div>
+      <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
+        <div className="eyebrow" style={{ color: C.amber }}>The film — 5:50 · the whole argument in one sitting</div>
+        <p className="body" style={{ margin: 0 }}>
+          Every scene below is drawn from this site's own data and models — the census raster, the beam geometry, the
+          reuse thresholds, the femtocell counts. Watch it straight through, or jump by chapter; then open the matching
+          tab and move the numbers yourself.
+        </p>
+      </div>
+      <div className="card" style={{ padding: 10 }}>
+        <video id="roadmap-video" controls preload="metadata" poster="video-poster.jpg"
+          style={{ width: "100%", display: "block", borderRadius: 10, background: "#000" }}
+          src="starlink-mobile-explainer.mp4" />
+      </div>
+      <div className="card">
+        <div className="eyebrow">Chapters</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {VIDEO_CHAPTERS.map(([tc, tsec, lab], i) => (
+            <button key={i} className="subpill" onClick={() => seek(tsec)}>
+              <span style={{ color: C.amber }}>{tc}</span>&nbsp; {lab}
+            </button>
+          ))}
+        </div>
+        <p className="body" style={{ fontSize: 12.5, color: C.dim, margin: "12px 0 0" }}>
+          Prefer a copy? <a href="starlink-mobile-explainer.mp4" download style={{ color: C.blue }}>Download the MP4</a> (1080p · 17 MB) — it's the same file this player streams.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 const REG_SECTIONS = [
   { id: "reg-gates", label: "Two gates" },
   { id: "reg-risks", label: "The six that decide it" },
@@ -3918,6 +3967,7 @@ function ServiceabilityTab() {
 
 const TABS = [
   { id: "story", label: "Story" },
+  { id: "video", label: "▶ Video" },
   { id: "spectrum", label: "Spectrum" },
   { id: "physics", label: "Physics" },
   { id: "coverage", label: "Coverage" },
@@ -3928,7 +3978,7 @@ const TABS = [
   { id: "verdict", label: "The Verdict" },
 ];
 
-const HASH_TAB = { cov: "coverage", phy: "physics", svc: "serviceability", reg: "reg", ver: "verdict" };
+const HASH_TAB = { cov: "coverage", phy: "physics", svc: "serviceability", reg: "reg", ver: "verdict", vid: "video" };
 function StarlinkMobileRoadmap() {
   const [tab, setTab] = useState(() => {
     try {
@@ -3974,7 +4024,8 @@ function StarlinkMobileRoadmap() {
         .srcA:hover { border-color: ${C.amber}; }
         .buildTag { display: inline-block; margin-left: 10px; font-family: var(--mono); font-size: 9.5px; color: ${C.dim}; opacity: 0.7; }
         .tabs { max-width: 1120px; margin: 22px auto 18px; display: flex; gap: 2px; flex-wrap: nowrap;
-          overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid ${C.line}; }
+          overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid ${C.line};
+          position: sticky; top: 0; z-index: 70; background: ${C.ink}; height: 46px; align-items: center; }
         .tabs::-webkit-scrollbar { display: none; }
         .tab { font-family: var(--mono); font-size: clamp(10px, 1.02vw, 12px); letter-spacing: 0.04em; color: ${C.dim};
           background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 9px; cursor: pointer;
@@ -3990,7 +4041,7 @@ function StarlinkMobileRoadmap() {
           border: 1px solid currentColor; border-radius: 4px; flex: none; }
         .secTitle { font-size: 21px; font-weight: 700; color: ${C.text}; letter-spacing: -0.01em; line-height: 1.2; }
         .secDeck { font-size: 12.5px; color: ${C.dim}; margin-top: 6px; max-width: 900px; }
-        .subnav { position: sticky; top: 0; z-index: 40; background: ${C.ink}F2; backdrop-filter: blur(6px);
+        .subnav { position: sticky; top: 47px; z-index: 40; background: ${C.ink}F2; backdrop-filter: blur(6px);
           display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 0 10px; margin-bottom: 14px; border-bottom: 1px solid ${C.line}; }
         .subpill { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em; color: ${C.dim};
           background: ${C.panel2}; border: 1px solid ${C.line}; border-radius: 999px; padding: 6px 11px; cursor: pointer; white-space: nowrap; }
@@ -4184,7 +4235,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v70 · lattice beam grid (uniform at any count)</span>
+        <span className="buildTag">build v71 · pinned nav + video tab</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
@@ -4198,6 +4249,7 @@ function StarlinkMobileRoadmap() {
 
       <main className="wrap">
         {tab === "story" && <StoryTab phase={phase} setPhase={setPhase} />}
+        {tab === "video" && <VideoTab />}
         {tab === "spectrum" && <SpectrumTab cfg={cfg} setCfg={setCfg} />}
         {tab === "physics" && <PhysicsTab cfg={cfg} setCfg={setCfg} />}
         {tab === "coverage" && <CoverageTab />}
