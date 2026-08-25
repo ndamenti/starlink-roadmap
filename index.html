@@ -3746,6 +3746,35 @@ function ServiceabilityTab() {
   const satsUS = fleet * (8.1 / 510) * 1.3;
   const servDens = satCapMbps / areaPer / minMbps / (activePct / 100); // servable subscribers per km²
   const feederFlag = satCapMbps > 100000;
+  // ---- the typical cell: same geometry as Panel 6, same capacity chain as this panel ----
+  const H_KM = 330, RE_KM = 6371;
+  const cellSpacing = 1.075 * Math.sqrt(areaPer);
+  const lamCell = cellSpacing / Math.sqrt(3) / RE_KM;
+  const cellElev = (Math.atan2(Math.cos(lamCell) - RE_KM / (RE_KM + H_KM), Math.sin(lamCell)) * 180) / Math.PI;
+  const sinE = Math.sin((Math.max(cellElev, 8) * Math.PI) / 180);
+  const beamAlong = 4.4 / (sinE * sinE);      // stretch along the look direction
+  const beamAcross = 4.4 / sinE;              // slant widening
+  const cellAreaKm2 = (Math.PI / 4) * beamAlong * beamAcross;
+  const dutyFrac = Math.min(1, 700 / (areaPer / (Math.PI * 2.2 * 2.2)));
+  const cellAvgMbps = perBeam * dutyFrac;     // averaged over the hop schedule
+  const cellSubs = servDens * cellAreaKm2;    // subscribers this cell can carry
+  const cellActive = cellSubs * (activePct / 100);
+  const cellReuse = cellElev >= 60 ? "Reuse-1 · full pool" : cellElev >= 42 ? "Transitional" : "Reuse-3 · rationed";
+  // deterministic bivariate-normal scatter, clipped to the ellipse
+  const cellPts = (() => {
+    const n = Math.max(1, Math.min(900, Math.round(cellSubs)));
+    const out = []; let seed = 20260825;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+    let guard = 0;
+    while (out.length < n && guard++ < n * 40) {
+      const u1 = Math.max(1e-9, rnd()), u2 = rnd();
+      const r = Math.sqrt(-2 * Math.log(u1));
+      const gx = r * Math.cos(2 * Math.PI * u2) * 0.34;   // sd = 0.34 of semi-axis
+      const gy = r * Math.sin(2 * Math.PI * u2) * 0.34;
+      if (gx * gx + gy * gy <= 1) out.push([gx, gy]);
+    }
+    return out;
+  })();
   // national aggregation over the census raster
   const satVacatesMetros = band === "2ghz" && (femMhz === 25 || femMhz === 45); // split modes: satellite DL leaves town
   const CELLA = US_DENS.cell * US_DENS.cell;
@@ -3866,6 +3895,70 @@ function ServiceabilityTab() {
             </div>
           </div>
           <div className="stat"><div className="statL">Land area fully green (100% servable)</div><div className="statV" style={{ fontSize: 20 }}>{landPct.toFixed(0)}%<span style={{ fontSize: 12, color: C.dim }}> of {stSel < 0 ? "CONUS" : US_STATES[stSel].a} cells</span></div></div>
+          <div className="stat" style={{ borderColor: C.blue, gridRow: "span 2" }}>
+            <div className="statL" style={{ color: C.blue }}>The typical cell — one beam at this fleet's geometry</div>
+            <svg viewBox="0 0 320 176" style={{ width: "100%", height: "auto", display: "block", marginTop: 4 }}>
+              <defs>
+                <radialGradient id="beamG" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor={C.blue} stopOpacity="0.25" />
+                  <stop offset="100%" stopColor={C.blue} stopOpacity="0.05" />
+                </radialGradient>
+              </defs>
+              {(() => {
+                const maxA = Math.max(beamAlong, beamAcross);
+                const sc = 132 / maxA;
+                const rx = (beamAlong * sc) / 2, ry = (beamAcross * sc) / 2;
+                const cx = 160, cy = 86;
+                const nAct = Math.max(cellPts.length > 0 ? 1 : 0, Math.round(cellPts.length * (activePct / 100)));
+                return (
+                  <g>
+                    <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="url(#beamG)" stroke={C.blue} strokeWidth="1" />
+                    <ellipse cx={cx} cy={cy} rx={rx * 0.6} ry={ry * 0.6} fill="none" stroke={C.blue} strokeWidth="0.4" strokeOpacity="0.35" strokeDasharray="2 3" />
+                    {cellPts.map(([gx, gy], i) => (
+                      <circle key={i} cx={cx + gx * rx} cy={cy + gy * ry} r={i < nAct ? 2.4 : 1.6}
+                        fill={i < nAct ? C.amber : C.dim} fillOpacity={i < nAct ? 0.95 : 0.45} />
+                    ))}
+                    <text x={10} y={14} fill={C.dim} style={{ fontSize: 7.5, fontFamily: "var(--mono)" }}>ELEV {cellElev.toFixed(0)}°</text>
+                    <text x={10} y={26} fill={cellElev >= 60 ? C.green : cellElev >= 42 ? C.amber : "#C79BFF"} style={{ fontSize: 7.5, fontFamily: "var(--mono)" }}>{cellReuse}</text>
+                    <circle cx={232} cy={11} r={2.4} fill={C.amber} />
+                    <text x={239} y={14} fill={C.dim} style={{ fontSize: 7.5, fontFamily: "var(--mono)" }}>active now</text>
+                    <circle cx={232} cy={23} r={1.6} fill={C.dim} fillOpacity="0.45" />
+                    <text x={239} y={26} fill={C.dim} style={{ fontSize: 7.5, fontFamily: "var(--mono)" }}>idle subscriber</text>
+                    <text x={cx} y={166} textAnchor="middle" fill={C.dim} style={{ fontSize: 8, fontFamily: "var(--mono)" }}>
+                      {beamAlong.toFixed(1)} km along  ·  {beamAcross.toFixed(1)} km across
+                    </text>
+                  </g>
+                );
+              })()}
+            </svg>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 8 }}>
+              <div>
+                <div className="statL">Avg capacity in this cell</div>
+                <div className="statV" style={{ fontSize: 19, color: C.blue }}>{cellAvgMbps < 10 ? cellAvgMbps.toFixed(1) : Math.round(cellAvgMbps)}<span style={{ fontSize: 11, color: C.dim }}> Mbps</span></div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim }}>{Math.round(perBeam)} Mbps/beam × {(dutyFrac * 100).toFixed(dutyFrac < 0.1 ? 1 : 0)}% duty</div>
+              </div>
+              <div>
+                <div className="statL">Cell footprint</div>
+                <div className="statV" style={{ fontSize: 19 }}>{Math.round(cellAreaKm2)}<span style={{ fontSize: 11, color: C.dim }}> km²</span></div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim }}>vs ~15 km² at nadir</div>
+              </div>
+              <div>
+                <div className="statL">Subscribers served here</div>
+                <div className="statV" style={{ fontSize: 19 }}>{cellSubs < 10 ? cellSubs.toFixed(1) : Math.round(cellSubs)}</div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim }}>{servDens.toFixed(2)}/km² × footprint</div>
+              </div>
+              <div>
+                <div className="statL">Active in the busy hour</div>
+                <div className="statV" style={{ fontSize: 19, color: C.amber }}>{cellActive < 10 ? cellActive.toFixed(1) : Math.round(cellActive)}</div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim }}>at {minMbps} Mbps each</div>
+              </div>
+            </div>
+            <p className="body" style={{ fontSize: 11, color: C.dim, margin: "8px 0 0" }}>
+              Dots are subscribers scattered normally about the beam centre; amber are the {activePct}% transmitting in
+              the busy hour. Every slider re-shapes this: fleet sets the elevation and so the ellipse, spectrum and
+              efficiency set the Mbps, speed and activity set how many people that capacity supports.
+            </p>
+          </div>
           <div className="stat" style={{ borderColor: C.green }}>
             <div className="statL">Hybrid network — orbit + femtocell overlay (CONUS)</div>
             <div className="statV" style={{ color: C.green, fontSize: 34, fontWeight: 700, lineHeight: 1.1 }}>
@@ -4403,7 +4496,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v74 · yardstick sourced + reuse-density explainer</span>
+        <span className="buildTag">build v75 · typical-cell beam panel</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
