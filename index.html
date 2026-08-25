@@ -1445,7 +1445,7 @@ function VerdictTab() {
         </div>
       </div>
       <div className="card" id="ver-yardstick" style={{ borderLeft: `2px solid ${C.amber}` }}>
-        <div className="eyebrow" style={{ color: C.amber }}>The competitive yardstick — what "fourth carrier" is measured against (2026)</div>
+        <div className="eyebrow" style={{ color: C.amber }}>The competitive yardstick — what "fourth carrier" is measured against (2026) <Src k="compete" topic="compete" /></div>
         <p className="body" style={{ fontSize: 13.5, marginBottom: 12 }}>
           Spectrum depth below is population-weighted and excludes mmWave; speeds are H1-2026 median downloads from
           nationwide drive testing. The Starlink rows use this site's own bracket: the owned 65 MHz, the satellite
@@ -1495,6 +1495,13 @@ function VerdictTab() {
             </tbody>
           </table>
         </div>
+        <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 10, marginBottom: 10 }}>
+          Row by row: T-Mobile's mid-band depth (~320 MHz, mostly 2.5 GHz n41) and AT&T's low-band lead are from
+          published spectrum-depth analyses; AT&T's ~79 MHz C-band plus ~74 MHz 3.45 GHz depth is post-EchoStar, a deal
+          that closed July 28, 2026; Verizon's ~161 MHz C-band average comes from its own disclosure. Speeds are median
+          <em> downloads</em> from H1-2026 nationwide drive testing — medians, not peaks, and not the same as a
+          spec-sheet figure. The Starlink row is this site's own model, not a third-party measurement.
+        </p>
         <p className="body" style={{ fontSize: 13, marginTop: 12, marginBottom: 8 }}>
           Read it as two gaps. The <strong>spectrum gap</strong> is roughly 6–8× against the satellite downlink —
           significant, but the kind of gap auctions can narrow (the Upper C-band in 2027 being the obvious shot, with
@@ -1505,14 +1512,57 @@ function VerdictTab() {
           per cell</em> — and why the thesis on this site is a coverage product with a terrestrial urban layer, not a
           symmetric fourth competitor.
         </p>
+        <Info label="why spectrum depth isn't the real gap — the reuse-density arithmetic, worked">
+          <strong>The short version:</strong> spectrum is what you own; <em>capacity</em> is what you own multiplied by
+          how many times you can spend it at once. Terrestrial networks win on the multiplier, not the spectrum.
+          <br /><br />
+          <strong>How a carrier spends its spectrum.</strong> T-Mobile's ~320 MHz of mid-band isn't delivered once — it
+          is re-transmitted at every cell site, and at each site it is split into (typically) three sectors that each
+          reuse the same channels behind directional antennas. With roughly 80,000+ macro sites in a national network,
+          plus small cells in dense areas, the same 320 MHz is being spent simultaneously in hundreds of thousands of
+          places. In a dense city that works out to a cell site every few hundred metres — so the spectrum is
+          effectively re-spent every ~0.2 km². That is the multiplier: <em>capacity per km² = spectrum × sites per
+          km² × sectors</em>.
+          <br /><br />
+          <strong>How a constellation spends its spectrum.</strong> A satellite re-spends its 20 MHz once per beam, and
+          beams are ~4.4 km across (~15 km²) — about 75× the area of an urban cell sector, before you account for the
+          fact that one satellite has only ~700 beams to cover a service patch of thousands of cells (Panel 6's duty
+          figure). Frequency reuse from orbit is limited by beam geometry and elevation, which is why the reuse regime
+          only reaches "all lanes" at high elevation — and why fleet growth, not spectrum purchases, is what raises the
+          per-cell number from ~8 to ~47 Mbps.
+          <br /><br />
+          <strong>Putting numbers on it.</strong> Compare capacity per square kilometre, which is the only fair
+          comparison when one network is terrestrial and the other orbital:
+          <br />
+          · <em>Urban macro sector:</em> ~100 MHz × ~5 bps/Hz ≈ 500 Mbps, serving perhaps 0.2 km² → on the order of
+          <strong> 2,500 Mbps per km²</strong>, and that is before small cells.
+          <br />
+          · <em>Satellite beam at the end-state:</em> ~47 Mbps shared across ~15 km² → about
+          <strong> 3 Mbps per km²</strong>.
+          <br />
+          That is a difference of roughly <strong>three orders of magnitude</strong> in delivered capacity density.
+          Buying more spectrum narrows the first term; it does nothing to the second.
+          <br /><br />
+          <strong>Why this doesn't make the satellite layer useless — it makes it different.</strong> Capacity density
+          only matters where people are dense. Across most of the country's land area, demand per km² is so low that
+          3 Mbps/km² is entirely adequate, and there the satellite has an advantage no carrier can match: it covers
+          ground where building a tower will never pay back. The conclusion isn't "the satellite loses"; it's that the
+          two networks are optimised for opposite ends of the density curve — which is precisely why the plan on this
+          site pairs orbit for coverage with a terrestrial femtocell layer for cities, and why the honest framing is a
+          <em> coverage product with an urban ground layer</em> rather than a symmetric fourth competitor.
+          <br /><br />
+          <em>Caveat on the arithmetic:</em> the terrestrial figure is a rough order-of-magnitude sketch — real
+          networks vary enormously by site density, sectorisation, spectrum deployed per site, and loading. Treat it as
+          a bracket, like everything else here.
+        </Info>
         <p className="body" style={{ fontSize: 12.5, color: C.dim, marginBottom: 8 }}>
           One irony worth keeping: the same EchoStar breakup armed both sides — ~50 MHz of low/mid-band to AT&T for
           $23B, and the 65 MHz here to SpaceX. The portfolio assembled to create a fourth carrier ended up
           strengthening the incumbents and funding the challenger at once.
         </p>
         <p className="body" style={{ fontSize: 11.5, color: C.dim, margin: 0 }}>
-          Sources: RootMetrics H1-2026 drive tests · Ookla/Opensignal 2026 · PolicyTracker spectrum database &
-          Spektrum Metrics (post-EchoStar holdings, ex-mmWave) ·{" "}
+          Every figure in the table is sourced — open the <strong>◈ sources</strong> chip in the section header for the
+          full list (drive-test reports, spectrum-depth analyses, and the AT&T and Verizon primary disclosures). ·{" "}
           <button className="nextlink" style={{ display: "inline", margin: 0, padding: 0 }}
             onClick={() => window.__navTo("coverage", "cov-6-stitching")}>the reuse-density arithmetic → Panel 6</button>
         </p>
@@ -1652,6 +1702,16 @@ function mulberry(seed) {
 /* Central source registry: card-level citation chips draw from here.
    k: primary = FCC/company documents; claim = company statements; derived = computed in this site. */
 const SRC = {
+  compete: [
+    { t: "RootMetrics / Ookla — US carrier median download speeds, H1 2026", u: "https://www.makeuseof.com/this-us-carrier-fastest-download-speeds/", k: "measured" },
+    { t: "Ookla \u0026 Opensignal H1-2026 network reports (T-Mobile fastest, Verizon widest)", u: "https://www.androidauthority.com/t-mobile-fastest-verizon-widest-ookla-opensignal-report-3690121/", k: "measured" },
+    { t: "Ookla State of the Mobile Union, H2 2025 (246,000 drive-test miles)", u: "https://www.telecompetitor.com/new-ookla-report-judges-major-mobile-carriers-speed-5g-and-reliability/", k: "measured" },
+    { t: "PolicyTracker — post-EchoStar spectrum holdings, population-weighted ex-mmWave", u: "https://www.policytracker.com/blog/spectrum-snapshot-att-becomes-the-second-largest-spectrum-holder-in-the-us-after-echostar-trade/", k: "analysis" },
+    { t: "Inside Towers / Spektrum Metrics — AT\u0026T C-band 79 MHz + 3.45 GHz 74 MHz depth", u: "https://insidetowers.com/atts-echostar-spectrum-purchase-carries-significant-implications/", k: "analysis" },
+    { t: "AT\u0026T press release — EchoStar spectrum closing (Jul 28, 2026)", u: "https://about.att.com/story/2026/echostar-spectrum.html", k: "primary" },
+    { t: "Verizon — spectrum portfolio overview (295 MHz low+mid, C-band 161 MHz avg)", u: "https://www.verizon.com/about/news/5g-frequency-bands-explained", k: "primary" },
+    { t: "Dgtl Infra — carrier spectrum depth by band (T-Mobile mid-band ~320 MHz)", u: "https://dgtlinfra.com/5g-spectrum-explained/", k: "analysis" },
+  ],
   echostar: [
     { t: "FCC Order DA 26-471 (May 12, 2026)", u: "https://docs.fcc.gov/public/attachments/DA-26-471A1.pdf", k: "primary" },
     { t: "EchoStar Form 8-K (Nov 6, 2025)", u: "https://ir.echostar.com/static-files/57bf0a65-59a3-4f0e-8b6d-f2d7cbb9d454", k: "primary" },
@@ -4310,6 +4370,8 @@ function StarlinkMobileRoadmap() {
         .sb.primary { background: #C79BFF; }
         .sb.claim { background: ${C.amber}; }
         .sb.derived { background: ${C.blue}; }
+        .sb.measured { background: ${C.green}; }
+        .sb.analysis { background: #7FD4C1; }
         .sk { font-family: var(--mono); font-size: 9px; color: ${C.dim}; margin-left: 8px; font-style: normal; }
         .srcAllLink { display: block; margin-top: 6px; font-family: var(--mono); font-size: 10.5px; color: #C79BFF; text-decoration: none; }
         .feasBox { background: ${C.panel2}; border: 1px solid ${C.line}; border-left: 2px solid ${C.green};
@@ -4341,7 +4403,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v73 · analytics beacon + tab/video tracking</span>
+        <span className="buildTag">build v74 · yardstick sourced + reuse-density explainer</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
