@@ -1409,6 +1409,7 @@ function NetworkTab() {
 const VER_SECTIONS = [
   { id: "ver-how", label: "How to read this" },
   { id: "ver-cases", label: "Bull v Bear" },
+  { id: "ver-yardstick", label: "The competitive yardstick" },
   { id: "ver-watch", label: "Six things to watch" },
 ];
 
@@ -1443,6 +1444,80 @@ function VerdictTab() {
           ))}
         </div>
       </div>
+      <div className="card" id="ver-yardstick" style={{ borderLeft: `2px solid ${C.amber}` }}>
+        <div className="eyebrow" style={{ color: C.amber }}>The competitive yardstick — what "fourth carrier" is measured against (2026)</div>
+        <p className="body" style={{ fontSize: 13.5, marginBottom: 12 }}>
+          Spectrum depth below is population-weighted and excludes mmWave; speeds are H1-2026 median downloads from
+          nationwide drive testing. The Starlink rows use this site's own bracket: the owned 65 MHz, the satellite
+          downlink that actually serves a phone (20 MHz today → 45 MHz if the deferred waivers grant), and per-cell
+          throughput at the reuse-1 end-state.
+        </p>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--mono)", fontSize: 11.5 }}>
+            <thead>
+              <tr style={{ color: C.dim, textAlign: "left" }}>
+                <th style={{ padding: "6px 10px", borderBottom: `1px solid ${C.line}` }}>Network</th>
+                <th style={{ padding: "6px 10px", borderBottom: `1px solid ${C.line}` }}>Low-band</th>
+                <th style={{ padding: "6px 10px", borderBottom: `1px solid ${C.line}` }}>Mid-band</th>
+                <th style={{ padding: "6px 10px", borderBottom: `1px solid ${C.line}` }}>Total (ex-mmWave)</th>
+                <th style={{ padding: "6px 10px", borderBottom: `1px solid ${C.line}` }}>Median DL · H1 2026</th>
+              </tr>
+            </thead>
+            <tbody style={{ color: C.text }}>
+              <tr>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>T-Mobile</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>~55–65 MHz</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>~320 MHz <span style={{ color: C.dim }}>(2.5 GHz + PCS/AWS + C)</span></td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}`, color: C.green }}>~390+ MHz</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}`, color: C.green }}>392 Mbps</td>
+              </tr>
+              <tr>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>AT&T</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>~75–85 MHz <span style={{ color: C.dim }}>(largest)</span></td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>~79 C-band + ~74 3.45 GHz + PCS/AWS</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>~375 MHz</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>229 Mbps</td>
+              </tr>
+              <tr>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>Verizon</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>~50 MHz</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>~161 C-band + PCS/AWS</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>~279 MHz</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>302 Mbps</td>
+              </tr>
+              <tr style={{ background: `${C.amber}12` }}>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}`, color: C.amber }}>Starlink Mobile</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>—</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>65 MHz owned · <strong>20 → 45 MHz</strong> satellite DL</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}`, color: C.amber }}>65 MHz</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>~4 Mbps today → <strong>~47 Mbps per cell</strong> end-state</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="body" style={{ fontSize: 13, marginTop: 12, marginBottom: 8 }}>
+          Read it as two gaps. The <strong>spectrum gap</strong> is roughly 6–8× against the satellite downlink —
+          significant, but the kind of gap auctions can narrow (the Upper C-band in 2027 being the obvious shot, with
+          AT&T expected to bid the same band). The <strong>reuse-density gap</strong> is the structural one: a
+          terrestrial carrier re-spends its whole stack at every one of ~80,000+ macro sites, three sectors each, plus
+          small cells — while a constellation re-spends its 20 MHz only as fast as beams-per-patch allows. That's why
+          the incumbents' <em>median user</em> sees 230–390 Mbps while this network's end-state is ~47 Mbps <em>shared
+          per cell</em> — and why the thesis on this site is a coverage product with a terrestrial urban layer, not a
+          symmetric fourth competitor.
+        </p>
+        <p className="body" style={{ fontSize: 12.5, color: C.dim, marginBottom: 8 }}>
+          One irony worth keeping: the same EchoStar breakup armed both sides — ~50 MHz of low/mid-band to AT&T for
+          $23B, and the 65 MHz here to SpaceX. The portfolio assembled to create a fourth carrier ended up
+          strengthening the incumbents and funding the challenger at once.
+        </p>
+        <p className="body" style={{ fontSize: 11.5, color: C.dim, margin: 0 }}>
+          Sources: RootMetrics H1-2026 drive tests · Ookla/Opensignal 2026 · PolicyTracker spectrum database &
+          Spektrum Metrics (post-EchoStar holdings, ex-mmWave) ·{" "}
+          <button className="nextlink" style={{ display: "inline", margin: 0, padding: 0 }}
+            onClick={() => window.__navTo("coverage", "cov-6-stitching")}>the reuse-density arithmetic → Panel 6</button>
+        </p>
+      </div>
+
       <div className="card" id="ver-watch">
         <div className="eyebrow">Six things that decide it — watch these</div>
         <div className="benchGrid">
@@ -4235,7 +4310,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v71 · pinned nav + video tab</span>
+        <span className="buildTag">build v72 · competitive yardstick on Verdict</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
