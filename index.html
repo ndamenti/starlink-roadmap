@@ -3463,6 +3463,22 @@ function VideoTab() {
     const v = document.getElementById("roadmap-video");
     if (v) { v.currentTime = t; v.play(); }
   };
+  useEffect(() => {
+    const v = document.getElementById("roadmap-video");
+    if (!v) return;
+    let hit = {};
+    const onPlay = () => { if (!hit.play) { hit.play = 1; track("video/play", "video:play"); } };
+    const onTime = () => {
+      if (!v.duration) return;
+      const pct = (v.currentTime / v.duration) * 100;
+      [25, 50, 75, 95].forEach((m) => {
+        if (pct >= m && !hit[m]) { hit[m] = 1; track("video/" + (m === 95 ? "complete" : m + "pct"), "video:" + m); }
+      });
+    };
+    v.addEventListener("play", onPlay);
+    v.addEventListener("timeupdate", onTime);
+    return () => { v.removeEventListener("play", onPlay); v.removeEventListener("timeupdate", onTime); };
+  }, []);
   return (
     <div>
       <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
@@ -4053,6 +4069,19 @@ const TABS = [
   { id: "verdict", label: "The Verdict" },
 ];
 
+// Analytics: emit a virtual pageview for SPA navigation. Cloudflare's beacon tracks
+// history changes, so a pushState here registers as a distinct page. Provider-agnostic:
+// if a custom-event tool (umami/plausible) is ever added, it fires there too.
+function track(path, label) {
+  try {
+    if (typeof window === "undefined") return;
+    const url = window.location.pathname + "?p=" + encodeURIComponent(path);
+    window.history.pushState({ p: path }, "", url);
+    if (window.umami && window.umami.track) window.umami.track(label || path);
+    if (window.plausible) window.plausible(label || path);
+  } catch (e) {}
+}
+
 const HASH_TAB = { cov: "coverage", phy: "physics", svc: "serviceability", reg: "reg", ver: "verdict", vid: "video" };
 function StarlinkMobileRoadmap() {
   const [tab, setTab] = useState(() => {
@@ -4065,12 +4094,14 @@ function StarlinkMobileRoadmap() {
   });
   useEffect(() => {
     window.__navTo = (t, id) => { setTab(t); setTimeout(() => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: "smooth" }); }, 250); };
+    window.__track = track;
     try {
       const h = (window.location.hash || "").slice(1);
       if (h && HASH_TAB[h.split("-")[0]]) setTimeout(() => { const el = document.getElementById(h); if (el) el.scrollIntoView({ behavior: "smooth" }); }, 600);
     } catch (e) {}
     return () => { delete window.__navTo; };
   }, []);
+  useEffect(() => { track("tab/" + tab, "tab:" + tab); }, [tab]);
   const [phase, setPhase] = useState(0);
   const [cfg, setCfg] = useState({ ...SCENARIOS[2].cfg, terrEff: 3 });
   return (
@@ -4310,7 +4341,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v72 · competitive yardstick on Verdict</span>
+        <span className="buildTag">build v73 · analytics beacon + tab/video tracking</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
@@ -4340,5 +4371,6 @@ function StarlinkMobileRoadmap() {
 
 ReactDOM.createRoot(document.getElementById("root")).render(<StarlinkMobileRoadmap />);
 </script>
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "976026915bb749b6bc334f9d61042c42"}'></script><!-- End Cloudflare Web Analytics -->
 </body>
 </html>
