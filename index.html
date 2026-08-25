@@ -3738,6 +3738,7 @@ function ServiceabilityTab() {
   const [depMode, setDepMode] = useState("organic");
   const [hostile, setHostile] = useState(40);
   const [strategy, setStrategy] = useState("sidewalk");
+  const [popMode, setPopMode] = useState("uniform");
   const eff = effMode === "claim" ? 2.48 : 0.62;
   const perBeam = eff * mhz;
   const areaPer = 510e6 / fleet;
@@ -3760,18 +3761,33 @@ function ServiceabilityTab() {
   const cellSubs = servDens * cellAreaKm2;    // subscribers this cell can carry
   const cellActive = cellSubs * (activePct / 100);
   const cellReuse = cellElev >= 60 ? "Reuse-1 · full pool" : cellElev >= 42 ? "Transitional" : "Reuse-3 · rationed";
-  // deterministic bivariate-normal scatter, clipped to the ellipse
+  // Subscriber placement. People are NOT distributed about the beam centre — the beam is a
+  // geometric footprint that lands wherever the satellite points, with no relation to settlement.
+  // Default is uniform by area; "settlement" clusters them around a town placed off-centre.
   const cellPts = (() => {
     const n = Math.max(1, Math.min(900, Math.round(cellSubs)));
     const out = []; let seed = 20260825;
     const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
-    let guard = 0;
-    while (out.length < n && guard++ < n * 40) {
-      const u1 = Math.max(1e-9, rnd()), u2 = rnd();
-      const r = Math.sqrt(-2 * Math.log(u1));
-      const gx = r * Math.cos(2 * Math.PI * u2) * 0.34;   // sd = 0.34 of semi-axis
-      const gy = r * Math.sin(2 * Math.PI * u2) * 0.34;
-      if (gx * gx + gy * gy <= 1) out.push([gx, gy]);
+    if (popMode === "uniform") {
+      for (let i = 0; i < n; i++) {
+        const th = 2 * Math.PI * rnd(), rr = Math.sqrt(rnd());   // sqrt => equal area, no centre bias
+        out.push([rr * Math.cos(th), rr * Math.sin(th)]);
+      }
+    } else {
+      const tx = -0.34, ty = 0.28;                               // the town sits off-centre, as towns do
+      let guard = 0;
+      while (out.length < n && guard++ < n * 40) {
+        const town = rnd() < 0.72;
+        if (town) {
+          const u1 = Math.max(1e-9, rnd()), u2 = rnd();
+          const r = Math.sqrt(-2 * Math.log(u1)) * 0.16;
+          const gx = tx + r * Math.cos(2 * Math.PI * u2), gy = ty + r * Math.sin(2 * Math.PI * u2);
+          if (gx * gx + gy * gy <= 1) out.push([gx, gy]);
+        } else {
+          const th = 2 * Math.PI * rnd(), rr = Math.sqrt(rnd());
+          out.push([rr * Math.cos(th), rr * Math.sin(th)]);
+        }
+      }
     }
     return out;
   })();
@@ -3913,7 +3929,6 @@ function ServiceabilityTab() {
                 return (
                   <g>
                     <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="url(#beamG)" stroke={C.blue} strokeWidth="1" />
-                    <ellipse cx={cx} cy={cy} rx={rx * 0.6} ry={ry * 0.6} fill="none" stroke={C.blue} strokeWidth="0.4" strokeOpacity="0.35" strokeDasharray="2 3" />
                     {cellPts.map(([gx, gy], i) => (
                       <circle key={i} cx={cx + gx * rx} cy={cy + gy * ry} r={i < nAct ? 2.4 : 1.6}
                         fill={i < nAct ? C.amber : C.dim} fillOpacity={i < nAct ? 0.95 : 0.45} />
@@ -3933,9 +3948,14 @@ function ServiceabilityTab() {
             </svg>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 8 }}>
               <div>
-                <div className="statL">Avg capacity in this cell</div>
+                <div className="statL">Cell rate — while the beam is here</div>
+                <div className="statV" style={{ fontSize: 19, color: C.green }}>{Math.round(perBeam)}<span style={{ fontSize: 11, color: C.dim }}> Mbps</span></div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim }}>full beam rate, {mhz} MHz × {eff}</div>
+              </div>
+              <div>
+                <div className="statL">Time-averaged, uniform demand</div>
                 <div className="statV" style={{ fontSize: 19, color: C.blue }}>{cellAvgMbps < 10 ? cellAvgMbps.toFixed(1) : Math.round(cellAvgMbps)}<span style={{ fontSize: 11, color: C.dim }}> Mbps</span></div>
-                <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim }}>{Math.round(perBeam)} Mbps/beam × {(dutyFrac * 100).toFixed(dutyFrac < 0.1 ? 1 : 0)}% duty</div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim }}>beam here {(dutyFrac * 100).toFixed(dutyFrac < 0.1 ? 1 : 0)}% of the time</div>
               </div>
               <div>
                 <div className="statL">Cell footprint</div>
@@ -3953,11 +3973,33 @@ function ServiceabilityTab() {
                 <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim }}>at {minMbps} Mbps each</div>
               </div>
             </div>
+            <div className="tglRow" style={{ marginTop: 8, gap: 6 }}>
+              <button className={"genBtn" + (popMode === "uniform" ? " on" : "")} onClick={() => setPopMode("uniform")}>Uniform population</button>
+              <button className={"genBtn" + (popMode === "town" ? " on" : "")} onClick={() => setPopMode("town")}>Clustered in a town</button>
+            </div>
             <p className="body" style={{ fontSize: 11, color: C.dim, margin: "8px 0 0" }}>
-              Dots are subscribers scattered normally about the beam centre; amber are the {activePct}% transmitting in
-              the busy hour. Every slider re-shapes this: fleet sets the elevation and so the ellipse, spectrum and
-              efficiency set the Mbps, speed and activity set how many people that capacity supports.
+              Dots are subscribers, amber the {activePct}% transmitting in the busy hour. People aren't distributed
+              around the beam's centre — a beam lands where the satellite points it, so placement is uniform by area, or
+              clustered around a settlement sitting wherever it happens to sit.
             </p>
+            <Info label="why does a 50 Mbps beam only average 16 Mbps here?">
+              Because one satellite has about <strong>700 beams</strong> but its service patch contains far more cells
+              than that — roughly 2,236 of them at 15,000 satellites. It cannot light them all at once, so it hops:
+              each cell gets a beam some fraction of the time, and that fraction is the duty figure.
+              <br /><br />
+              Two things this does <em>not</em> mean. It is <strong>not</strong> wasted capacity — all 700 beams are
+              busy every moment, just pointed at other cells. And it is <strong>not</strong> intermittent service —
+              hopping runs on millisecond scheduling, far below anything a user perceives; your session doesn't stop
+              between dwells any more than it stops between LTE scheduling slots.
+              <br /><br />
+              What it <em>is</em>: a statement about <strong>capacity density</strong>. While the beam is on your cell
+              you get the full {Math.round(perBeam)} Mbps; averaged over the hop schedule, and assuming every cell in
+              the patch wants service equally, the cell's share is {cellAvgMbps < 10 ? cellAvgMbps.toFixed(1) : Math.round(cellAvgMbps)} Mbps.
+              <br /><br />
+              And that uniform-demand assumption is deliberately conservative. Most 4.4 km cells over land are empty —
+              schedulers chase demand, so a cell with real users gets beams far more often than its uniform share. Read
+              the time-averaged figure as a floor for planning, not a prediction of what one user experiences.
+            </Info>
           </div>
           <div className="stat" style={{ borderColor: C.green }}>
             <div className="statL">Hybrid network — orbit + femtocell overlay (CONUS)</div>
@@ -4496,7 +4538,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v75 · typical-cell beam panel</span>
+        <span className="buildTag">build v76 · cell panel: uniform population + duty explainer</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
