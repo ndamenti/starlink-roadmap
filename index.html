@@ -3196,6 +3196,30 @@ function patchStats(fleet) {
   PG_CACHE[key] = out;
   return out;
 }
+function patchZones(fleet, mhz, eff) {
+  const A = 510e6 / fleet, R = Math.sqrt(A / Math.PI), steps = 600;
+  const Z = { r1: [0, 0, 0], tr: [0, 0, 0], r3: [0, 0, 0] }; // cells, Σ(cells×Mbps), maxMbps
+  for (let i = 0; i < steps; i++) {
+    const d = (R * (i + 0.5)) / steps, dr = R / steps;
+    const c = pgCell(d);
+    const n = ((2 * Math.PI * d) * dr) / c.area;
+    const uf = c.epsDeg >= 60 ? 1 : c.epsDeg >= 42 ? 2 / 3 : 1 / 3;
+    const T = uf * mhz * eff * Math.sin((c.epsDeg * Math.PI) / 180);
+    const k = c.epsDeg >= 60 ? "r1" : c.epsDeg >= 42 ? "tr" : "r3";
+    Z[k][0] += n; Z[k][1] += n * T; Z[k][2] = Math.max(Z[k][2], T);
+  }
+  const tot = Z.r1[0] + Z.tr[0] + Z.r3[0], sumT = Z.r1[1] + Z.tr[1] + Z.r3[1];
+  const row = (k, name, usable) => ({
+    name, usable, cells: Z[k][0], share: Z[k][0] / tot,
+    avg: Z[k][0] > 0.5 ? Z[k][1] / Z[k][0] : 0, max: Z[k][2],
+    se: Z[k][0] > 0.5 ? Z[k][1] / Z[k][0] / mhz : 0,
+  });
+  return {
+    rows: [row("r1", "Reuse-1", mhz), row("tr", "Transitional", (mhz * 2) / 3), row("r3", "Reuse-3", mhz / 3)],
+    total: { cells: tot, avg: sumT / tot, max: Math.max(Z.r1[2], Z.tr[2], Z.r3[2]), se: sumT / tot / mhz },
+  };
+}
+
 /* radius where elevation crosses a given threshold (for the reuse rings) */
 function pgRadiusForElev(deg) {
   let lo = 0, hi = 2500;
@@ -3211,6 +3235,8 @@ function PatchTilePanel() {
   const [hopSpd, setHopSpd] = useState(6);
   const [hop, setHop] = useState(0);
   const [showZones, setShowZones] = useState(true);
+  const [effMode7, setEffMode7] = useState("claim");
+  const [demandPct, setDemandPct] = useState(5);   // share of cells holding an active user
   useEffect(() => {
     if (hopSpd === 0) return;
     const id = setInterval(() => setHop((h) => h + 1), Math.max(90, 1000 / hopSpd));
@@ -3218,6 +3244,11 @@ function PatchTilePanel() {
   }, [hopSpd]);
 
   const ps = patchStats(fleet);
+  const MHZ7 = 20, EFF7 = effMode7 === "claim" ? 2.48 : 0.62;
+  const pz = patchZones(fleet, MHZ7, EFF7);
+  const activeCells = Math.round((pz.total.cells * demandPct) / 100);
+  const contCovered = Math.min(700, activeCells);
+  const schedShare = Math.min(1, 700 / Math.max(activeCells, 1));
   const r60 = pgRadiusForElev(60), r42 = pgRadiusForElev(42);
   // build the ring tiling
   const rings = [];
@@ -3231,15 +3262,20 @@ function PatchTilePanel() {
   const totalCells = rings.reduce((a, x) => a + x.n, 0);
   const DRAW_CAP = 620;
   const step = Math.max(1, Math.ceil(totalCells / DRAW_CAP));
+  // sample as an even sub-lattice (every m-th ring, every m-th cell in the ring) so the drawn
+  // spots keep the real tiling's uniformity instead of clumping the way index-sampling did
+  const mStep = Math.max(1, Math.round(Math.sqrt(step)));
   const VB = 520, cx = VB / 2, cy = VB / 2;
   const sc = (VB / 2 - 14) / ps.R;
   const zoneCol = (e) => (e >= 60 ? C.green : e >= 42 ? C.amber : "#C79BFF");
   const cells = [];
   let idx = 0;
   rings.forEach((ring, ri) => {
+    const inRingStep = Math.max(1, Math.round(step / mStep));
     for (let k = 0; k < ring.n; k++, idx++) {
-      if (idx % step) continue;
-      const th = (2 * Math.PI * k) / ring.n + ri * 0.35;
+      if (ri % mStep) continue;
+      if (k % inRingStep) continue;
+      const th = (2 * Math.PI * k) / ring.n + ri * 0.12;
       const px = cx + ring.r * sc * Math.cos(th);
       const py = cy + ring.r * sc * Math.sin(th);
       cells.push({
@@ -3287,8 +3323,15 @@ function PatchTilePanel() {
           <input type="range" min="0" max="20" step="1" value={hopSpd} onChange={(e) => setHopSpd(+e.target.value)} />
         </label>
       </div>
+      <label className="sliderL" style={{ marginTop: 6 }}>
+        Cells holding an active user: <strong>{demandPct}%</strong>{" "}
+        <span style={{ color: C.dim }}>({Math.round(pz.total.cells * demandPct / 100).toLocaleString()} of {Math.round(pz.total.cells).toLocaleString()} cells)</span>
+        <input type="range" min="1" max="100" step="1" value={demandPct} onChange={(e) => setDemandPct(+e.target.value)} />
+      </label>
       <div className="tglRow" style={{ marginTop: 6 }}>
         <button className={"genBtn" + (showZones ? " on" : "")} onClick={() => setShowZones(!showZones)}>{showZones ? "Reuse zones on" : "Reuse zones off"}</button>
+        <button className={"genBtn" + (effMode7 === "measured" ? " on" : "")} onClick={() => setEffMode7("measured")}>Measured 0.62</button>
+        <button className={"genBtn" + (effMode7 === "claim" ? " on" : "")} onClick={() => setEffMode7("claim")}>Claim-anchored 2.48</button>
       </div>
       <div className="split" style={{ marginTop: 10, alignItems: "start" }}>
         <div>
@@ -3334,6 +3377,54 @@ function PatchTilePanel() {
             </div>
           </div>
           <div className="stat" style={{ marginTop: 8 }}>
+            <div className="statL">Throughput & spectral efficiency by zone <span style={{ color: C.dim }}>· {MHZ7} MHz DL × {EFF7} bps/Hz</span></div>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--mono)", fontSize: 10.5, marginTop: 6 }}>
+              <thead><tr style={{ color: C.dim, textAlign: "left" }}>
+                <th style={{ padding: "3px 4px" }}>zone</th><th style={{ padding: "3px 4px" }}>cells</th>
+                <th style={{ padding: "3px 4px" }}>usable</th><th style={{ padding: "3px 4px" }}>avg</th>
+                <th style={{ padding: "3px 4px" }}>max</th><th style={{ padding: "3px 4px" }}>eff SE</th>
+              </tr></thead>
+              <tbody>
+                {pz.rows.map((r, i) => (
+                  <tr key={i} style={{ color: r.cells < 0.5 ? C.dim : C.text, opacity: r.cells < 0.5 ? 0.4 : 1 }}>
+                    <td style={{ padding: "3px 4px", color: i === 0 ? C.green : i === 1 ? C.amber : "#C79BFF" }}>{r.name}</td>
+                    <td style={{ padding: "3px 4px" }}>{r.cells < 0.5 ? "—" : (r.share * 100).toFixed(0) + "%"}</td>
+                    <td style={{ padding: "3px 4px" }}>{r.usable.toFixed(1)}</td>
+                    <td style={{ padding: "3px 4px" }}>{r.cells < 0.5 ? "—" : r.avg.toFixed(1)}</td>
+                    <td style={{ padding: "3px 4px" }}>{r.cells < 0.5 ? "—" : r.max.toFixed(1)}</td>
+                    <td style={{ padding: "3px 4px" }}>{r.cells < 0.5 ? "—" : r.se.toFixed(2)}</td>
+                  </tr>
+                ))}
+                <tr style={{ borderTop: `1px solid ${C.line}`, color: C.amber }}>
+                  <td style={{ padding: "4px" }}>PATCH</td>
+                  <td style={{ padding: "4px" }}>{Math.round(pz.total.cells).toLocaleString()}</td>
+                  <td style={{ padding: "4px" }}>—</td>
+                  <td style={{ padding: "4px" }}>{pz.total.avg.toFixed(1)}</td>
+                  <td style={{ padding: "4px" }}>{pz.total.max.toFixed(1)}</td>
+                  <td style={{ padding: "4px" }}>{pz.total.se.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim, marginTop: 4 }}>
+              Mbps per cell while its beam is on · eff SE = delivered bits ÷ the full {MHZ7} MHz owned pool
+            </div>
+          </div>
+          <div className="stat" style={{ marginTop: 8, borderLeft: `2px solid ${contCovered >= activeCells ? C.green : C.amber}` }}>
+            <div className="statL">Scheduler — who gets continuous service</div>
+            <div className="statV" style={{ fontSize: 19, color: contCovered >= activeCells ? C.green : C.amber }}>
+              {contCovered.toLocaleString()}<span style={{ fontSize: 12, color: C.dim }}> of {activeCells.toLocaleString()} active cells</span>
+            </div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 3 }}>
+              {contCovered >= activeCells
+                ? "demand fits inside 700 beams — every active cell can be held continuously, no hopping needed"
+                : "demand exceeds 700 beams — active cells share, each served " + (schedShare * 100).toFixed(0) + "% of the time"}
+            </div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 5 }}>
+              throughput per active cell ≈ <strong style={{ color: C.text }}>{(pz.total.avg * schedShare).toFixed(1)} Mbps</strong>
+              {"  ·  break-even at "}{(700 / pz.total.cells * 100).toFixed(1)}% of cells active
+            </div>
+          </div>
+          <div className="stat" style={{ marginTop: 8 }}>
             <div className="statL">Patch area by reuse regime</div>
             <div style={{ display: "flex", height: 16, borderRadius: 4, overflow: "hidden", marginTop: 6 }}>
               <div style={{ width: `${zoneShare[0] * 100}%`, background: C.green }} />
@@ -3376,6 +3467,15 @@ function PatchTilePanel() {
         reuse-1 and get the full pool; cells past ~42° are rationed to a third. The coloured bands above show how the
         patch divides. Grow the fleet and the whole patch shrinks inside the steep zone — which is why fleet size buys
         both duty <em>and</em> spectrum reuse at once.
+        <br /><br />
+        <strong>6 · What the scheduler can actually promise.</strong> Hopping only happens when more cells want
+        service than there are beams. A satellite can hold <strong>700 cells continuously</strong> — so if the number of
+        cells containing an active user is under 700, every one of them can be served without interruption and duty
+        cycle stops mattering entirely. Above that, active cells share beams and each is served 700 ÷ active-cells of
+        the time. The break-even share is shown above: at 15,000 satellites roughly a third of all cells can be busy
+        before anyone has to share, while at 650 it is under 4%. This is the honest answer to "how many places can get
+        continuous coverage": <em>seven hundred per satellite</em>, wherever they are, and the constellation's job is to
+        put enough satellites overhead that 700 is enough for the demand underneath.
         <br /><br />
         <strong>Where full duty arrives.</strong> When the patch contains only ~700 cells, every cell can be lit
         continuously and hopping stops. On the corrected geometry that happens near <strong>46,000–48,000
@@ -4801,7 +4901,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v78 · Panel 7 patch tiling + area-weighted duty</span>
+        <span className="buildTag">build v79 · Panel 7 zones, SE, scheduler</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
