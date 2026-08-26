@@ -3260,13 +3260,25 @@ function pgRadiusForElev(deg) {
   return lo;
 }
 
+const SETTLE = [
+  { k: "vrural", n: "Very rural", ppl: 2, take: 0.25, act: 50 },
+  { k: "rural", n: "Rural", ppl: 10, take: 0.20, act: 200 },
+  { k: "sub", n: "Suburban", ppl: 500, take: 0.05, act: 2500 },
+  { k: "dsub", n: "Dense suburban", ppl: 1500, take: 0.03, act: 4500 },
+  { k: "urban", n: "Urban", ppl: 4000, take: 0.02, act: 8000 },
+  { k: "durban", n: "Dense urban", ppl: 10000, take: 0.01, act: 10000 },
+];
+const HABITABLE = 0.35; // clustered mode: share of cells that contain any settlement at all
+
 function PatchTilePanel() {
   const [fleet, setFleet] = useState(5000);
   const [hopSpd, setHopSpd] = useState(6);
   const [hop, setHop] = useState(0);
   const [showZones, setShowZones] = useState(true);
   const [effMode7, setEffMode7] = useState("claim");
-  const [demandDens, setDemandDens] = useState(4); // active users per 1,000 km² of ground
+  const [demandDens, setDemandDens] = useState(50); // active users per 1,000 km² of ground
+  const [distMode, setDistMode] = useState("poisson");
+  const [minUser, setMinUser] = useState(3);
   useEffect(() => {
     if (hopSpd === 0) return;
     const id = setInterval(() => setHop((h) => h + 1), Math.max(90, 1000 / hopSpd));
@@ -3276,9 +3288,20 @@ function PatchTilePanel() {
   const ps = patchStats(fleet);
   const MHZ7 = 20, EFF7 = effMode7 === "claim" ? 2.48 : 0.62;
   const pz = patchZones(fleet, MHZ7, EFF7);
-  const activeCells = Math.min(Math.round(pz.total.cells), Math.round((demandDens * ps.A) / 1000));
+  const usersInPatch = (demandDens * ps.A) / 1000;
+  const muCell = usersInPatch / pz.total.cells;
+  const occupiedCells =
+    distMode === "dispersed" ? Math.min(pz.total.cells, usersInPatch)
+    : distMode === "poisson" ? pz.total.cells * (1 - Math.exp(-muCell))
+    : pz.total.cells * HABITABLE * (1 - Math.exp(-muCell / HABITABLE));
+  const activeCells = Math.max(1, Math.round(occupiedCells));
   const contCovered = Math.min(700, activeCells);
   const schedShare = Math.min(1, 700 / Math.max(activeCells, 1));
+  const perCellMbps = pz.total.avg * schedShare;
+  const usersPerCell = usersInPatch / Math.max(activeCells, 1);
+  const perUserMbps = perCellMbps / Math.max(usersPerCell, 1e-9);
+  const beamLimited = activeCells > 700;
+  const served = perUserMbps >= minUser;
   const breakEvenDens = (700 / ps.A) * 1000;
   const r60 = pgRadiusForElev(60), r42 = pgRadiusForElev(42);
   // the tiling: hex lattice in pointing-angle space, projected to ground
@@ -3332,11 +3355,31 @@ function PatchTilePanel() {
           <input type="range" min="0" max="20" step="1" value={hopSpd} onChange={(e) => setHopSpd(+e.target.value)} />
         </label>
       </div>
-      <label className="sliderL" style={{ marginTop: 6 }}>
-        Ground demand: <strong>{demandDens}</strong> active users per 1,000 km²{" "}
-        <span style={{ color: C.dim }}>(fixed on the ground — independent of fleet)</span>
-        <input type="range" min="1" max="120" step="1" value={demandDens} onChange={(e) => setDemandDens(+e.target.value)} />
-      </label>
+      <div style={{ marginTop: 8 }}>
+        <div className="statL" style={{ marginBottom: 5 }}>Ground demand — pick a settlement type, or set it directly</div>
+        <div className="tglRow" style={{ gap: 5, flexWrap: "wrap" }}>
+          {SETTLE.map((z) => (
+            <button key={z.k} className={"genBtn" + (Math.abs(demandDens - z.act) < 1 ? " on" : "")}
+              onClick={() => setDemandDens(z.act)} title={`${z.ppl.toLocaleString()} people/km² · ${(z.take * 100).toFixed(0)}% take D2C · 10% active in the busy hour`}>
+              {z.n}
+            </button>
+          ))}
+        </div>
+        <label className="sliderL" style={{ marginTop: 6 }}>
+          <strong>{demandDens.toLocaleString()}</strong> active users per 1,000 km²{" "}
+          <span style={{ color: C.dim }}>
+            ({Math.round(usersInPatch).toLocaleString()} in this patch · fixed on the ground, independent of fleet)
+          </span>
+          <input type="range" min="0" max="100" step="1"
+            value={Math.round(Math.log10(Math.max(demandDens, 1)) * 25)}
+            onChange={(e) => setDemandDens(Math.round(Math.pow(10, +e.target.value / 25)))} />
+        </label>
+        <div className="tglRow" style={{ gap: 5, marginTop: 4 }}>
+          <button className={"genBtn" + (distMode === "dispersed" ? " on" : "")} onClick={() => setDistMode("dispersed")}>Dispersed — one user per cell</button>
+          <button className={"genBtn" + (distMode === "poisson" ? " on" : "")} onClick={() => setDistMode("poisson")}>Organic (Poisson)</button>
+          <button className={"genBtn" + (distMode === "clustered" ? " on" : "")} onClick={() => setDistMode("clustered")}>Clustered in settlements</button>
+        </div>
+      </div>
       <div className="tglRow" style={{ marginTop: 6 }}>
         <button className={"genBtn" + (showZones ? " on" : "")} onClick={() => setShowZones(!showZones)}>{showZones ? "Reuse zones on" : "Reuse zones off"}</button>
         <button className={"genBtn" + (effMode7 === "measured" ? " on" : "")} onClick={() => setEffMode7("measured")}>Measured 0.62</button>
@@ -3441,28 +3484,41 @@ function PatchTilePanel() {
               Mbps per cell while its beam is on · eff SE = delivered bits ÷ the full {MHZ7} MHz owned pool
             </div>
           </div>
-          <div className="stat" style={{ marginTop: 8, borderLeft: `2px solid ${contCovered >= activeCells ? C.green : C.amber}` }}>
-            <div className="statL">Scheduler — who gets continuous service</div>
-            <div className="statV" style={{ fontSize: 19, color: contCovered >= activeCells ? C.green : C.amber }}>
-              {contCovered.toLocaleString()}<span style={{ fontSize: 12, color: C.dim }}> of {activeCells.toLocaleString()} active cells</span>
+          <div className="stat" style={{ marginTop: 8, borderLeft: `2px solid ${served ? C.green : beamLimited ? C.amber : C.red}` }}>
+            <div className="statL">Scheduler — what this demand actually gets</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+              <div className="statV" style={{ fontSize: 19, color: served ? C.green : C.amber }}>
+                {contCovered.toLocaleString()}<span style={{ fontSize: 12, color: C.dim }}> of {activeCells.toLocaleString()} occupied cells held continuously</span>
+              </div>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 10, padding: "2px 7px", borderRadius: 999,
+                border: `1px solid ${served ? C.green : beamLimited ? C.amber : C.red}`,
+                color: served ? C.green : beamLimited ? C.amber : C.red }}>
+                {served ? "demand served" : beamLimited ? "beam-limited" : "capacity-limited"}
+              </span>
             </div>
-            <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 3 }}>
-              {contCovered >= activeCells
-                ? "demand fits inside 700 beams — every active cell can be held continuously, no hopping needed"
-                : "demand exceeds 700 beams — active cells share, each served " + (schedShare * 100).toFixed(0) + "% of the time"}
-            </div>
-            <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 5 }}>
-              patch holds <strong style={{ color: C.text }}>{Math.round(pz.total.cells).toLocaleString()}</strong> cells ·
-              {" "}<strong style={{ color: C.text }}>700</strong> beams ·
-              {" "}<strong style={{ color: C.text }}>{activeCells.toLocaleString()}</strong> cells with an active user
-            </div>
-            <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 3 }}>
-              throughput per active cell ≈ <strong style={{ color: C.text }}>{(pz.total.avg * schedShare).toFixed(1)} Mbps</strong>
-              {"  ·  hopping starts above "}{breakEvenDens.toFixed(1)} users/1,000 km²
-            </div>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--mono)", fontSize: 10.5, marginTop: 7 }}>
+              <tbody>
+                {[["cells in the patch", Math.round(pz.total.cells).toLocaleString()],
+                  ["active users in the patch", Math.round(usersInPatch).toLocaleString()],
+                  ["cells they occupy (beam demand)", activeCells.toLocaleString()],
+                  ["beams available", "700"],
+                  ["each occupied cell served", (schedShare * 100).toFixed(1) + "% of the time"],
+                  ["users sharing an occupied cell", usersPerCell.toFixed(1)],
+                  ["throughput per active user", perUserMbps.toFixed(2) + " Mbps"]].map((r, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: "2px 4px", color: C.dim }}>{r[0]}</td>
+                    <td style={{ padding: "2px 4px", textAlign: "right", color: i === 6 ? (served ? C.green : C.red) : C.text }}>{r[1]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <label className="sliderL" style={{ marginTop: 6 }}>
+              Usable-service threshold: <strong>{minUser} Mbps</strong> per active user
+              <input type="range" min="1" max="10" step="1" value={minUser} onChange={(e) => setMinUser(+e.target.value)} />
+            </label>
             <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim, marginTop: 5 }}>
-              Demand is set per unit of ground, so it does not change with fleet — but the patch does. Add satellites and
-              each one covers less ground, so fewer users fall inside its patch and 700 beams go further.
+              hopping starts above {breakEvenDens.toFixed(1)} users/1,000 km² in dispersed demand · demand is per unit of
+              ground, so it doesn't move with fleet — the patch does
             </div>
           </div>
           <div className="stat" style={{ marginTop: 8 }}>
@@ -3478,6 +3534,31 @@ function PatchTilePanel() {
           </div>
         </div>
       </div>
+      <Info label="does it matter how demand is spread out? — yes, but only in one regime">
+        Users are not sprinkled evenly over the ground, so the panel offers three spatial patterns, the demand-side
+        analogue of the femtocell deployment models on the Serviceability tab.
+        <br /><br />
+        <strong>Dispersed</strong> puts every active user in a cell of their own — the worst case for beam demand, and
+        roughly what very sparse rural traffic looks like. <strong>Organic (Poisson)</strong> scatters users randomly, so
+        some cells hold several and many hold none: occupied cells = N × (1 − e<sup>−μ</sup>), where μ is the mean users
+        per cell. <strong>Clustered in settlements</strong> confines users to about {(HABITABLE * 100).toFixed(0)}% of
+        cells — villages, towns, a highway — leaving most of the patch genuinely empty.
+        <br /><br />
+        <strong>The regime that matters.</strong> When demand is light enough that occupied cells fit inside 700 beams,
+        clustering is a real advantage: fewer distinct cells need a beam, so more of them — often all — can be held
+        continuously with no hopping at all. This is the rural case, and it is where the satellite layer is at its best.
+        <br /><br />
+        <strong>The regime where it stops mattering.</strong> Once occupied cells exceed 700, every beam is busy every
+        instant, so the satellite delivers a fixed total of 700 × the per-cell rate no matter how the users are
+        arranged. Clustering then changes only <em>who</em> shares with whom, not how much there is: per-user throughput
+        comes out the same for all three patterns. Try it — set Suburban and switch between the three; the last row of
+        the table doesn't move.
+        <br /><br />
+        That is the useful lesson. Spatial distribution decides whether you are beam-limited; total demand decides
+        whether you are capacity-limited. Rural demand can be beam-limited and fixed by clever scheduling. Urban demand
+        is capacity-limited, and no scheduler, clustering assumption, or beam count rescues it — which is precisely the
+        density dilemma the rest of this site quantifies.
+      </Info>
       <Info label="the whole machine, in order — patch, tiling, hopping, reuse">
         <strong>1 · The patch.</strong> Every point on the ground is served by whichever satellite sees it at the
         steepest angle. That partitions the surface into one patch per satellite, and patch size depends on nothing but
@@ -4942,7 +5023,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v80 · hex lattice + eccentricity ruler + ground demand</span>
+        <span className="buildTag">build v81 · settlement demand model</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
