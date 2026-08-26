@@ -1564,7 +1564,7 @@ function VerdictTab() {
           Every figure in the table is sourced — open the <strong>◈ sources</strong> chip in the section header for the
           full list (drive-test reports, spectrum-depth analyses, and the AT&T and Verizon primary disclosures). ·{" "}
           <button className="nextlink" style={{ display: "inline", margin: 0, padding: 0 }}
-            onClick={() => window.__navTo("coverage", "cov-6-stitching")}>the reuse-density arithmetic → Panel 6</button>
+            onClick={() => window.__navTo("coverage", "cov-7-patch")}>the reuse-density arithmetic → Panel 7</button>
         </p>
       </div>
 
@@ -2695,7 +2695,7 @@ function StitchPanel() {
   const regime = eEdge >= 60 ? 1 : eEdge >= 42 ? 2 : 3;
   const tone = regime === 1 ? C.green : regime === 2 ? C.amber : "#C79BFF";
   const beamArea = Math.PI * 2.2 * 2.2; // 4.4 km ⌀ — Panel 1b convention (θ = λ/D), unified site-wide
-  const beamsNeeded = areaPer / beamArea;
+  const beamsNeeded = patchStats(fleet).N; // area-weighted: cells grow toward the patch rim (Panel 7)
   const duty = Math.min(700 / beamsNeeded, 1) * 100;
   const satsUS = fleet * (US / EARTH) * 1.3;
   // guaranteed floor: invert Panel 1's calibrated model (3.3× Walker overlap) — largest mask this fleet guarantees everywhere, always
@@ -2959,7 +2959,8 @@ function StitchPanel() {
         Model (derived, schematic): CONUS boundary from Natural Earth (public domain), equirectangular at 38°N; two
         interleaved hex lattices (ascending + descending families) netting the fleet's density, ×1.3 mid-latitude
         crowding for 53° planes; patch-edge elevation from spherical geometry at 330 km; duty = ~700 available beams ÷
-        positions to cover (4.4 km beams, Panel 1b convention). Note the crossover this implies: up to ~48,000
+        cells in the patch, area-weighted across the patch (a beam is a 4.4 km circle only at nadir and stretches into
+        an ellipse toward the rim — see Panel 7); the older nadir-sized approximation understated duty. Note the crossover this implies: up to ~48,000
         satellites, crowding is absorbed by duty cycle (all 700 beams stay busy inside their shrinking patch — the
         Voronoi assignment prevents neighbor overlap); beyond that — Gen3's 100,000-satellite scale — a patch physically
         can't hold 700 beams, and active beams per satellite must fall to patch ÷ beam-area (~330 at 100k). Even at
@@ -3167,7 +3168,222 @@ const COV_SECTIONS = [
   { id: "cov-4-ntn", label: "4 · NTN" },
   { id: "cov-5-sawtooth", label: "5 · Sawtooth" },
   { id: "cov-6-stitching", label: "6 · Stitching" },
+  { id: "cov-7-patch", label: "7 · The patch, tiled" },
 ];
+
+/* ---------- shared patch geometry: one place, used everywhere duty is quoted ---------- */
+const PG_RE = 6371, PG_H = 330, PG_TB = 4.4 / 330;
+function pgCell(d) {
+  const lam = d / PG_RE;
+  const S = Math.sqrt(PG_RE * PG_RE + (PG_RE + PG_H) * (PG_RE + PG_H) - 2 * PG_RE * (PG_RE + PG_H) * Math.cos(lam));
+  const eps = Math.atan2(Math.cos(lam) - PG_RE / (PG_RE + PG_H), Math.sin(lam));
+  const across = PG_TB * S;
+  const along = across / Math.max(Math.sin(eps), 1e-6);
+  return { epsDeg: (eps * 180) / Math.PI, across, along, area: (Math.PI / 4) * along * across };
+}
+const PG_CACHE = {};
+function patchStats(fleet) {
+  const key = Math.round(fleet);
+  if (PG_CACHE[key]) return PG_CACHE[key];
+  const A = 510e6 / fleet, R = Math.sqrt(A / Math.PI);
+  let N = 0; const steps = 400;
+  for (let i = 0; i < steps; i++) {
+    const d = (R * (i + 0.5)) / steps;
+    N += ((2 * Math.PI * d) * (R / steps)) / pgCell(d).area;
+  }
+  const edge = pgCell(R), nadir = pgCell(0.001);
+  const out = { A, R, N, avgCell: A / N, duty: Math.min(1, 700 / N), edge, nadir, naiveN: A / 15.2 };
+  PG_CACHE[key] = out;
+  return out;
+}
+/* radius where elevation crosses a given threshold (for the reuse rings) */
+function pgRadiusForElev(deg) {
+  let lo = 0, hi = 2500;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (pgCell(mid).epsDeg > deg) lo = mid; else hi = mid;
+  }
+  return lo;
+}
+
+function PatchTilePanel() {
+  const [fleet, setFleet] = useState(5000);
+  const [hopSpd, setHopSpd] = useState(6);
+  const [hop, setHop] = useState(0);
+  const [showZones, setShowZones] = useState(true);
+  useEffect(() => {
+    if (hopSpd === 0) return;
+    const id = setInterval(() => setHop((h) => h + 1), Math.max(90, 1000 / hopSpd));
+    return () => clearInterval(id);
+  }, [hopSpd]);
+
+  const ps = patchStats(fleet);
+  const r60 = pgRadiusForElev(60), r42 = pgRadiusForElev(42);
+  // build the ring tiling
+  const rings = [];
+  let r = 0, guard = 0;
+  while (r < ps.R && guard++ < 400) {
+    const c = pgCell(Math.max(r, 0.5));
+    const nInRing = Math.max(1, Math.round((2 * Math.PI * Math.max(r, c.across)) / c.across));
+    rings.push({ r: r, cell: c, n: nInRing });
+    r += c.along;
+  }
+  const totalCells = rings.reduce((a, x) => a + x.n, 0);
+  const DRAW_CAP = 620;
+  const step = Math.max(1, Math.ceil(totalCells / DRAW_CAP));
+  const VB = 520, cx = VB / 2, cy = VB / 2;
+  const sc = (VB / 2 - 14) / ps.R;
+  const zoneCol = (e) => (e >= 60 ? C.green : e >= 42 ? C.amber : "#C79BFF");
+  const cells = [];
+  let idx = 0;
+  rings.forEach((ring, ri) => {
+    for (let k = 0; k < ring.n; k++, idx++) {
+      if (idx % step) continue;
+      const th = (2 * Math.PI * k) / ring.n + ri * 0.35;
+      const px = cx + ring.r * sc * Math.cos(th);
+      const py = cy + ring.r * sc * Math.sin(th);
+      cells.push({
+        px, py,
+        rx: Math.max(0.7, (ring.cell.along * sc) / 2),
+        ry: Math.max(0.7, (ring.cell.across * sc) / 2),
+        rot: (th * 180) / Math.PI,
+        col: zoneCol(ring.cell.epsDeg),
+        id: idx,
+      });
+    }
+  });
+  // which drawn cells are lit this hop — matches the duty fraction
+  const litCount = Math.max(1, Math.round(cells.length * ps.duty));
+  const lit = new Set();
+  { let seed = (hop * 2654435761) % 4294967296;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+    let g = 0;
+    while (lit.size < litCount && g++ < litCount * 30) lit.add(Math.floor(rnd() * cells.length));
+  }
+  const zoneShare = (() => {
+    const inner = Math.min(r60, ps.R), mid = Math.min(r42, ps.R);
+    const a1 = Math.PI * inner * inner, a2 = Math.PI * mid * mid - a1, a3 = Math.PI * ps.R * ps.R - Math.PI * mid * mid;
+    const tot = Math.PI * ps.R * ps.R;
+    return [a1 / tot, Math.max(0, a2) / tot, Math.max(0, a3) / tot];
+  })();
+
+  return (
+    <div className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
+      <div className="eyebrow" style={{ color: C.blue }}>Panel 7 · The patch, tiled — where duty cycle actually comes from <Src k="fleet" topic="fleet" /></div>
+      <p className="body" style={{ marginBottom: 10 }}>
+        Every cell on the ground belongs to whichever satellite sees it steepest, so the surface divides into
+        per-satellite <strong>patches</strong> whose size is set purely by fleet count: <em>patch area = 510 million km²
+        ÷ fleet</em>. Each satellite must then cover its whole patch using about <strong>700 beams</strong> — and it has
+        nowhere near enough of them, so it hops. <strong>Duty cycle is simply 700 ÷ the number of cells in the
+        patch.</strong> Drag the fleet and watch the patch shrink, the cell count collapse, and the duty climb.
+      </p>
+      <div className="split2" style={{ gap: 12 }}>
+        <label className="sliderL">
+          D2C fleet: <strong>{fleet.toLocaleString()}</strong> <span style={{ color: C.dim }}>(patch radius ~{Math.round(ps.R)} km)</span>
+          <input type="range" min="650" max="48000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
+        </label>
+        <label className="sliderL">
+          Hop speed: <strong>{hopSpd === 0 ? "paused" : "×" + hopSpd}</strong> <span style={{ color: C.dim }}>(0 = pause)</span>
+          <input type="range" min="0" max="20" step="1" value={hopSpd} onChange={(e) => setHopSpd(+e.target.value)} />
+        </label>
+      </div>
+      <div className="tglRow" style={{ marginTop: 6 }}>
+        <button className={"genBtn" + (showZones ? " on" : "")} onClick={() => setShowZones(!showZones)}>{showZones ? "Reuse zones on" : "Reuse zones off"}</button>
+      </div>
+      <div className="split" style={{ marginTop: 10, alignItems: "start" }}>
+        <div>
+          <svg viewBox={`0 0 ${VB} ${VB}`} style={{ width: "100%", height: "auto", display: "block", background: C.panel2, borderRadius: 8 }}>
+            <circle cx={cx} cy={cy} r={ps.R * sc} fill="none" stroke={C.line} strokeWidth="1.5" />
+            {showZones && r60 < ps.R && <circle cx={cx} cy={cy} r={r60 * sc} fill={C.green} fillOpacity="0.05" stroke={C.green} strokeOpacity="0.5" strokeDasharray="4 4" strokeWidth="1" />}
+            {showZones && r42 < ps.R && <circle cx={cx} cy={cy} r={r42 * sc} fill="none" stroke={C.amber} strokeOpacity="0.5" strokeDasharray="4 4" strokeWidth="1" />}
+            {cells.map((c, i) => (
+              <ellipse key={i} cx={c.px} cy={c.py} rx={c.rx} ry={c.ry} transform={`rotate(${c.rot} ${c.px} ${c.py})`}
+                fill={lit.has(i) ? c.col : c.col} fillOpacity={lit.has(i) ? 0.85 : 0.10}
+                stroke={c.col} strokeOpacity={lit.has(i) ? 1 : 0.28} strokeWidth={lit.has(i) ? 0.9 : 0.35} />
+            ))}
+            <circle cx={cx} cy={cy} r="3" fill={C.text} />
+            <text x={cx + 7} y={cy + 3} fill={C.dim} style={{ fontSize: 9, fontFamily: "var(--mono)" }}>nadir</text>
+            {showZones && r60 < ps.R && <text x={cx} y={cy - r60 * sc - 4} textAnchor="middle" fill={C.green} style={{ fontSize: 9, fontFamily: "var(--mono)" }}>60° · reuse-1</text>}
+            {showZones && r42 < ps.R && <text x={cx} y={cy - r42 * sc - 4} textAnchor="middle" fill={C.amber} style={{ fontSize: 9, fontFamily: "var(--mono)" }}>42° · transitional</text>}
+            <text x={cx} y={VB - 6} textAnchor="middle" fill={C.dim} style={{ fontSize: 9, fontFamily: "var(--mono)" }}>
+              showing 1 of every {step} cell{step > 1 ? "s" : ""} · lit cells = beams active this hop
+            </text>
+          </svg>
+        </div>
+        <div>
+          <div className="statRow">
+            <div className="stat"><div className="statL">Cells in the patch</div><div className="statV">{Math.round(ps.N).toLocaleString()}</div>
+              <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>area-weighted, not nadir-sized</div></div>
+            <div className="stat"><div className="statL">Duty — beams ÷ cells</div>
+              <div className="statV" style={{ color: ps.duty >= 0.99 ? C.green : ps.duty > 0.25 ? C.amber : "#C79BFF" }}>
+                {(ps.duty * 100).toFixed(ps.duty < 0.1 ? 1 : 0)}%</div>
+              <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>700 ÷ {Math.round(ps.N).toLocaleString()}</div></div>
+          </div>
+          <div className="statRow" style={{ marginTop: 8 }}>
+            <div className="stat"><div className="statL">Cell at nadir</div><div className="statV" style={{ fontSize: 19 }}>15 km²</div>
+              <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>4.4 × 4.4 km — circular</div></div>
+            <div className="stat"><div className="statL">Cell at the patch edge</div>
+              <div className="statV" style={{ fontSize: 19, color: "#C79BFF" }}>{Math.round(ps.edge.area)} km²</div>
+              <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>{ps.edge.along.toFixed(1)} × {ps.edge.across.toFixed(1)} km at {ps.edge.epsDeg.toFixed(0)}°</div></div>
+          </div>
+          <div className="stat" style={{ marginTop: 8 }}>
+            <div className="statL">Average cell across the patch</div>
+            <div className="statV" style={{ fontSize: 19 }}>{ps.avgCell.toFixed(1)} km²</div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>
+              the nadir-only convention would count {Math.round(ps.naiveN).toLocaleString()} cells and understate duty as {(Math.min(1, 700 / ps.naiveN) * 100).toFixed(1)}%
+            </div>
+          </div>
+          <div className="stat" style={{ marginTop: 8 }}>
+            <div className="statL">Patch area by reuse regime</div>
+            <div style={{ display: "flex", height: 16, borderRadius: 4, overflow: "hidden", marginTop: 6 }}>
+              <div style={{ width: `${zoneShare[0] * 100}%`, background: C.green }} />
+              <div style={{ width: `${zoneShare[1] * 100}%`, background: C.amber }} />
+              <div style={{ width: `${zoneShare[2] * 100}%`, background: "#C79BFF" }} />
+            </div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 5 }}>
+              reuse-1 {(zoneShare[0] * 100).toFixed(0)}% · transitional {(zoneShare[1] * 100).toFixed(0)}% · reuse-3 {(zoneShare[2] * 100).toFixed(0)}%
+            </div>
+          </div>
+        </div>
+      </div>
+      <Info label="the whole machine, in order — patch, tiling, hopping, reuse">
+        <strong>1 · The patch.</strong> Every point on the ground is served by whichever satellite sees it at the
+        steepest angle. That partitions the surface into one patch per satellite, and patch size depends on nothing but
+        fleet count: 510 million km² ÷ fleet. At 650 satellites a patch spans a ~500 km radius; at 15,000 it is ~104 km;
+        at ~48,000 it is ~58 km.
+        <br /><br />
+        <strong>2 · The tiling — and why cells are not all the same size.</strong> A satellite steers each beam by a
+        fixed angular width. Pointed straight down it lands as a 4.4 km circle covering ~15 km². Pointed anywhere else
+        it strikes the ground obliquely and smears into an ellipse: longer along the look direction by 1/sin ε, and
+        wider overall because the slant range is greater. So a patch is <em>not</em> tiled with identical circles — it
+        has one circular cell at nadir and progressively larger, more eccentric ellipses toward the rim. At a 500 km
+        patch radius the edge cell covers about 100 km², nearly seven times the nadir cell.
+        <br /><br />
+        <strong>3 · How many cells, really.</strong> Counting cells as if all were nadir-sized overstates the count
+        badly. The correct figure integrates the varying cell area across the patch — and it is what this panel now
+        uses everywhere, replacing the old nadir-only convention. The difference is large at small fleets and vanishes
+        at large ones, because a small patch never strays far from nadir.
+        <br /><br />
+        <strong>4 · Hopping.</strong> With ~700 beams and more cells than that, the satellite illuminates a subset at a
+        time and cycles. Duty = 700 ÷ cells. This is not lost capacity — all 700 beams are working every instant — and
+        it is not intermittent service, since hopping runs far faster than anything a user perceives. It is a statement
+        about how thinly capacity spreads across ground area. And it is <em>uniform-demand</em> arithmetic: real
+        schedulers chase demand, and since most cells over land are empty, a cell with actual users is served far more
+        often than its uniform share.
+        <br /><br />
+        <strong>5 · Reuse varies across the same patch.</strong> Elevation falls as you move from nadir to rim, so the
+        reuse regime changes <em>within</em> a single satellite's patch: cells near the centre are steep enough for
+        reuse-1 and get the full pool; cells past ~42° are rationed to a third. The coloured bands above show how the
+        patch divides. Grow the fleet and the whole patch shrinks inside the steep zone — which is why fleet size buys
+        both duty <em>and</em> spectrum reuse at once.
+        <br /><br />
+        <strong>Where full duty arrives.</strong> When the patch contains only ~700 cells, every cell can be lit
+        continuously and hopping stops. On the corrected geometry that happens near <strong>46,000–48,000
+        satellites</strong> — Gen3 territory, well beyond the 15,000-satellite plan.
+      </Info>
+    </div>
+  );
+}
 
 function CoverageTab() {
   return (
@@ -3193,6 +3409,7 @@ function CoverageTab() {
       <div id="cov-4-ntn"><NtnPanel /><NextLink to="cov-5-sawtooth" label="Sawtooth" /></div>
       <div id="cov-5-sawtooth"><SawtoothPanel /><NextLink to="cov-6-stitching" label="The stitching" /></div>
       <div id="cov-6-stitching"><StitchPanel /></div>
+      <div id="cov-7-patch"><PatchTilePanel /></div>
     </div>
   );
 }
@@ -3761,7 +3978,7 @@ function ServiceabilityTab() {
   const beamAlong = 4.4 / (sinE * sinE);      // stretch along the look direction
   const beamAcross = 4.4 / sinE;              // slant widening
   const cellAreaKm2 = (Math.PI / 4) * beamAlong * beamAcross;
-  const dutyFrac = Math.min(1, 700 / (areaPer / (Math.PI * 2.2 * 2.2)));
+  const dutyFrac = patchStats(fleet).duty;   // area-weighted cell count (Panel 7), not nadir-sized
   const cellAvgMbps = perBeam * dutyFrac;     // averaged over the hop schedule
   const cellSubs = servDens * cellAreaKm2;    // subscribers this cell can carry
   const cellActive = cellSubs * (activePct / 100);
@@ -4042,6 +4259,9 @@ function ServiceabilityTab() {
               And that uniform-demand assumption is deliberately conservative. Most 4.4 km cells over land are empty —
               schedulers chase demand, so a cell with real users gets beams far more often than its uniform share. Read
               the time-averaged figure as a floor for planning, not a prediction of what one user experiences.
+              <br /><br />
+              <button className="nextlink" style={{ display: "inline", margin: 0, padding: 0 }}
+                onClick={() => window.__navTo("coverage", "cov-7-patch")}>See the machine itself → Panel 7: the patch, tiled</button>
             </Info>
           </div>
           <div className="stat" style={{ borderColor: C.green }}>
@@ -4581,7 +4801,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v77 · elevation-adjusted beam rate</span>
+        <span className="buildTag">build v78 · Panel 7 patch tiling + area-weighted duty</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
