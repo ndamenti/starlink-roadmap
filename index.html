@@ -3352,7 +3352,8 @@ function PatchFirstPrinciples() {
           {[
             ["1", "Start with the whole sphere", "510,000,000 km²", "Earth's surface area — the thing being divided up"],
             ["2", "Divide by the fleet", `510,000,000 ÷ ${fleet.toLocaleString()}`, "every point is served by whichever satellite sees it steepest, so the surface splits into one territory per satellite"],
-            ["3", "That is the patch", `${Math.round(A).toLocaleString()} km²`, `≈ ${st.ratio >= 0.92 && st.ratio <= 1.08 ? "the size of" : st.ratio.toFixed(2) + "× "} ${st.name}`],
+            ["3", "That is the patch", `${Math.round(A).toLocaleString()} km²`,
+              `≈ ${st.ratio >= 0.92 && st.ratio <= 1.08 ? "the size of" : st.ratio.toFixed(2) + "× "} ${st.name}  ·  ${(A / 24050).toFixed(A / 24050 >= 10 ? 0 : 1)}× the Dallas–Fort Worth metroplex`],
             ["4", "Its radius", `${Math.round(R)} km`, `√(area ÷ π) — about ${Math.round(R * 0.621)} miles from the satellite's nadir to the patch rim`],
             ["5", "Elevation at the rim", `${edge.epsDeg.toFixed(0)}°`, edge.epsDeg >= 60 ? "steep enough for full frequency reuse everywhere in the patch" : edge.epsDeg >= 42 ? "rim cells fall into the transitional reuse zone" : "rim cells are rationed to a third of the spectrum"],
           ].map(([n, label, val, note], i) => (
@@ -3510,7 +3511,7 @@ function PatchTilePanel() {
             onChange={(e) => setDemandDens(Math.round(Math.pow(10, +e.target.value / 25)))} />
         </label>
         <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 2 }}>
-          1,000 km² is a 20 mile × 20 mile square — about the size of Dallas (997 km²), or Rocky Mountain National Park (1,075 km²); New York City\’s five boroughs are smaller at 780 km²
+          1,000 km² is a 20 mile × 20 mile square — the <em>city</em> of Dallas is 999 km²; the DFW metroplex is 24× bigger at 24,050 km². Rocky Mountain National Park is 1,075 km²; New York City's five boroughs are 780 km².
         </div>
         <div className="tglRow" style={{ gap: 5, marginTop: 6 }}>
           <button className={"genBtn" + (distMode === "dispersed" ? " on" : "")} onClick={() => setDistMode("dispersed")}>Dispersed — one user per cell</button>
@@ -5192,7 +5193,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v83 · Panel 1c patch from first principles</span>
+        <span className="buildTag">build v84 · clearer US area anchors</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
