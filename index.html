@@ -3273,6 +3273,13 @@ const SETTLE = [
   { k: "urban", n: "Urban", ppl: 4000, take: 0.02, act: 8000 },
   { k: "durban", n: "Dense urban", ppl: 10000, take: 0.01, act: 10000 },
 ];
+const ST_AREA = { AL:135767, AZ:295234, AR:137732, CA:423967, CO:269601, CT:14357, DE:6446, DC:177,
+  FL:170312, GA:153910, ID:216443, IL:149995, IN:94326, IA:145746, KS:213100, KY:104656, LA:135659,
+  ME:91633, MD:32131, MA:27336, MI:250487, MN:225163, MS:125438, MO:180540, MT:380831, NE:200330,
+  NV:286380, NH:24214, NJ:22591, NM:314917, NY:141297, NC:139391, ND:183108, OH:116098, OK:181037,
+  OR:254799, PA:119280, RI:4001, SC:82933, SD:199729, TN:109153, TX:695662, UT:219882, VT:24906,
+  VA:110787, WA:184661, WV:62756, WI:169635, WY:253335 };
+
 const HABITABLE = 0.35; // clustered mode: share of cells that contain any settlement at all
 
 const US_AREAS = [
@@ -3418,6 +3425,7 @@ function PatchTilePanel() {
   const [demandDens, setDemandDens] = useState(50); // active users per 1,000 km² of ground
   const [distMode, setDistMode] = useState("poisson");
   const [minUser, setMinUser] = useState(3);
+  const [stPick, setStPick] = useState("TX");
   useEffect(() => {
     if (hopSpd === 0) return;
     const id = setInterval(() => setHop((h) => h + 1), Math.max(90, 1000 / hopSpd));
@@ -3572,6 +3580,50 @@ function PatchTilePanel() {
               })}
             </svg>
           </div>
+          {(() => {
+            const st = US_STATES.find((x) => x.a === stPick) || US_STATES[0];
+            const [x0, y0, x1, y1] = st.bb;
+            const sw = x1 - x0, sh = y1 - y0;
+            const BW = 300, BH = 210, pad = 12;
+            const k = Math.min((BW - pad * 2) / Math.max(sw, 2 * ps.R * 1.05), (BH - pad * 2) / Math.max(sh, 2 * ps.R * 1.05));
+            const ox = BW / 2 - ((x0 + x1) / 2) * k, oy = BH / 2 - ((y0 + y1) / 2) * k;
+            const stArea = ST_AREA[st.a] || 0;
+            const nPatch = stArea / ps.A;
+            return (
+              <div className="stat" style={{ marginTop: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                  <div className="statL" style={{ margin: 0 }}>One patch, drawn on a state you know</div>
+                  <select value={stPick} onChange={(e) => setStPick(e.target.value)}
+                    style={{ background: C.panel, color: C.text, border: `1px solid ${C.line}`, borderRadius: 6,
+                      fontFamily: "var(--mono)", fontSize: 11, padding: "3px 6px" }}>
+                    {US_STATES.map((x) => <option key={x.a} value={x.a}>{x.n}</option>)}
+                  </select>
+                </div>
+                <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
+                  <svg viewBox={`0 0 ${BW} ${BH}`} style={{ width: 300, maxWidth: "100%", height: "auto", background: C.panel2, borderRadius: 6 }}>
+                    {st.d.split("M").slice(1).map((sub, i) => {
+                      const pts = sub.replace("Z", "").split("L").map((t) => t.trim()).filter(Boolean)
+                        .map((t) => { const [a, b] = t.split(","); return `${(+a) * k + ox},${(+b) * k + oy}`; });
+                      return <path key={i} d={"M" + pts.join("L") + "Z"} fill={C.dim} fillOpacity="0.12" stroke={C.dim} strokeWidth="1" />;
+                    })}
+                    <circle cx={BW / 2} cy={BH / 2} r={ps.R * k} fill={C.amber} fillOpacity="0.20" stroke={C.amber} strokeWidth="1.5" />
+                    <text x={BW / 2} y={BH / 2 + 3} textAnchor="middle" fill={C.amber} style={{ fontSize: 9, fontFamily: "var(--mono)" }}>1 patch</text>
+                  </svg>
+                  <div style={{ minWidth: 150 }}>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim }}>patch</div>
+                    <div className="statV" style={{ fontSize: 18, color: C.amber }}>{Math.round(ps.A).toLocaleString()} km²</div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginTop: 6 }}>{st.n}</div>
+                    <div className="statV" style={{ fontSize: 18 }}>{stArea.toLocaleString()} km²</div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.text, marginTop: 8 }}>
+                      {nPatch >= 1
+                        ? <><strong style={{ color: C.blue }}>{nPatch >= 10 ? Math.round(nPatch) : nPatch.toFixed(1)}</strong> patches to cover {st.a}</>
+                        : <>one patch covers <strong style={{ color: C.blue }}>{(1 / nPatch).toFixed(1)}×</strong> all of {st.a}</>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
         <div>
           <div className="stat">
@@ -5210,7 +5262,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v86 · Coverage in three acts</span>
+        <span className="buildTag">build v87 · patch-on-a-state overlay</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
