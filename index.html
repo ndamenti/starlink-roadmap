@@ -3599,8 +3599,8 @@ function PatchTilePanel() {
                     {US_STATES.map((x) => <option key={x.a} value={x.a}>{x.n}</option>)}
                   </select>
                 </div>
-                <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
-                  <svg viewBox={`0 0 ${BW} ${BH}`} style={{ width: 300, maxWidth: "100%", height: "auto", background: C.panel2, borderRadius: 6 }}>
+                <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginTop: 6 }}>
+                  <svg viewBox={`0 0 ${BW} ${BH}`} style={{ width: 218, flex: "0 0 218px", height: "auto", background: C.panel2, borderRadius: 6 }}>
                     {st.d.split("M").slice(1).map((sub, i) => {
                       const pts = sub.replace("Z", "").split("L").map((t) => t.trim()).filter(Boolean)
                         .map((t) => { const [a, b] = t.split(","); return `${(+a) * k + ox},${(+b) * k + oy}`; });
@@ -3609,27 +3609,30 @@ function PatchTilePanel() {
                     <circle cx={BW / 2} cy={BH / 2} r={ps.R * k} fill={C.amber} fillOpacity="0.20" stroke={C.amber} strokeWidth="1.5" />
                     <text x={BW / 2} y={BH / 2 + 3} textAnchor="middle" fill={C.amber} style={{ fontSize: 9, fontFamily: "var(--mono)" }}>1 patch</text>
                   </svg>
-                  <div style={{ minWidth: 168 }}>
-                    <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim }}>D2C fleet</div>
-                    <div className="statV" style={{ fontSize: 18 }}>{fleet.toLocaleString()} <span style={{ fontSize: 11, color: C.dim }}>satellites</span></div>
-                    <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginTop: 6 }}>one patch</div>
-                    <div className="statV" style={{ fontSize: 18, color: C.amber }}>{Math.round(ps.A).toLocaleString()} km²</div>
-                    <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginTop: 6 }}>spot beams in that patch</div>
-                    <div className="statV" style={{ fontSize: 18, color: C.blue }}>
-                      {Math.round(ps.N).toLocaleString()} <span style={{ fontSize: 11, color: C.dim }}>cells · 700 lit at once</span>
-                    </div>
-                    <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginTop: 6 }}>{st.n}</div>
-                    <div className="statV" style={{ fontSize: 18 }}>{stArea.toLocaleString()} km²</div>
-                    <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.text, marginTop: 8, lineHeight: 1.5 }}>
-                      {nPatch >= 1
-                        ? <><strong style={{ color: C.blue }}>{nPatch >= 10 ? Math.round(nPatch) : nPatch.toFixed(1)}</strong> patches to cover {st.a}</>
-                        : <>one patch covers <strong style={{ color: C.blue }}>{(1 / nPatch).toFixed(1)}×</strong> all of {st.a}</>}
-                      <br />
-                      <span style={{ color: C.dim }}>
-                        ≈ <strong style={{ color: C.text }}>{Math.round(ps.N * nPatch).toLocaleString()}</strong> cells cover {st.a},
-                        {" "}<strong style={{ color: C.text }}>{Math.round(700 * nPatch).toLocaleString()}</strong> of them lit at any instant
-                      </span>
-                    </div>
+                  <div style={{ flex: "1 1 140px", minWidth: 132 }}>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>D2C fleet</div>
+                    <div className="statV" style={{ fontSize: 17 }}>{fleet.toLocaleString()} <span style={{ fontSize: 10.5, color: C.dim }}>sats</span></div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 7 }}>one patch</div>
+                    <div className="statV" style={{ fontSize: 17, color: C.amber }}>{Math.round(ps.A).toLocaleString()} <span style={{ fontSize: 10.5, color: C.dim }}>km²</span></div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 7 }}>spot beams in it</div>
+                    <div className="statV" style={{ fontSize: 17, color: C.blue }}>{Math.round(ps.N).toLocaleString()} <span style={{ fontSize: 10.5, color: C.dim }}>cells</span></div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim }}>700 lit at once</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 14, alignItems: "baseline", flexWrap: "wrap", marginTop: 9,
+                  borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
+                  <div>
+                    <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>{st.n} </span>
+                    <span className="statV" style={{ fontSize: 17 }}>{stArea.toLocaleString()} <span style={{ fontSize: 10.5, color: C.dim }}>km²</span></span>
+                  </div>
+                  <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.text, lineHeight: 1.55 }}>
+                    {nPatch >= 1
+                      ? <><strong style={{ color: C.blue }}>{nPatch >= 10 ? Math.round(nPatch) : nPatch.toFixed(1)}</strong> patches to cover {st.a}</>
+                      : <>one patch covers <strong style={{ color: C.blue }}>{(1 / nPatch).toFixed(1)}×</strong> all of {st.a}</>}
+                    <span style={{ color: C.dim }}>
+                      {" · ≈ "}<strong style={{ color: C.text }}>{Math.round(ps.N * nPatch).toLocaleString()}</strong> cells over {st.a},
+                      {" "}<strong style={{ color: C.text }}>{Math.round(700 * nPatch).toLocaleString()}</strong> lit at any instant
+                    </span>
                   </div>
                 </div>
               </div>
@@ -5273,7 +5276,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v88 · state box shows fleet + spot count</span>
+        <span className="buildTag">build v89 · state box side-by-side layout</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
