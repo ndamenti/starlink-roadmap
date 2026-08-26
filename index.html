@@ -1564,7 +1564,7 @@ function VerdictTab() {
           Every figure in the table is sourced — open the <strong>◈ sources</strong> chip in the section header for the
           full list (drive-test reports, spectrum-depth analyses, and the AT&T and Verizon primary disclosures). ·{" "}
           <button className="nextlink" style={{ display: "inline", margin: 0, padding: 0 }}
-            onClick={() => window.__navTo("coverage", "cov-7-patch")}>the reuse-density arithmetic → Panel 7</button>
+            onClick={() => window.__navTo("coverage", "cov-7-patch")}>the reuse-density arithmetic → Panel 3b</button>
         </p>
       </div>
 
@@ -2697,7 +2697,7 @@ function StitchPanel() {
   const regime = eEdge >= 60 ? 1 : eEdge >= 42 ? 2 : 3;
   const tone = regime === 1 ? C.green : regime === 2 ? C.amber : "#C79BFF";
   const beamArea = Math.PI * 2.2 * 2.2; // 4.4 km ⌀ — Panel 1b convention (θ = λ/D), unified site-wide
-  const beamsNeeded = patchStats(fleet).N; // area-weighted: cells grow toward the patch rim (Panel 7)
+  const beamsNeeded = patchStats(fleet).N; // area-weighted: cells grow toward the patch rim (Panel 3b)
   const duty = Math.min(700 / beamsNeeded, 1) * 100;
   const satsUS = fleet * (US / EARTH) * 1.3;
   // guaranteed floor: invert Panel 1's calibrated model (3.3× Walker overlap) — largest mask this fleet guarantees everywhere, always
@@ -2962,7 +2962,7 @@ function StitchPanel() {
         interleaved hex lattices (ascending + descending families) netting the fleet's density, ×1.3 mid-latitude
         crowding for 53° planes; patch-edge elevation from spherical geometry at 330 km; duty = ~700 available beams ÷
         cells in the patch, area-weighted across the patch (a beam is a 4.4 km circle only at nadir and stretches into
-        an ellipse toward the rim — see Panel 7); the older nadir-sized approximation understated duty. Note the crossover this implies: up to ~48,000
+        an ellipse toward the rim — see Panel 3b); the older nadir-sized approximation understated duty. Note the crossover this implies: up to ~48,000
         satellites, crowding is absorbed by duty cycle (all 700 beams stay busy inside their shrinking patch — the
         Voronoi assignment prevents neighbor overlap); beyond that — Gen3's 100,000-satellite scale — a patch physically
         can't hold 700 beams, and active beams per satellite must fall to patch ÷ beam-area (~330 at 100k). Even at
@@ -3162,15 +3162,18 @@ function NextLink({ to, label }) {
 
 const COV_SECTIONS = [
   { id: "cov-intro", label: "Intro" },
+  { id: "cov-act1", label: "① The units" },
   { id: "cov-1-reach", label: "1 · Reach" },
   { id: "cov-1b-lab", label: "1b · Beam lab" },
   { id: "cov-1c-patch", label: "1c · Patch lab" },
+  { id: "cov-act2", label: "② The machine" },
   { id: "cov-2-beammap", label: "2 · Beam map" },
   { id: "cov-3-reuse", label: "3 · Adaptive reuse" },
+  { id: "cov-7-patch", label: "3b · The patch, tiled" },
+  { id: "cov-act3", label: "③ In motion" },
   { id: "cov-4-ntn", label: "4 · NTN" },
   { id: "cov-5-sawtooth", label: "5 · Sawtooth" },
   { id: "cov-6-stitching", label: "6 · Stitching" },
-  { id: "cov-7-patch", label: "7 · The patch, tiled" },
 ];
 
 /* ---------- shared patch geometry: one place, used everywhere duty is quoted ---------- */
@@ -3373,7 +3376,7 @@ function PatchFirstPrinciples() {
             <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 2 }}>
               at ~{patchStats(fleet).avgCell.toFixed(1)} km² each · 700 beams cover {(patchStats(fleet).duty * 100).toFixed(patchStats(fleet).duty < 0.1 ? 1 : 0)}% at a time —{" "}
               <button className="nextlink" style={{ display: "inline", margin: 0, padding: 0 }}
-                onClick={() => window.__navTo("coverage", "cov-7-patch")}>see Panel 7 →</button>
+                onClick={() => window.__navTo("coverage", "cov-7-patch")}>see Panel 3b →</button>
             </div>
           </div>
         </div>
@@ -3473,7 +3476,7 @@ function PatchTilePanel() {
 
   return (
     <div className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
-      <div className="eyebrow" style={{ color: C.blue }}>Panel 7 · The patch, tiled — where duty cycle actually comes from <Src k="fleet" topic="fleet" /></div>
+      <div className="eyebrow" style={{ color: C.blue }}>Panel 3b · The patch, tiled — where duty cycle actually comes from <Src k="fleet" topic="fleet" /></div>
       <p className="body" style={{ marginBottom: 10 }}>
         Every cell on the ground belongs to whichever satellite sees it steepest, so the surface divides into
         per-satellite <strong>patches</strong> whose size is set purely by fleet count: <em>patch area = 510 million km²
@@ -3793,15 +3796,29 @@ function CoverageTab() {
           moving constellation fakes a stationary network, and what changes when phones finally learn satellites exist.
         </p>
       </div>
+      <div id="cov-act1">
+        <SectionHead n="01" color={"#C79BFF"} title="The units — what the system is built out of"
+          deck="Three quantities, each derived from first principles: how far a satellite can see, how big one beam lands, and how much ground one satellite owns. Everything later is arithmetic on these." />
+      </div>
       <div id="cov-1-reach"><FootprintPanel /><NextLink to="cov-1b-lab" label="Beam-size lab" /></div>
       <div id="cov-1b-lab"><BeamSizeLab /><NextLink to="cov-1c-patch" label="Patch lab" /></div>
       <div id="cov-1c-patch"><PatchFirstPrinciples /><NextLink to="cov-2-beammap" label="Beam map" /></div>
+
+      <div id="cov-act2">
+        <SectionHead n="02" color={C.blue} title="The machine — beams and patch, working together"
+          deck="Put the beam inside the patch and the system's core constraints appear: how spectrum is reused across a patch, and why one satellite's beams can never light all of it at once." />
+      </div>
       <div id="cov-2-beammap"><BeamMap /><NextLink to="cov-3-reuse" label="Adaptive reuse" /></div>
-      <div id="cov-3-reuse"><AdaptiveReusePanel /><NextLink to="cov-4-ntn" label="NTN" /></div>
+      <div id="cov-3-reuse"><AdaptiveReusePanel /><NextLink to="cov-7-patch" label="The patch, tiled" /></div>
+      <div id="cov-7-patch"><PatchTilePanel /><NextLink to="cov-4-ntn" label="NTN" /></div>
+
+      <div id="cov-act3">
+        <SectionHead n="03" color={C.green} title="The system in motion — standards, orbits, handover"
+          deck="Nothing above is static. The standard that lets a phone talk to orbit, the sawtooth of a satellite rising and setting, and the continuous handover that stitches moving parts into steady coverage." />
+      </div>
       <div id="cov-4-ntn"><NtnPanel /><NextLink to="cov-5-sawtooth" label="Sawtooth" /></div>
       <div id="cov-5-sawtooth"><SawtoothPanel /><NextLink to="cov-6-stitching" label="The stitching" /></div>
       <div id="cov-6-stitching"><StitchPanel /></div>
-      <div id="cov-7-patch"><PatchTilePanel /></div>
     </div>
   );
 }
@@ -4370,7 +4387,7 @@ function ServiceabilityTab() {
   const beamAlong = 4.4 / (sinE * sinE);      // stretch along the look direction
   const beamAcross = 4.4 / sinE;              // slant widening
   const cellAreaKm2 = (Math.PI / 4) * beamAlong * beamAcross;
-  const dutyFrac = patchStats(fleet).duty;   // area-weighted cell count (Panel 7), not nadir-sized
+  const dutyFrac = patchStats(fleet).duty;   // area-weighted cell count (Panel 3b), not nadir-sized
   const cellAvgMbps = perBeam * dutyFrac;     // averaged over the hop schedule
   const cellSubs = servDens * cellAreaKm2;    // subscribers this cell can carry
   const cellActive = cellSubs * (activePct / 100);
@@ -4653,7 +4670,7 @@ function ServiceabilityTab() {
               the time-averaged figure as a floor for planning, not a prediction of what one user experiences.
               <br /><br />
               <button className="nextlink" style={{ display: "inline", margin: 0, padding: 0 }}
-                onClick={() => window.__navTo("coverage", "cov-7-patch")}>See the machine itself → Panel 7: the patch, tiled</button>
+                onClick={() => window.__navTo("coverage", "cov-7-patch")}>See the machine itself → Panel 3b: the patch, tiled</button>
             </Info>
           </div>
           <div className="stat" style={{ borderColor: C.green }}>
@@ -5193,7 +5210,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v85 · receipts folded into the beam lab</span>
+        <span className="buildTag">build v86 · Coverage in three acts</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
