@@ -3347,7 +3347,8 @@ function PatchTilePanel() {
       </p>
       <div className="split2" style={{ gap: 12 }}>
         <label className="sliderL">
-          D2C fleet: <strong>{fleet.toLocaleString()}</strong> <span style={{ color: C.dim }}>(patch radius ~{Math.round(ps.R)} km)</span>
+          D2C fleet: <strong>{fleet.toLocaleString()}</strong>{" "}
+          <span style={{ color: C.dim }}>(patch radius ~{Math.round(ps.R)} km · area ~{Math.round(ps.A).toLocaleString()} km²)</span>
           <input type="range" min="650" max="48000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
         </label>
         <label className="sliderL">
@@ -3366,15 +3367,18 @@ function PatchTilePanel() {
           ))}
         </div>
         <label className="sliderL" style={{ marginTop: 6 }}>
-          <strong>{demandDens.toLocaleString()}</strong> active users per 1,000 km²{" "}
+          <strong>{demandDens.toLocaleString()}</strong> <em>simultaneously active</em> users per 1,000 km²{" "}
           <span style={{ color: C.dim }}>
-            ({Math.round(usersInPatch).toLocaleString()} in this patch · fixed on the ground, independent of fleet)
+            ≈ {(demandDens * 10).toLocaleString()} subscribers at 10% busy-hour activity · {Math.round(usersInPatch).toLocaleString()} active in this patch
           </span>
           <input type="range" min="0" max="100" step="1"
             value={Math.round(Math.log10(Math.max(demandDens, 1)) * 25)}
             onChange={(e) => setDemandDens(Math.round(Math.pow(10, +e.target.value / 25)))} />
         </label>
-        <div className="tglRow" style={{ gap: 5, marginTop: 4 }}>
+        <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 2 }}>
+          1,000 km² is a square about 32 km on a side — roughly Hong Kong (1,110 km²), or 1.3× the five boroughs of New York City (780 km²)
+        </div>
+        <div className="tglRow" style={{ gap: 5, marginTop: 6 }}>
           <button className={"genBtn" + (distMode === "dispersed" ? " on" : "")} onClick={() => setDistMode("dispersed")}>Dispersed — one user per cell</button>
           <button className={"genBtn" + (distMode === "poisson" ? " on" : "")} onClick={() => setDistMode("poisson")}>Organic (Poisson)</button>
           <button className={"genBtn" + (distMode === "clustered" ? " on" : "")} onClick={() => setDistMode("clustered")}>Clustered in settlements</button>
@@ -3406,43 +3410,62 @@ function PatchTilePanel() {
           </svg>
           <div style={{ marginTop: 8 }}>
             <div className="statL" style={{ marginBottom: 4 }}>Cell shape from nadir to patch edge — eccentricity grows with distance</div>
-            <svg viewBox="0 0 520 96" style={{ width: "100%", height: "auto", display: "block" }}>
+            <svg viewBox="0 0 520 118" style={{ width: "100%", height: "auto", display: "block" }}>
+              <text x={4} y={11} fill={C.dim} style={{ fontSize: 8, fontFamily: "var(--mono)" }}>distance from nadir, as a share of patch radius →</text>
+              <line x1={26} y1={20} x2={500} y2={20} stroke={C.line} strokeWidth="1" />
               {[0.001, 0.25, 0.5, 0.75, 1.0].map((f, i) => {
                 const d = Math.max(ps.R * f, 0.001), c = pgCell(d);
-                const ruleSc = 60 / Math.max(pgCell(ps.R).along, 4.4);
-                const X = 60 + i * 105, Y = 40;
+                const ruleSc = 46 / Math.max(pgCell(ps.R).along, 4.4);
+                const X = 58 + i * 101, Y = 58;
                 return (
                   <g key={i}>
-                    <ellipse cx={X} cy={Y} rx={Math.max(1.5, (c.along * ruleSc) / 2)} ry={Math.max(1.5, (c.across * ruleSc) / 2)}
-                      fill={zoneCol(c.epsDeg)} fillOpacity="0.28" stroke={zoneCol(c.epsDeg)} strokeWidth="1" />
-                    <text x={X} y={74} textAnchor="middle" fill={C.dim} style={{ fontSize: 8, fontFamily: "var(--mono)" }}>
-                      {(f * 100).toFixed(0)}% · {c.epsDeg.toFixed(0)}°
+                    <line x1={X} y1={20} x2={X} y2={26} stroke={C.line} strokeWidth="1" />
+                    <ellipse cx={X} cy={Y} rx={Math.max(2, (c.along * ruleSc) / 2)} ry={Math.max(2, (c.across * ruleSc) / 2)}
+                      fill={zoneCol(c.epsDeg)} fillOpacity="0.25" stroke={zoneCol(c.epsDeg)} strokeWidth="1.1" />
+                    <text x={X} y={97} textAnchor="middle" fill={C.dim} style={{ fontSize: 8.5, fontFamily: "var(--mono)" }}>
+                      {(f * 100).toFixed(0)}%  ·  {c.epsDeg.toFixed(0)}°
                     </text>
-                    <text x={X} y={86} textAnchor="middle" fill={zoneCol(c.epsDeg)} style={{ fontSize: 8, fontFamily: "var(--mono)" }}>
-                      {c.along.toFixed(1)}×{c.across.toFixed(1)} ecc {(c.along / c.across).toFixed(2)}
+                    <text x={X} y={110} textAnchor="middle" fill={zoneCol(c.epsDeg)} style={{ fontSize: 8.5, fontFamily: "var(--mono)" }}>
+                      {c.along.toFixed(1)}×{c.across.toFixed(1)}  ecc {(c.along / c.across).toFixed(2)}
                     </text>
                   </g>
                 );
               })}
-              <text x={6} y={16} fill={C.dim} style={{ fontSize: 8, fontFamily: "var(--mono)" }}>distance from nadir, as a share of patch radius →</text>
             </svg>
           </div>
         </div>
         <div>
-          <div className="statRow">
-            <div className="stat"><div className="statL">Cells in the patch</div><div className="statV">{Math.round(ps.N).toLocaleString()}</div>
-              <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>area-weighted, not nadir-sized</div></div>
-            <div className="stat"><div className="statL">Duty — beams ÷ cells</div>
-              <div className="statV" style={{ color: ps.duty >= 0.99 ? C.green : ps.duty > 0.25 ? C.amber : "#C79BFF" }}>
-                {(ps.duty * 100).toFixed(ps.duty < 0.1 ? 1 : 0)}%</div>
-              <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>700 ÷ {Math.round(ps.N).toLocaleString()}</div></div>
+          <div className="stat">
+            <div className="statL">The patch — and how many cells it takes</div>
+            <div style={{ display: "flex", gap: 22, flexWrap: "wrap", marginTop: 4 }}>
+              <div>
+                <div className="statV" style={{ fontSize: 21 }}>{Math.round(ps.R)}<span style={{ fontSize: 11, color: C.dim }}> km radius</span></div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>{Math.round(ps.A).toLocaleString()} km² of ground</div>
+              </div>
+              <div>
+                <div className="statV" style={{ fontSize: 21 }}>{Math.round(ps.N).toLocaleString()}<span style={{ fontSize: 11, color: C.dim }}> cells</span></div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>area-weighted, not nadir-sized</div>
+              </div>
+              <div>
+                <div className="statV" style={{ fontSize: 21, color: ps.duty >= 0.99 ? C.green : ps.duty > 0.25 ? C.amber : "#C79BFF" }}>
+                  {(ps.duty * 100).toFixed(ps.duty < 0.1 ? 1 : 0)}%<span style={{ fontSize: 11, color: C.dim }}> duty</span>
+                </div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>700 beams ÷ {Math.round(ps.N).toLocaleString()} cells</div>
+              </div>
+            </div>
           </div>
-          <div className="statRow" style={{ marginTop: 8 }}>
-            <div className="stat"><div className="statL">Cell at nadir</div><div className="statV" style={{ fontSize: 19 }}>15 km²</div>
-              <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>4.4 × 4.4 km — circular</div></div>
-            <div className="stat"><div className="statL">Cell at the patch edge</div>
-              <div className="statV" style={{ fontSize: 19, color: "#C79BFF" }}>{Math.round(ps.edge.area)} km²</div>
-              <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>{ps.edge.along.toFixed(1)} × {ps.edge.across.toFixed(1)} km at {ps.edge.epsDeg.toFixed(0)}°</div></div>
+          <div className="stat" style={{ marginTop: 8 }}>
+            <div className="statL">Cell size — nadir vs patch edge</div>
+            <div style={{ display: "flex", gap: 26, flexWrap: "wrap", marginTop: 4 }}>
+              <div>
+                <div className="statV" style={{ fontSize: 21 }}>15<span style={{ fontSize: 11, color: C.dim }}> km² at nadir</span></div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>4.4 × 4.4 km — circular</div>
+              </div>
+              <div>
+                <div className="statV" style={{ fontSize: 21, color: "#C79BFF" }}>{Math.round(ps.edge.area)}<span style={{ fontSize: 11, color: C.dim }}> km² at the edge</span></div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>{ps.edge.along.toFixed(1)} × {ps.edge.across.toFixed(1)} km at {ps.edge.epsDeg.toFixed(0)}°</div>
+              </div>
+            </div>
           </div>
           <div className="stat" style={{ marginTop: 8 }}>
             <div className="statL">Average cell across the patch</div>
@@ -3513,9 +3536,20 @@ function PatchTilePanel() {
               </tbody>
             </table>
             <label className="sliderL" style={{ marginTop: 6 }}>
-              Usable-service threshold: <strong>{minUser} Mbps</strong> per active user
+              Usable-service threshold: <strong>{minUser} Mbps</strong> per active user{" "}
+              <span style={{ color: perUserMbps >= minUser ? C.green : C.red }}>
+                — this demand delivers {perUserMbps.toFixed(2)}, so it {perUserMbps >= minUser ? "clears the bar" : "falls short"}
+              </span>
               <input type="range" min="1" max="10" step="1" value={minUser} onChange={(e) => setMinUser(+e.target.value)} />
             </label>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 4 }}>
+              at {minUser} Mbps each, this patch can carry{" "}
+              <strong style={{ color: C.amber }}>{Math.round((700 * pz.total.avg) / minUser).toLocaleString()}</strong> active users —
+              a ground demand of{" "}
+              <strong style={{ color: C.amber }}>{(((700 * pz.total.avg) / minUser / ps.A) * 1000).toFixed(1)}</strong> per 1,000 km²
+              {" "}({(((700 * pz.total.avg) / minUser / ps.A) * 1000 * 10).toFixed(0)} subscribers), against the{" "}
+              <strong style={{ color: perUserMbps >= minUser ? C.green : C.red }}>{demandDens.toLocaleString()}</strong> set above
+            </div>
             <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim, marginTop: 5 }}>
               hopping starts above {breakEvenDens.toFixed(1)} users/1,000 km² in dispersed demand · demand is per unit of
               ground, so it doesn't move with fleet — the patch does
@@ -5023,7 +5057,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v81 · settlement demand model</span>
+        <span className="buildTag">build v82 · Panel 7 layout + demand context</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
