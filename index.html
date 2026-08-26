@@ -3196,6 +3196,36 @@ function patchStats(fleet) {
   PG_CACHE[key] = out;
   return out;
 }
+const PG_PITCH = PG_TB * Math.sqrt((Math.PI / 4) / (Math.sqrt(3) / 2)); // hex pitch ⇒ hex-cell area = ellipse area
+const PG_THMAX = Math.asin(PG_RE / (PG_RE + PG_H));
+function pgGroundFromTheta(th) {
+  if (th >= PG_THMAX) return null;
+  const sv = (Math.sin(th) * (PG_RE + PG_H)) / PG_RE;
+  if (sv >= 1) return null;
+  const eps = Math.acos(Math.min(1, Math.max(-1, sv)));
+  const lam = Math.PI / 2 - th - eps;
+  if (lam <= 0) return null;
+  return { d: PG_RE * lam, epsDeg: (eps * 180) / Math.PI };
+}
+/* Real arrays lay beams on a hex lattice in pointing-angle space; projected onto the ground that is
+   hexagonal at nadir and progressively stretched outward. mStep sub-samples the lattice by taking a
+   coarser hex lattice, so the drawn pattern stays hexagonal and evenly spaced. */
+function pgLattice(R, mStep) {
+  const out = [];
+  const rings = Math.ceil((1.35 * R) / (PG_PITCH * PG_H)) + 24;
+  for (let j = -rings; j <= rings; j += mStep) {
+    for (let i = -rings; i <= rings; i += mStep) {
+      const tx = (i + j / 2) * PG_PITCH, ty = j * PG_PITCH * (Math.sqrt(3) / 2);
+      const th = Math.hypot(tx, ty);
+      const g = pgGroundFromTheta(th);
+      if (!g || g.d > R) continue;
+      const c = pgCell(Math.max(g.d, 0.001));
+      out.push({ d: g.d, ang: Math.atan2(ty, tx), along: c.along, across: c.across, epsDeg: c.epsDeg });
+    }
+  }
+  return out;
+}
+
 function patchZones(fleet, mhz, eff) {
   const A = 510e6 / fleet, R = Math.sqrt(A / Math.PI), steps = 600;
   const Z = { r1: [0, 0, 0], tr: [0, 0, 0], r3: [0, 0, 0] }; // cells, Σ(cells×Mbps), maxMbps
@@ -3236,7 +3266,7 @@ function PatchTilePanel() {
   const [hop, setHop] = useState(0);
   const [showZones, setShowZones] = useState(true);
   const [effMode7, setEffMode7] = useState("claim");
-  const [demandPct, setDemandPct] = useState(5);   // share of cells holding an active user
+  const [demandDens, setDemandDens] = useState(4); // active users per 1,000 km² of ground
   useEffect(() => {
     if (hopSpd === 0) return;
     const id = setInterval(() => setHop((h) => h + 1), Math.max(90, 1000 / hopSpd));
@@ -3246,49 +3276,28 @@ function PatchTilePanel() {
   const ps = patchStats(fleet);
   const MHZ7 = 20, EFF7 = effMode7 === "claim" ? 2.48 : 0.62;
   const pz = patchZones(fleet, MHZ7, EFF7);
-  const activeCells = Math.round((pz.total.cells * demandPct) / 100);
+  const activeCells = Math.min(Math.round(pz.total.cells), Math.round((demandDens * ps.A) / 1000));
   const contCovered = Math.min(700, activeCells);
   const schedShare = Math.min(1, 700 / Math.max(activeCells, 1));
+  const breakEvenDens = (700 / ps.A) * 1000;
   const r60 = pgRadiusForElev(60), r42 = pgRadiusForElev(42);
-  // build the ring tiling
-  const rings = [];
-  let r = 0, guard = 0;
-  while (r < ps.R && guard++ < 400) {
-    const c = pgCell(Math.max(r, 0.5));
-    const nInRing = Math.max(1, Math.round((2 * Math.PI * Math.max(r, c.across)) / c.across));
-    rings.push({ r: r, cell: c, n: nInRing });
-    r += c.along;
-  }
-  const totalCells = rings.reduce((a, x) => a + x.n, 0);
-  const DRAW_CAP = 620;
-  const step = Math.max(1, Math.ceil(totalCells / DRAW_CAP));
-  // sample as an even sub-lattice (every m-th ring, every m-th cell in the ring) so the drawn
-  // spots keep the real tiling's uniformity instead of clumping the way index-sampling did
-  const mStep = Math.max(1, Math.round(Math.sqrt(step)));
+  // the tiling: hex lattice in pointing-angle space, projected to ground
+  const DRAW_CAP = 720;
+  const roughN = Math.max(1, ps.N);
+  const mStep = Math.max(1, Math.round(Math.sqrt(roughN / DRAW_CAP)));
+  const latt = pgLattice(ps.R, mStep);
+  const step = Math.max(1, Math.round(roughN / Math.max(latt.length, 1)));
   const VB = 520, cx = VB / 2, cy = VB / 2;
-  const sc = (VB / 2 - 14) / ps.R;
+  const sc = (VB / 2 - 16) / ps.R;
   const zoneCol = (e) => (e >= 60 ? C.green : e >= 42 ? C.amber : "#C79BFF");
-  const cells = [];
-  let idx = 0;
-  rings.forEach((ring, ri) => {
-    const inRingStep = Math.max(1, Math.round(step / mStep));
-    for (let k = 0; k < ring.n; k++, idx++) {
-      if (ri % mStep) continue;
-      if (k % inRingStep) continue;
-      const th = (2 * Math.PI * k) / ring.n + ri * 0.12;
-      const px = cx + ring.r * sc * Math.cos(th);
-      const py = cy + ring.r * sc * Math.sin(th);
-      cells.push({
-        px, py,
-        rx: Math.max(0.7, (ring.cell.along * sc) / 2),
-        ry: Math.max(0.7, (ring.cell.across * sc) / 2),
-        rot: (th * 180) / Math.PI,
-        col: zoneCol(ring.cell.epsDeg),
-        id: idx,
-      });
-    }
-  });
-  // which drawn cells are lit this hop — matches the duty fraction
+  const cells = latt.map((L) => ({
+    px: cx + L.d * sc * Math.cos(L.ang),
+    py: cy + L.d * sc * Math.sin(L.ang),
+    rx: Math.max(0.8, (L.along * sc) / 2),
+    ry: Math.max(0.8, (L.across * sc) / 2),
+    rot: (L.ang * 180) / Math.PI,
+    col: zoneCol(L.epsDeg),
+  }));
   const litCount = Math.max(1, Math.round(cells.length * ps.duty));
   const lit = new Set();
   { let seed = (hop * 2654435761) % 4294967296;
@@ -3324,9 +3333,9 @@ function PatchTilePanel() {
         </label>
       </div>
       <label className="sliderL" style={{ marginTop: 6 }}>
-        Cells holding an active user: <strong>{demandPct}%</strong>{" "}
-        <span style={{ color: C.dim }}>({Math.round(pz.total.cells * demandPct / 100).toLocaleString()} of {Math.round(pz.total.cells).toLocaleString()} cells)</span>
-        <input type="range" min="1" max="100" step="1" value={demandPct} onChange={(e) => setDemandPct(+e.target.value)} />
+        Ground demand: <strong>{demandDens}</strong> active users per 1,000 km²{" "}
+        <span style={{ color: C.dim }}>(fixed on the ground — independent of fleet)</span>
+        <input type="range" min="1" max="120" step="1" value={demandDens} onChange={(e) => setDemandDens(+e.target.value)} />
       </label>
       <div className="tglRow" style={{ marginTop: 6 }}>
         <button className={"genBtn" + (showZones ? " on" : "")} onClick={() => setShowZones(!showZones)}>{showZones ? "Reuse zones on" : "Reuse zones off"}</button>
@@ -3349,9 +3358,32 @@ function PatchTilePanel() {
             {showZones && r60 < ps.R && <text x={cx} y={cy - r60 * sc - 4} textAnchor="middle" fill={C.green} style={{ fontSize: 9, fontFamily: "var(--mono)" }}>60° · reuse-1</text>}
             {showZones && r42 < ps.R && <text x={cx} y={cy - r42 * sc - 4} textAnchor="middle" fill={C.amber} style={{ fontSize: 9, fontFamily: "var(--mono)" }}>42° · transitional</text>}
             <text x={cx} y={VB - 6} textAnchor="middle" fill={C.dim} style={{ fontSize: 9, fontFamily: "var(--mono)" }}>
-              showing 1 of every {step} cell{step > 1 ? "s" : ""} · lit cells = beams active this hop
+              hex lattice in pointing-angle space · showing 1 of every {step} cell{step > 1 ? "s" : ""} · lit = beams active this hop
             </text>
           </svg>
+          <div style={{ marginTop: 8 }}>
+            <div className="statL" style={{ marginBottom: 4 }}>Cell shape from nadir to patch edge — eccentricity grows with distance</div>
+            <svg viewBox="0 0 520 96" style={{ width: "100%", height: "auto", display: "block" }}>
+              {[0.001, 0.25, 0.5, 0.75, 1.0].map((f, i) => {
+                const d = Math.max(ps.R * f, 0.001), c = pgCell(d);
+                const ruleSc = 60 / Math.max(pgCell(ps.R).along, 4.4);
+                const X = 60 + i * 105, Y = 40;
+                return (
+                  <g key={i}>
+                    <ellipse cx={X} cy={Y} rx={Math.max(1.5, (c.along * ruleSc) / 2)} ry={Math.max(1.5, (c.across * ruleSc) / 2)}
+                      fill={zoneCol(c.epsDeg)} fillOpacity="0.28" stroke={zoneCol(c.epsDeg)} strokeWidth="1" />
+                    <text x={X} y={74} textAnchor="middle" fill={C.dim} style={{ fontSize: 8, fontFamily: "var(--mono)" }}>
+                      {(f * 100).toFixed(0)}% · {c.epsDeg.toFixed(0)}°
+                    </text>
+                    <text x={X} y={86} textAnchor="middle" fill={zoneCol(c.epsDeg)} style={{ fontSize: 8, fontFamily: "var(--mono)" }}>
+                      {c.along.toFixed(1)}×{c.across.toFixed(1)} ecc {(c.along / c.across).toFixed(2)}
+                    </text>
+                  </g>
+                );
+              })}
+              <text x={6} y={16} fill={C.dim} style={{ fontSize: 8, fontFamily: "var(--mono)" }}>distance from nadir, as a share of patch radius →</text>
+            </svg>
+          </div>
         </div>
         <div>
           <div className="statRow">
@@ -3420,8 +3452,17 @@ function PatchTilePanel() {
                 : "demand exceeds 700 beams — active cells share, each served " + (schedShare * 100).toFixed(0) + "% of the time"}
             </div>
             <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 5 }}>
+              patch holds <strong style={{ color: C.text }}>{Math.round(pz.total.cells).toLocaleString()}</strong> cells ·
+              {" "}<strong style={{ color: C.text }}>700</strong> beams ·
+              {" "}<strong style={{ color: C.text }}>{activeCells.toLocaleString()}</strong> cells with an active user
+            </div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 3 }}>
               throughput per active cell ≈ <strong style={{ color: C.text }}>{(pz.total.avg * schedShare).toFixed(1)} Mbps</strong>
-              {"  ·  break-even at "}{(700 / pz.total.cells * 100).toFixed(1)}% of cells active
+              {"  ·  hopping starts above "}{breakEvenDens.toFixed(1)} users/1,000 km²
+            </div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim, marginTop: 5 }}>
+              Demand is set per unit of ground, so it does not change with fleet — but the patch does. Add satellites and
+              each one covers less ground, so fewer users fall inside its patch and 700 beams go further.
             </div>
           </div>
           <div className="stat" style={{ marginTop: 8 }}>
@@ -4901,7 +4942,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v79 · Panel 7 zones, SE, scheduler</span>
+        <span className="buildTag">build v80 · hex lattice + eccentricity ruler + ground demand</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
