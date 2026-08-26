@@ -704,7 +704,7 @@ function StoryTab({ phase, setPhase }) {
           <button className="hiliteBtn" onClick={() => window.__navTo("video", "")}>▸ Watch the film — 5:50</button>
           <button className="hiliteBtn" onClick={() => window.__navTo("physics", "phy-ladder")}>▸ The speed ladder — fact vs claim</button>
           <button className="hiliteBtn" onClick={() => window.__navTo("coverage", "cov-6-stitching")}>▸ The strip machine — watch the network run</button>
-          <button className="hiliteBtn" onClick={() => window.__navTo("coverage", "cov-1b-receipts")}>▸ Beam-size receipts — the evidence chain</button>
+          <button className="hiliteBtn" onClick={() => window.__navTo("coverage", "cov-1b-lab")}>▸ Beam size — the lab and its receipts</button>
           <button className="hiliteBtn" onClick={() => window.__navTo("serviceability", "svc-top")}>▸ Serviceability — who can this network carry?</button>
         </div>
       </div>
@@ -2115,6 +2115,9 @@ function BeamSizeLab() {
         ~50 m panel (~2,500 m²) — an order of magnitude beyond anything flying or announced, which is why every D2C player
         converges on kilometers-wide cells and why femtocells, not satellites, own street-level capacity.
       </p>
+      <Info label="the receipts — where the 4.4 km comes from, and how to argue with it">
+        <BeamReceipts />
+      </Info>
       <Info label="walk me through the four knobs">
         Think of the antenna as a flashlight lens. <strong>Bigger lens, tighter beam:</strong> a radio antenna can only
         focus energy into a cone about as narrow as (wavelength ÷ its own width) — physics' non-negotiable exchange rate.
@@ -2149,12 +2152,11 @@ function BeamReceipts() {
     { c: "\u201cA beam and a cell are the same thing.\u201d", r: "Cells are Earth-fixed scheduling zones; beams are the RF spotlights that visit them. A beam can dwell across several cells per second (Panel 2). Quoting cell-grid size as beam size — or vice versa — mixes the map with the flashlight." },
   ];
   return (
-    <div className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
-      <div className="eyebrow" style={{ color: C.blue }}>Panel 1b · The receipts — beam size from first principles <Src k="antenna" topic="fleet" /></div>
+    <div>
       <p className="body" style={{ marginBottom: 12 }}>
-        Beam size is not a matter of opinion — it is three sourced inputs and one line of physics. Every number below
-        traces to a primary document or to arithmetic on one; disagree with the conclusion and you must name which row is
-        wrong.
+        The number this lab produces is not a matter of opinion — it is three sourced inputs and one line of physics.
+        Every row below traces to a primary document or to arithmetic on one; disagree with the ~4.4 km conclusion and
+        you have to name which row is wrong. <Src k="antenna" topic="fleet" />
       </p>
       {ROWS.map((r, i) => (
         <div key={i} className="evt" style={{ borderLeft: `2px solid ${r.tone}`, paddingLeft: 12, marginBottom: 8 }}>
@@ -2174,7 +2176,7 @@ function BeamReceipts() {
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 8 }}>
         Honest error bars: the diffraction constant (taper-dependent) and exact operating frequency move results ±30%;
         scan loss and pointing add real-world margin. Nothing in that budget turns 5 km into 500 m or into 500 km — the
-        kilometers are load-bearing. To pressure-test any input yourself, the lab above accepts arbitrary values.
+        kilometers are load-bearing. To pressure-test any input yourself, the sliders above accept arbitrary values.
       </p>
     </div>
   );
@@ -3163,7 +3165,6 @@ const COV_SECTIONS = [
   { id: "cov-1-reach", label: "1 · Reach" },
   { id: "cov-1b-lab", label: "1b · Beam lab" },
   { id: "cov-1c-patch", label: "1c · Patch lab" },
-  { id: "cov-1b-receipts", label: "Receipts" },
   { id: "cov-2-beammap", label: "2 · Beam map" },
   { id: "cov-3-reuse", label: "3 · Adaptive reuse" },
   { id: "cov-4-ntn", label: "4 · NTN" },
@@ -3793,9 +3794,8 @@ function CoverageTab() {
         </p>
       </div>
       <div id="cov-1-reach"><FootprintPanel /><NextLink to="cov-1b-lab" label="Beam-size lab" /></div>
-      <div id="cov-1b-lab"><BeamSizeLab /><NextLink to="cov-1b-receipts" label="The receipts" /></div>
-      <div id="cov-1c-patch"><PatchFirstPrinciples /></div>
-      <div id="cov-1b-receipts"><BeamReceipts /><NextLink to="cov-2-beammap" label="Beam map" /></div>
+      <div id="cov-1b-lab"><BeamSizeLab /><NextLink to="cov-1c-patch" label="Patch lab" /></div>
+      <div id="cov-1c-patch"><PatchFirstPrinciples /><NextLink to="cov-2-beammap" label="Beam map" /></div>
       <div id="cov-2-beammap"><BeamMap /><NextLink to="cov-3-reuse" label="Adaptive reuse" /></div>
       <div id="cov-3-reuse"><AdaptiveReusePanel /><NextLink to="cov-4-ntn" label="NTN" /></div>
       <div id="cov-4-ntn"><NtnPanel /><NextLink to="cov-5-sawtooth" label="Sawtooth" /></div>
@@ -5193,7 +5193,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v84 · clearer US area anchors</span>
+        <span className="buildTag">build v85 · receipts folded into the beam lab</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
