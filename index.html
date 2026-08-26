@@ -3582,22 +3582,28 @@ function PatchTilePanel() {
           </div>
           {(() => {
             const st = US_STATES.find((x) => x.a === stPick) || US_STATES[0];
+            const stArea = ST_AREA[st.a] || 0;
             const [x0, y0, x1, y1] = st.bb;
             const sw = x1 - x0, sh = y1 - y0;
             const BW = 300, BH = 210, pad = 12;
             const k = Math.min((BW - pad * 2) / Math.max(sw, 2 * ps.R * 1.05), (BH - pad * 2) / Math.max(sh, 2 * ps.R * 1.05));
             const ox = BW / 2 - ((x0 + x1) / 2) * k, oy = BH / 2 - ((y0 + y1) / 2) * k;
-            const stArea = ST_AREA[st.a] || 0;
             const nPatch = stArea / ps.A;
             return (
               <div className="stat" style={{ marginTop: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                   <div className="statL" style={{ margin: 0 }}>One patch, drawn on a state you know</div>
-                  <select value={stPick} onChange={(e) => setStPick(e.target.value)}
-                    style={{ background: C.panel, color: C.text, border: `1px solid ${C.line}`, borderRadius: 6,
-                      fontFamily: "var(--mono)", fontSize: 11, padding: "3px 6px" }}>
-                    {US_STATES.map((x) => <option key={x.a} value={x.a}>{x.n}</option>)}
-                  </select>
+                  <div style={{ textAlign: "right" }}>
+                    <select value={stPick} onChange={(e) => setStPick(e.target.value)}
+                      style={{ background: C.panel, color: C.text, border: `1px solid ${C.line}`, borderRadius: 6,
+                        fontFamily: "var(--mono)", fontSize: 11, padding: "3px 6px" }}>
+                      {US_STATES.map((x) => <option key={x.a} value={x.a}>{x.n}</option>)}
+                    </select>
+                    <div style={{ marginTop: 3 }}>
+                      <span className="statV" style={{ fontSize: 15 }}>{stArea.toLocaleString()}</span>
+                      <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}> km² total</span>
+                    </div>
+                  </div>
                 </div>
                 <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginTop: 6 }}>
                   <svg viewBox={`0 0 ${BW} ${BH}`} style={{ width: 218, flex: "0 0 218px", height: "auto", background: C.panel2, borderRadius: 6 }}>
@@ -3619,12 +3625,7 @@ function PatchTilePanel() {
                     <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim }}>700 lit at once</div>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 14, alignItems: "baseline", flexWrap: "wrap", marginTop: 9,
-                  borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
-                  <div>
-                    <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>{st.n} </span>
-                    <span className="statV" style={{ fontSize: 17 }}>{stArea.toLocaleString()} <span style={{ fontSize: 10.5, color: C.dim }}>km²</span></span>
-                  </div>
+                <div style={{ marginTop: 8, borderTop: `1px solid ${C.line}`, paddingTop: 7 }}>
                   <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.text, lineHeight: 1.55 }}>
                     {nPatch >= 1
                       ? <><strong style={{ color: C.blue }}>{nPatch >= 10 ? Math.round(nPatch) : nPatch.toFixed(1)}</strong> patches to cover {st.a}</>
@@ -5276,7 +5277,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v89 · state box side-by-side layout</span>
+        <span className="buildTag">build v90 · state area under the selector</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
