@@ -3162,6 +3162,7 @@ const COV_SECTIONS = [
   { id: "cov-intro", label: "Intro" },
   { id: "cov-1-reach", label: "1 · Reach" },
   { id: "cov-1b-lab", label: "1b · Beam lab" },
+  { id: "cov-1c-patch", label: "1c · Patch lab" },
   { id: "cov-1b-receipts", label: "Receipts" },
   { id: "cov-2-beammap", label: "2 · Beam map" },
   { id: "cov-3-reuse", label: "3 · Adaptive reuse" },
@@ -3270,6 +3271,139 @@ const SETTLE = [
 ];
 const HABITABLE = 0.35; // clustered mode: share of cells that contain any settlement at all
 
+const US_AREAS = [
+  ["Rhode Island", 4001], ["Delaware", 6446], ["Connecticut", 14357], ["New Jersey", 22591],
+  ["New Hampshire", 24214], ["Vermont", 24906], ["Massachusetts", 27336], ["Maryland", 32131],
+  ["West Virginia", 62756], ["Maine", 91633], ["Indiana", 94326], ["Kentucky", 104656],
+  ["Tennessee", 109153], ["Virginia", 110787], ["Ohio", 116098], ["Pennsylvania", 119280],
+  ["Michigan", 250487], ["Oregon", 254799], ["Colorado", 269601], ["Nevada", 286380],
+  ["Arizona", 295234], ["New Mexico", 314917], ["Montana", 380831], ["California", 423967],
+  ["Texas", 695662], ["Alaska", 1723337],
+];
+function closestState(a) {
+  let best = US_AREAS[0];
+  for (const s of US_AREAS) if (Math.abs(Math.log(s[1] / a)) < Math.abs(Math.log(best[1] / a))) best = s;
+  return { name: best[0], ratio: a / best[1] };
+}
+const CONUS_KM2 = 8.08e6;
+
+function PatchFirstPrinciples() {
+  const [fleet, setFleet] = useState(5000);
+  const A = 510e6 / fleet;
+  const R = Math.sqrt(A / Math.PI);
+  const st = closestState(A);
+  const patchesCONUS = CONUS_KM2 / A;
+  const satsOverCONUS = patchesCONUS * 1.3;      // ×1.3 mid-latitude crowding for 53° planes
+  const spacing = Math.sqrt((2 * A) / Math.sqrt(3)); // hex centre-to-centre
+  const edge = pgCell(R);
+  // CONUS map with patches drawn to scale
+  const MW = 5140, MH = 2760;
+  const VW = 560, sc = VW / MW, VH = MH * sc;
+  const circles = [];
+  const dy = spacing * (Math.sqrt(3) / 2);
+  for (let j = 0, row = 0; j < MH + dy; j += dy, row++) {
+    for (let i = (row % 2 ? spacing / 2 : 0); i < MW + spacing; i += spacing) {
+      circles.push([i * sc, j * sc, R * sc]);
+    }
+  }
+  return (
+    <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
+      <div className="eyebrow" style={{ color: C.amber }}>Panel 1c · Patch size from first principles — how much ground does one satellite own? <Src k="fleet" topic="fleet" /></div>
+      <p className="body" style={{ marginBottom: 10 }}>
+        Panel 1b built the <em>beam</em> from the antenna outward. This one builds the <em>patch</em> — the territory a
+        single satellite is responsible for — and it needs only one input: how many satellites there are. Everything
+        else follows from dividing a sphere.
+      </p>
+      <label className="sliderL">
+        D2C fleet: <strong>{fleet.toLocaleString()}</strong> satellites
+        <input type="range" min="650" max="48000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
+      </label>
+      <div className="split" style={{ marginTop: 10, alignItems: "start" }}>
+        <div>
+          <div className="statL" style={{ marginBottom: 6 }}>Patches drawn to scale over the continental US</div>
+          <svg viewBox={`0 0 ${VW} ${VH}`} style={{ width: "100%", height: "auto", display: "block", background: C.panel2, borderRadius: 8 }}>
+            <defs>
+              <clipPath id="conusClip1c">
+                {CONUS_PATH.split("M").slice(1).map((sub, i) => {
+                  const pts = sub.replace("Z", "").split("L").map((t) => t.trim()).filter(Boolean)
+                    .map((t) => { const [x, y] = t.split(","); return `${(+x) * sc},${(+y) * sc}`; });
+                  return <path key={i} d={"M" + pts.join("L") + "Z"} />;
+                })}
+              </clipPath>
+            </defs>
+            <g clipPath="url(#conusClip1c)">
+              <rect x="0" y="0" width={VW} height={VH} fill={C.panel} />
+              {circles.map(([x, y, r], i) => (
+                <circle key={i} cx={x} cy={y} r={r} fill={C.amber} fillOpacity="0.07" stroke={C.amber} strokeOpacity="0.55" strokeWidth="0.7" />
+              ))}
+            </g>
+            {CONUS_PATH.split("M").slice(1).map((sub, i) => {
+              const pts = sub.replace("Z", "").split("L").map((t) => t.trim()).filter(Boolean)
+                .map((t) => { const [x, y] = t.split(","); return `${(+x) * sc},${(+y) * sc}`; });
+              return <path key={i} d={"M" + pts.join("L") + "Z"} fill="none" stroke={C.dim} strokeOpacity="0.8" strokeWidth="1" />;
+            })}
+          </svg>
+          <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginTop: 5 }}>
+            ~{Math.round(patchesCONUS).toLocaleString()} patches tile CONUS · about {Math.round(satsOverCONUS).toLocaleString()} satellites
+            overhead at any instant (×1.3 for mid-latitude crowding at 53° inclination)
+          </div>
+        </div>
+        <div>
+          {[
+            ["1", "Start with the whole sphere", "510,000,000 km²", "Earth's surface area — the thing being divided up"],
+            ["2", "Divide by the fleet", `510,000,000 ÷ ${fleet.toLocaleString()}`, "every point is served by whichever satellite sees it steepest, so the surface splits into one territory per satellite"],
+            ["3", "That is the patch", `${Math.round(A).toLocaleString()} km²`, `≈ ${st.ratio >= 0.92 && st.ratio <= 1.08 ? "the size of" : st.ratio.toFixed(2) + "× "} ${st.name}`],
+            ["4", "Its radius", `${Math.round(R)} km`, `√(area ÷ π) — about ${Math.round(R * 0.621)} miles from the satellite's nadir to the patch rim`],
+            ["5", "Elevation at the rim", `${edge.epsDeg.toFixed(0)}°`, edge.epsDeg >= 60 ? "steep enough for full frequency reuse everywhere in the patch" : edge.epsDeg >= 42 ? "rim cells fall into the transitional reuse zone" : "rim cells are rationed to a third of the spectrum"],
+          ].map(([n, label, val, note], i) => (
+            <div key={i} className="stat" style={{ marginBottom: 7, borderLeft: `2px solid ${i === 2 ? C.amber : C.line}` }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
+                <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: C.amber }}>{n}</span>
+                <span className="statL" style={{ margin: 0 }}>{label}</span>
+              </div>
+              <div className="statV" style={{ fontSize: i === 2 ? 26 : 19, color: i === 2 ? C.amber : C.text, marginTop: 2 }}>{val}</div>
+              <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 2 }}>{note}</div>
+            </div>
+          ))}
+          <div className="stat" style={{ borderLeft: `2px solid ${C.blue}` }}>
+            <div className="statL">And the cells inside it</div>
+            <div className="statV" style={{ fontSize: 19, color: C.blue }}>{Math.round(patchStats(fleet).N).toLocaleString()} cells</div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 2 }}>
+              at ~{patchStats(fleet).avgCell.toFixed(1)} km² each · 700 beams cover {(patchStats(fleet).duty * 100).toFixed(patchStats(fleet).duty < 0.1 ? 1 : 0)}% at a time —{" "}
+              <button className="nextlink" style={{ display: "inline", margin: 0, padding: 0 }}
+                onClick={() => window.__navTo("coverage", "cov-7-patch")}>see Panel 7 →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <Info label="why the patch is just 'sphere ÷ fleet' — and what that hides">
+        <strong>The clean part.</strong> A phone talks to whichever satellite is highest in its sky. That rule
+        partitions the Earth's surface into Voronoi territories — one per satellite — and however irregular any
+        individual territory is, the <em>average</em> is exactly the sphere's area divided by the fleet count. No orbital
+        mechanics required: 510 million km² ÷ N. This is why fleet size, and nothing else, sets patch scale.
+        <br /><br />
+        <strong>What it hides — orbits are not evenly spread.</strong> Starlink's shells are inclined near 53°, and a
+        satellite in an inclined orbit spends more of its time near the extremes of its latitude range than over the
+        equator. So the mid-latitudes — where most of the US, Europe and China live — are crowded relative to the
+        average, by roughly 1.3×, while the equator is sparser and the poles above 53° get nothing at all from that
+        shell. The map here draws the average patch; over the US the real ones are a little smaller and more numerous,
+        which is the ×1.3 in the count beneath it.
+        <br /><br />
+        <strong>What it also hides — patches move.</strong> A patch is not a fixed piece of ground. Satellites travel at
+        7.5 km/s, so the territory each one owns sweeps across the surface continuously, and a given town is handed from
+        one satellite's patch to the next every minute or two. The patch is a snapshot of an assignment that is being
+        recomputed constantly — which is what Panel 6's strip machine shows in motion.
+        <br /><br />
+        <strong>Why it matters so much.</strong> Patch size is the hinge of the whole system. It sets how many cells one
+        satellite must cover (and therefore the duty cycle), how far from nadir the rim sits (and therefore the reuse
+        regime and the elevation penalty), and how much ground demand falls on a single satellite's 700 beams. Three of
+        the site's central numbers — duty, reuse, and servable subscriber density — are all downstream of this one
+        division.
+      </Info>
+    </div>
+  );
+}
+
 function PatchTilePanel() {
   const [fleet, setFleet] = useState(5000);
   const [hopSpd, setHopSpd] = useState(6);
@@ -3376,7 +3510,7 @@ function PatchTilePanel() {
             onChange={(e) => setDemandDens(Math.round(Math.pow(10, +e.target.value / 25)))} />
         </label>
         <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 2 }}>
-          1,000 km² is a square about 32 km on a side — roughly Hong Kong (1,110 km²), or 1.3× the five boroughs of New York City (780 km²)
+          1,000 km² is a 20 mile × 20 mile square — about the size of Dallas (997 km²), or Rocky Mountain National Park (1,075 km²); New York City\’s five boroughs are smaller at 780 km²
         </div>
         <div className="tglRow" style={{ gap: 5, marginTop: 6 }}>
           <button className={"genBtn" + (distMode === "dispersed" ? " on" : "")} onClick={() => setDistMode("dispersed")}>Dispersed — one user per cell</button>
@@ -3659,6 +3793,7 @@ function CoverageTab() {
       </div>
       <div id="cov-1-reach"><FootprintPanel /><NextLink to="cov-1b-lab" label="Beam-size lab" /></div>
       <div id="cov-1b-lab"><BeamSizeLab /><NextLink to="cov-1b-receipts" label="The receipts" /></div>
+      <div id="cov-1c-patch"><PatchFirstPrinciples /></div>
       <div id="cov-1b-receipts"><BeamReceipts /><NextLink to="cov-2-beammap" label="Beam map" /></div>
       <div id="cov-2-beammap"><BeamMap /><NextLink to="cov-3-reuse" label="Adaptive reuse" /></div>
       <div id="cov-3-reuse"><AdaptiveReusePanel /><NextLink to="cov-4-ntn" label="NTN" /></div>
@@ -5057,7 +5192,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v82 · Panel 7 layout + demand context</span>
+        <span className="buildTag">build v83 · Panel 1c patch from first principles</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
