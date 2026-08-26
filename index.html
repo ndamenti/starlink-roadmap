@@ -3609,15 +3609,26 @@ function PatchTilePanel() {
                     <circle cx={BW / 2} cy={BH / 2} r={ps.R * k} fill={C.amber} fillOpacity="0.20" stroke={C.amber} strokeWidth="1.5" />
                     <text x={BW / 2} y={BH / 2 + 3} textAnchor="middle" fill={C.amber} style={{ fontSize: 9, fontFamily: "var(--mono)" }}>1 patch</text>
                   </svg>
-                  <div style={{ minWidth: 150 }}>
-                    <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim }}>patch</div>
+                  <div style={{ minWidth: 168 }}>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim }}>D2C fleet</div>
+                    <div className="statV" style={{ fontSize: 18 }}>{fleet.toLocaleString()} <span style={{ fontSize: 11, color: C.dim }}>satellites</span></div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginTop: 6 }}>one patch</div>
                     <div className="statV" style={{ fontSize: 18, color: C.amber }}>{Math.round(ps.A).toLocaleString()} km²</div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginTop: 6 }}>spot beams in that patch</div>
+                    <div className="statV" style={{ fontSize: 18, color: C.blue }}>
+                      {Math.round(ps.N).toLocaleString()} <span style={{ fontSize: 11, color: C.dim }}>cells · 700 lit at once</span>
+                    </div>
                     <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginTop: 6 }}>{st.n}</div>
                     <div className="statV" style={{ fontSize: 18 }}>{stArea.toLocaleString()} km²</div>
-                    <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.text, marginTop: 8 }}>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.text, marginTop: 8, lineHeight: 1.5 }}>
                       {nPatch >= 1
                         ? <><strong style={{ color: C.blue }}>{nPatch >= 10 ? Math.round(nPatch) : nPatch.toFixed(1)}</strong> patches to cover {st.a}</>
                         : <>one patch covers <strong style={{ color: C.blue }}>{(1 / nPatch).toFixed(1)}×</strong> all of {st.a}</>}
+                      <br />
+                      <span style={{ color: C.dim }}>
+                        ≈ <strong style={{ color: C.text }}>{Math.round(ps.N * nPatch).toLocaleString()}</strong> cells cover {st.a},
+                        {" "}<strong style={{ color: C.text }}>{Math.round(700 * nPatch).toLocaleString()}</strong> of them lit at any instant
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -5262,7 +5273,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v87 · patch-on-a-state overlay</span>
+        <span className="buildTag">build v88 · state box shows fleet + spot count</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
