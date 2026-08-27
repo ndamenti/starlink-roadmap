@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Starlink Mobile — Interactive Roadmap (Aug 2026)</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-<style>body { margin: 0; background: #070B14; }</style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Starlink Mobile — Interactive Roadmap</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -39,6 +38,23 @@ const C = {
 };
 
 /* ------------------------- PHASE DATA ------------------------- */
+
+// ---- Canonical beam model (v92) --------------------------------------------
+// Gen1 (V2-Mini D2C): FCC Schedule S (SAT-MOD-20230207-00021) files a 29/32/35/38 dBi
+// gain ladder that maps onto ¼/½/1/2 panels of the four-panel ~25 m² array (3 DL + 1 UL,
+// ~6.25 m² each) at a consistent ~92% aperture efficiency. One-panel beams ≈ 32 km at
+// nadir from 530 km; Ookla's Aug-2026 measurement (~38 km effective) sits mid-ladder.
+// 2027 dedicated D2C per-beam aperture is undisclosed → bracket:
+//   floor  4.4 km  (full 125 m² coherent — ideal; no flying system forms beams this way)
+//   center 8.9 km  (Gen1 panelization scaled 5× → ~31 m²/beam)  ← site-wide canonical
+//   upper 19.9 km  (Gen1's 6.25 m² panels reused unchanged)
+const BEAM_KM = 8.9;
+const BEAM_FLOOR_KM = 4.4;
+const BEAM_MAX_KM = 19.9;
+const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
+const CHANGELOG = [
+  { v: "v92", d: "Beam model rebuilt on primary sources: FCC Schedule S gain ladder (SAT-MOD-20230207-00021) + Ookla Aug-2026 crowdsourced measurements. Gen1 beams run 32–45 km in service — the ~25 m² array is four panels and beams form on sub-panels — not the ~16 km ideal previously derived. 2027 beam re-bracketed 4.4 / 8.9 / 19.9 km (floor / canonical center / Gen1-panel upper); cell counts and duty cycles recomputed. Capacity-per-km², reuse crossovers, and femtocell conclusions unchanged. CONUS overhead count keeps ×1.3, now labeled conservative (exact 53°-shell average ≈ ×1.39 → ~330 of 15k). Video narration still cites v91 beam figures pending re-cut." },
+];
 
 const PHASES = [
   {
@@ -1525,7 +1541,7 @@ function VerdictTab() {
           km² × sectors</em>.
           <br /><br />
           <strong>How a constellation spends its spectrum.</strong> A satellite re-spends its 20 MHz once per beam, and
-          beams are ~4.4 km across (~15 km²) — about 75× the area of an urban cell sector, before you account for the
+          beams are ~9 km across (~62 km²; bracket 4.4–19.9) — about 300× the area of an urban cell sector, before you account for the
           fact that one satellite has only ~700 beams to cover a service patch of thousands of cells (Panel 6's duty
           figure). Frequency reuse from orbit is limited by beam geometry and elevation, which is why the reuse regime
           only reaches "all lanes" at high elevation — and why fleet growth, not spectrum purchases, is what raises the
@@ -1729,6 +1745,8 @@ const SRC = {
     { t: "Aerospace America (AIAA) — 25 m², 43 beams", u: "https://aerospaceamerica.aiaa.org/departments/direct-to-device-satellite-internet-sparks-competing-concepts/", k: "claim" },
     { t: "AST SpaceMobile — Block 2 BlueBird", u: "https://ast-science.com/next-gen-bluebird/", k: "primary" },
     { t: "Axis Intelligence teardown — 3 DL antennas \u00d7 8 beams \u00d7 2 pol = 48 DL beams/satellite", u: "https://axis-intelligence.com/starlink-direct-to-cell-2026-mobile-sat/", k: "claim" },
+    { t: "FCC Schedule S (SAT-MOD-20230207-00021) — 29/32/35/38 dBi beam-class ladder, UL+DL, 0° & 35° scan patterns", u: "https://fcc.report/IBFS/SAT-MOD-20230207-00021", k: "primary" },
+    { t: "Ookla via ISPreview (Aug 2026) — measured DTC beams: ~19 km effective radius near-nadir, ~44 km at ~30° elevation", u: "https://www.ispreview.co.uk/index.php/2026/08/ookla-maps-size-of-starlinks-direct-to-cell-4g-mobile-satellite-beams.html", k: "primary" },
   ],
   nextgen: [
     { t: "Light Reading — MWC 2026", u: "https://www.lightreading.com/satellite/at-mwc-spacex-execs-tout-starlink-v2-and-a-key-carrier-partner-for-it", k: "claim" },
@@ -2039,8 +2057,10 @@ function BeamSizeLab() {
   const area = Math.PI * (across / 2) * (along / 2);
   const Dsub = lam * h;               // aperture side for 1-km nadir cells at this f & h
   const PRESETS = [
-    { n: "V2-Mini D2C (today)", D: 5.0, f: 2.0, h: 530 },
-    { n: "Dedicated D2C 2027", D: 11.2, f: 2.0, h: 330 },
+    { n: "V2-Mini · 1 panel (35 dBi filed)", D: 2.5, f: 2.0, h: 530 },
+    { n: "V2-Mini · 2-panel class (38 dBi)", D: 3.5, f: 2.0, h: 530 },
+    { n: "2027 · panel-scaled center", D: 5.6, f: 2.0, h: 330 },
+    { n: "2027 · full-aperture floor", D: 11.2, f: 2.0, h: 330 },
     { n: "AST BB2 · 850 MHz low-band", D: 14.9, f: 0.85, h: 520 },
     { n: "AST BB2 · same panel @ 2 GHz", D: 14.9, f: 2.0, h: 520 },
   ];
@@ -2054,7 +2074,7 @@ function BeamSizeLab() {
         beamwidth ≈ wavelength ÷ panel side). <strong>Frequency</strong>: higher frequency → shorter wavelength → narrower
         beam (why low-band partner spectrum re-widens AST's beams despite its giant panel). <strong>Altitude</strong>:
         the beam is a cone — farther away, wider spot. <strong>Look angle</strong>: off-nadir, the slant is longer and the
-        landing oblique → the ellipse from Panel 1. Presets are real systems; then break physics on purpose — drag the
+        landing oblique → the ellipse from Panel 1. Presets are per-beam apertures of real systems, not whole physical arrays (Gen1 forms each beam on 1–2 of its four ~6.25 m² panels — see the receipts); then break physics on purpose — drag the
         panel slider and watch what sub-km cells would demand.
       </p>
       <div className="tglRow" style={{ marginBottom: 10 }}>
@@ -2066,7 +2086,7 @@ function BeamSizeLab() {
       <div className="split" style={{ alignItems: "start" }}>
         <div>
           <label className="sliderL">Antenna panel side: <strong>{D.toFixed(1)} m</strong> (~{(D * D).toFixed(0)} m² aperture)
-            <input type="range" min="3" max="60" step="0.1" value={D} onChange={(e) => setD(+e.target.value)} /></label>
+            <input type="range" min="1" max="60" step="0.1" value={D} onChange={(e) => setD(+e.target.value)} /></label>
           <label className="sliderL">Frequency: <strong>{f.toFixed(2)} GHz</strong> (λ = {(lam * 100).toFixed(1)} cm)
             <input type="range" min="0.7" max="3.5" step="0.05" value={f} onChange={(e) => setF(+e.target.value)} /></label>
           <label className="sliderL">Orbital altitude: <strong>{h} km</strong>
@@ -2172,16 +2192,16 @@ function BeamSizeLab() {
         })()}
       </div>
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
-        Model: beamwidth ≈ λ/D — this k = 1 convention is the site-wide canonical beam size, used identically by the budget card, the Stitching panel, and Serviceability (half-power conventions vary by taper; treat sizes as ±30% estimates); spot at elevation ε
+        Model: beamwidth ≈ λ/D — this k = 1 convention applies to the per-beam aperture; the site-wide canonical (v92) is 8.9 km ⌀ at nadir for 2027 — the bracket center (floor 4.4 full-aperture · upper 19.9 Gen1-panels) — used identically by the budget card, the Stitching panel, and Serviceability (half-power conventions vary by taper; treat sizes as ±30% estimates); spot at elevation ε
         widens by the longer slant (h/sin ε) and stretches 1/sin ε along the look direction; scan loss not included. Preset
-        notes: today's D2C payload ~25 m² per Musk's 2022 description; 2027 ≈ 5× → ~125 m² (derived); AST Block 2 ≈ 223 m²
+        notes: today's payload is ~25 m² in four panels — beams form on 1–2 panels (2.5–3.5 m side, per the FCC gain ladder); 2027 ≈ 5× → ~125 m², per-beam ~31 m² if panelization scales (5.6 m side); AST Block 2 ≈ 223 m²
         — click its two presets back-to-back: the identical panel paints ~12 km spots on 850 MHz partner low-band but
         ~5 km at 2 GHz. The panel is real; the wavelength decides what it buys — spectrum choice is silently a beam-size
         choice. The purple readout is the punchline: sub-km cells at phone frequencies demand a
         ~50 m panel (~2,500 m²) — an order of magnitude beyond anything flying or announced, which is why every D2C player
         converges on kilometers-wide cells and why femtocells, not satellites, own street-level capacity.
       </p>
-      <Info label="the receipts — where the 4.4 km comes from, and how to argue with it">
+      <Info label="the receipts — where the beam bracket comes from, and how to argue with it">
         <BeamReceipts />
       </Info>
       <Info label="walk me through the four knobs">
@@ -2203,13 +2223,15 @@ function BeamSizeLab() {
 
 function BeamReceipts() {
   const ROWS = [
-    { k: "INPUT · aperture", tone: "#C79BFF", t: "Gen1 D2C antenna ≈ 25 m² (~5 m side)", d: "Musk's own words, August 2022: \u201cfive or six meters on a side\u201d — about 25 m². Corroborated by AIAA (25 m², up to 43 spot beams). The 2027 satellites: \u201c5\u00d7 larger\u201d per MWC → ~125 m² (~11.2 m side, derived). AST Block 2: 223 m² (company spec).", s: "primary + derived" },
+    { k: "INPUT · aperture", tone: "#C79BFF", t: "Gen1 D2C antenna ≈ 25 m² — four panels: 3 downlink + 1 uplink, ~6.25 m² each", d: "Musk’s “five or six meters on a side” (Aug 2022) describes the total; AIAA corroborates 25 m², and the payload teardown gives the split: 3 DL antennas × 8 beams × 2 pol = 48 DL / 16 UL beams. Beams are formed per sub-panel, never by the whole array — the one assumption the old ~16 km figure silently got wrong. The 2027 satellites: “5× larger” per MWC → ~125 m² (~11.2 m side, derived). AST Block 2: 223 m² (company spec).", s: "primary + teardown" },
     { k: "INPUT · frequency", tone: "#C79BFF", t: "Phone-band: 1.9–2.2 GHz → wavelength 14–16 cm", d: "PCS G-block (1990–1995 DL) today; n252 (2180–2200 DL) for the owned network. Wavelength = c/f — arithmetic, not opinion.", s: "primary (FCC band plan)" },
     { k: "INPUT · altitude", tone: "#C79BFF", t: "~530 km today · 326–335 km dedicated constellation", d: "Gen2 authorization; FCC DA 25-1018 for the dedicated D2C shell. Beam is a cone: spot diameter scales linearly with distance.", s: "primary (FCC)" },
     { k: "PHYSICS", tone: "#6BDB8F", t: "Diffraction: beamwidth ≈ wavelength ÷ antenna size", d: "The non-negotiable exchange rate for any aperture — laser pointers to radio telescopes. Taper conventions move the constant between ~0.9 and ~1.2; nothing moves it 10\u00d7.", s: "textbook" },
-    { k: "ARITHMETIC", tone: C.amber, t: "Gen1: 0.157 m ÷ 5 m ≈ 1.8° → ~16 km at nadir from 530 km", d: "Off-nadir smear (1/sin ε + slant) stretches edge beams to ~30–50 km ellipses. The 2027 hardware: 0.15 m ÷ 11.2 m ≈ 0.77° → ~4.4 km from 330 km (taper conventions ±30%; the site uses θ = λ/D everywhere). Every input above is sourced; this row is multiplication.", s: "derived" },
+    { k: "FILED · Schedule S", tone: "#6BDB8F", t: "SpaceX’s own gain ladder — 29/32/35/38 dBi = ¼/½/1/2 panels at a consistent ~92% efficiency", d: "SAT-MOD-20230207-00021 files four beam classes per polarization, UL and DL, with patterns at 0° and 35° scan. Gain → aperture (G = 4πA/λ²) reproduces the whole ladder from panel subdivision alone: nadir beam classes ~64 / 45 / 32 / 23 km from 530 km. The array is excellent (~92% efficient); it simply never points 25 m² at one beam.", s: "primary (FCC)" },
+    { k: "MEASURED · Ookla 2026", tone: "#6BDB8F", t: "Crowdsourced beam mapping — ~38 km effective ⌀ near-nadir, wider at low elevation", d: "Phones decoding the same satellite ID + beam index, matched against orbital data: ~19 km effective radius near-overhead, ~44 km radius at ~30° elevation — mid-ladder between the 35 and 32 dBi classes, and matching the −3/−5 dB contours (15–22.5 km radius) in SpaceX’s 2023 filing. Measurement, filing, and Musk’s “~15 mile” description all reconcile.", s: "primary (measurement)" },
+    { k: "ARITHMETIC", tone: C.amber, t: "Gen1: ideal 16 km vs real 32–45 km — so the 2027 bracket is 4.4 / 8.9 / 19.9 km", d: "Ideal λ/D on the whole Gen1 array (0.157 ÷ 5 → ~16 km) is a floor no panelized array reaches — filed + measured beams run 32–45 km in service. Same logic for 2027: full-aperture floor 0.15 ÷ 11.2 → 4.4 km; Gen1 panelization scaled 5× (~31 m²/beam) → ~8.9 km, the site-wide canonical center; unchanged 6.25 m² panels → ~19.9 km. Off-nadir smear (1/sin ε + slant) stretches every class further. The per-beam aperture is SpaceX’s undisclosed design choice; the bracket is multiplication.", s: "derived" },
     { k: "CROSS-CHECK 1", tone: C.blue, t: "An independent system lands on the same order", d: "AST's 223 m² panel — 3\u00d7 SpaceX's next-gen linear size — still paints ~12 km spots on 850 MHz and ~5 km at 2 GHz. Different company, same equation, same kilometers. If sub-km beams were buildable, the biggest antenna in orbit would have them.", s: "corroboration" },
-    { k: "CROSS-CHECK 2", tone: C.blue, t: "SpaceX's own capacity claims only add up with km-scale beams", d: "\u201c100\u00d7 data density\u201d decomposes as more beams \u00d7 smaller beams \u00d7 better efficiency. Going ~16 km → ~5 km is ~10\u00d7 by area; \u00d74 efficiency and more simultaneous beams covers the rest. Sub-km beams would imply ~1,000\u00d7+ density — a claim SpaceX conspicuously does not make.", s: "consistency" },
+    { k: "CROSS-CHECK 2", tone: C.blue, t: "SpaceX’s own capacity claims only add up with km-scale beams", d: "“100× data density” decomposes as more beams × smaller beams × better efficiency. Going ~35 km (measured Gen1) → ~9 km is ~15× by area; ×4 efficiency and more simultaneous beams covers the rest. Sub-km beams would imply ~1,000×+ density — a claim SpaceX conspicuously does not make.", s: "consistency" },
   ];
   const WRONG = [
     { c: "\u201cThe beams are like cell towers — a kilometer or less.\u201d", r: "Run the lab: 1-km cells at 2 GHz from 330 km demand a ~50 m antenna (~2,500 m²) — 20\u00d7 the area of anything flying or announced, by any company. The diffraction limit is not negotiable; nobody has claimed sub-km, because nobody can build it." },
@@ -2221,7 +2243,7 @@ function BeamReceipts() {
     <div>
       <p className="body" style={{ marginBottom: 12 }}>
         The number this lab produces is not a matter of opinion — it is three sourced inputs and one line of physics.
-        Every row below traces to a primary document or to arithmetic on one; disagree with the ~4.4 km conclusion and
+        Every row below traces to a primary document or to arithmetic on one; disagree with the 4.4–19.9 km bracket (center 8.9) and
         you have to name which row is wrong. <Src k="antenna" topic="fleet" />
       </p>
       {ROWS.map((r, i) => (
@@ -2241,7 +2263,7 @@ function BeamReceipts() {
       ))}
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 8 }}>
         Honest error bars: the diffraction constant (taper-dependent) and exact operating frequency move results ±30%;
-        scan loss and pointing add real-world margin. Nothing in that budget turns 5 km into 500 m or into 500 km — the
+        scan loss and pointing add real-world margin. Nothing in that budget turns 9 km into 900 m or into 900 km — the
         kilometers are load-bearing. To pressure-test any input yourself, the sliders above accept arbitrary values.
       </p>
     </div>
@@ -2762,7 +2784,7 @@ function StitchPanel() {
   const eEdge = (Math.atan2(Math.cos(lamD) - Re / (Re + h), Math.sin(lamD)) * 180) / Math.PI;
   const regime = eEdge >= 60 ? 1 : eEdge >= 42 ? 2 : 3;
   const tone = regime === 1 ? C.green : regime === 2 ? C.amber : "#C79BFF";
-  const beamArea = Math.PI * 2.2 * 2.2; // 4.4 km ⌀ — Panel 1b convention (θ = λ/D), unified site-wide
+  const beamArea = BEAM_AREA; // ~8.9 km ⌀ canonical center (v92) — Panel 1b bracket, unified site-wide
   const beamsNeeded = patchStats(fleet).N; // area-weighted: cells grow toward the patch rim (Panel 3b)
   const duty = Math.min(700 / beamsNeeded, 1) * 100;
   const satsUS = fleet * (US / EARTH) * 1.3;
@@ -3003,7 +3025,7 @@ function StitchPanel() {
         ~15,000 even the <em>guaranteed</em> floor reaches it — full menu everywhere, always.
         <strong> Duty cycle</strong> (this panel) asks something else entirely: <em>how thinly must one satellite's ~700
         beams spread across the cells in its patch?</em> It is <strong>not</strong> a claim that your phone has service
-        31% of the time. Hopping runs on millisecond scheduling, and schedulers chase demand — most 4.4 km cells in a
+        31% of the time. Hopping runs on millisecond scheduling, and schedulers chase demand — most ~9 km cells in a
         patch are empty land, so beams park where users actually are. Duty is a way of stating <em>capacity per unit
         area</em>: 700 beams × the per-cell rate, divided across the patch, which is exactly the arithmetic the
         Serviceability tab runs. Reuse sets your cell's speed; duty sets how much total capacity exists to share.
@@ -3027,7 +3049,7 @@ function StitchPanel() {
         Model (derived, schematic): CONUS boundary from Natural Earth (public domain), equirectangular at 38°N; two
         interleaved hex lattices (ascending + descending families) netting the fleet's density, ×1.3 mid-latitude
         crowding for 53° planes; patch-edge elevation from spherical geometry at 330 km; duty = ~700 available beams ÷
-        cells in the patch, area-weighted across the patch (a beam is a 4.4 km circle only at nadir and stretches into
+        cells in the patch, area-weighted across the patch (a beam is an ~8.9 km circle only at nadir and stretches into
         an ellipse toward the rim — see Panel 3b); the older nadir-sized approximation understated duty. Note the crossover this implies: up to ~48,000
         satellites, crowding is absorbed by duty cycle (all 700 beams stay busy inside their shrinking patch — the
         Voronoi assignment prevents neighbor overlap); beyond that — Gen3's 100,000-satellite scale — a patch physically
@@ -3243,7 +3265,7 @@ const COV_SECTIONS = [
 ];
 
 /* ---------- shared patch geometry: one place, used everywhere duty is quoted ---------- */
-const PG_RE = 6371, PG_H = 330, PG_TB = 4.4 / 330;
+const PG_RE = 6371, PG_H = 330, PG_TB = BEAM_KM / 330;
 function pgCell(d) {
   const lam = d / PG_RE;
   const S = Math.sqrt(PG_RE * PG_RE + (PG_RE + PG_H) * (PG_RE + PG_H) - 2 * PG_RE * (PG_RE + PG_H) * Math.cos(lam));
@@ -3263,7 +3285,7 @@ function patchStats(fleet) {
     N += ((2 * Math.PI * d) * (R / steps)) / pgCell(d).area;
   }
   const edge = pgCell(R), nadir = pgCell(0.001);
-  const out = { A, R, N, avgCell: A / N, duty: Math.min(1, 700 / N), edge, nadir, naiveN: A / 15.2 };
+  const out = { A, R, N, avgCell: A / N, duty: Math.min(1, 700 / N), edge, nadir, naiveN: A / BEAM_AREA };
   PG_CACHE[key] = out;
   return out;
 }
@@ -3628,7 +3650,7 @@ function PatchTilePanel() {
               <line x1={26} y1={20} x2={500} y2={20} stroke={C.line} strokeWidth="1" />
               {[0.001, 0.25, 0.5, 0.75, 1.0].map((f, i) => {
                 const d = Math.max(ps.R * f, 0.001), c = pgCell(d);
-                const ruleSc = 46 / Math.max(pgCell(ps.R).along, 4.4);
+                const ruleSc = 46 / Math.max(pgCell(ps.R).along, BEAM_KM);
                 const X = 58 + i * 101, Y = 58;
                 return (
                   <g key={i}>
@@ -3731,7 +3753,7 @@ function PatchTilePanel() {
             <div style={{ display: "flex", gap: 26, flexWrap: "wrap", marginTop: 4 }}>
               <div>
                 <div className="statV" style={{ fontSize: 21 }}>15<span style={{ fontSize: 11, color: C.dim }}> km² at nadir</span></div>
-                <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>4.4 × 4.4 km — circular</div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>8.9 × 8.9 km — circular</div>
               </div>
               <div>
                 <div className="statV" style={{ fontSize: 21, color: "#C79BFF" }}>{Math.round(ps.edge.area)}<span style={{ fontSize: 11, color: C.dim }}> km² at the edge</span></div>
@@ -3872,7 +3894,7 @@ function PatchTilePanel() {
         at ~48,000 it is ~58 km.
         <br /><br />
         <strong>2 · The tiling — and why cells are not all the same size.</strong> A satellite steers each beam by a
-        fixed angular width. Pointed straight down it lands as a 4.4 km circle covering ~15 km². Pointed anywhere else
+        fixed angular width. Pointed straight down it lands as an ~8.9 km circle covering ~62 km² (bracket 4.4–19.9 — Panel 1b receipts). Pointed anywhere else
         it strikes the ground obliquely and smears into an ellipse: longer along the look direction by 1/sin ε, and
         wider overall because the slant range is greater. So a patch is <em>not</em> tiled with identical circles — it
         has one circular cell at nadir and progressively larger, more eccentric ellipses toward the rim. At a 500 km
@@ -4077,8 +4099,8 @@ function TechTab() {
         </div>
         {(() => {
           const G = {
-            gen1: { alt: 530, mask: 25, beamD: 16, nBeams: 48, nLabel: "~43–48 downlink (converging secondary sources: AIAA \u201cup to 43\u201d; payload teardown 3 DL antennas \u00d7 8 beams \u00d7 2 polarizations = 48). No SpaceX primary. Early service ran far fewer active LTE carriers — a config fact once misread as beam capability.", ap: "~25 m² (Musk, Aug 2022)", mhz: 5, mhzL: "5 MHz leased G-block DL", perBeam: "~3.1 Mbps (UPM-measured)", tone: C.dim },
-            v2: { alt: 330, mask: 25, beamD: 4.4, nBeams: 700, nLabel: "undisclosed — ~700-class derived (16\u00d7 the ~43\u201348 Gen1 beams). Residual ambiguity: MWC\u2019s \u201c20\u00d720 MHz beams\u201d could parse as twenty 20-MHz beams; the count is genuinely not public.", ap: "~125 m² (5\u00d7 claim, derived)", mhz: 20, mhzL: "20 MHz owned n252 DL per beam (the \u201c20\u00d720 MHz beams\u201d claim)", perBeam: "~12 Mbps at measured efficiency \u2192 ~50 Mbps claim-anchored", tone: C.amber },
+            gen1: { alt: 530, mask: 25, beamD: 38, nBeams: 48, nLabel: "~43–48 downlink (converging secondary sources: AIAA \u201cup to 43\u201d; payload teardown 3 DL antennas \u00d7 8 beams \u00d7 2 polarizations = 48). No SpaceX primary. Early service ran far fewer active LTE carriers — a config fact once misread as beam capability.", ap: "~25 m² · 4 panels: 3 DL + 1 UL (Musk total; teardown split)", mhz: 5, mhzL: "5 MHz leased G-block DL", perBeam: "~3.1 Mbps (UPM-measured)", tone: C.dim },
+            v2: { alt: 330, mask: 25, beamD: 8.9, nBeams: 700, nLabel: "undisclosed — ~700-class derived (16\u00d7 the ~43\u201348 Gen1 beams). Residual ambiguity: MWC\u2019s \u201c20\u00d720 MHz beams\u201d could parse as twenty 20-MHz beams; the count is genuinely not public.", ap: "~125 m² (5\u00d7 claim, derived)", mhz: 20, mhzL: "20 MHz owned n252 DL per beam (the \u201c20\u00d720 MHz beams\u201d claim)", perBeam: "~12 Mbps at measured efficiency \u2192 ~50 Mbps claim-anchored", tone: C.amber },
             v3: { alt: 350, mask: 25, beamD: 3, nBeams: 0, nLabel: "different product: GHz-wide Ku beams to dish antennas (real gain, powered, steered) — 1 Tbps/satellite claim. No phone radio as specced; it backhauls the femtocells that serve phones instead.", ap: "Ku/E-band arrays", mhz: 0, mhzL: "", perBeam: "", tone: C.blue },
           };
           const g = G[bg];
@@ -4116,7 +4138,7 @@ function TechTab() {
                 <div className="specRow"><span className="specL">Altitude · mask</span><span className="specV">{alt} km · {g.mask}°</span></div>
                 <div className="specRow"><span className="specL">Footprint (steerable)</span><span className="specV">~{Math.round(fpKm).toLocaleString()} km across (~{(fpKm2 / 1e6).toFixed(1)}M km²)</span></div>
                 {bg !== "v3" && <div className="specRow"><span className="specL">Beam diameter (nadir)</span><span className="specV">~{g.beamD} km</span></div>}
-                {bg === "v2" && <div className="specRow"><span className="specL">Beam at the 25° edge</span><span className="specV" style={{ whiteSpace: "normal" }}>~9.5 × 22 km ellipse (2.4:1, ecc. ≈ 0.91, ~11× nadir area): 2.15× slant widening × 2.37× oblique stretch</span></div>}
+                {bg === "v2" && <div className="specRow"><span className="specL">Beam at the 25° edge</span><span className="specV" style={{ whiteSpace: "normal" }}>~19 × 45 km ellipse (2.4:1, ecc. ≈ 0.91, ~11× nadir area): 2.15× slant widening × 2.37× oblique stretch</span></div>}
                 <div className="specRow"><span className="specL">Simultaneous beams</span><span className="specV" style={{ whiteSpace: "normal" }}>{g.nLabel}</span></div>
                 {bg !== "v3" && <div className="specRow"><span className="specL">Spectrum per beam</span><span className="specV">{g.mhzL}</span></div>}
                 {bg !== "v3" && <div className="specRow"><span className="specL">Per-beam throughput</span><span className="specV">{g.perBeam}</span></div>}
@@ -4511,14 +4533,14 @@ function ServiceabilityTab() {
   const perBeamNadir = eff * mhz;                       // ceiling: beam straight overhead, full pool
   const perBeamElev = usableMHz * eff * sinE;           // Panel 3's model at this fleet's elevation
   const perBeam = beamMode === "elev" ? perBeamElev : perBeamNadir;
-  const beamsUsable = Math.min(700, areaPer / (Math.PI * 2.2 * 2.2)); // beyond ~48k satellites a patch can't hold 700 beams
+  const beamsUsable = Math.min(700, areaPer / BEAM_AREA); // beyond ~11.7k satellites a patch can’t hold 700 beams of this size (v92)
   const satCapMbps = beamsUsable * perBeam;
   const satsUS = fleet * (8.1 / 510) * 1.3;
   const servDens = satCapMbps / areaPer / minMbps / (activePct / 100); // servable subscribers per km²
   const feederFlag = satCapMbps > 100000;
   // ---- the typical cell ----
-  const beamAlong = 4.4 / (sinE * sinE);      // stretch along the look direction
-  const beamAcross = 4.4 / sinE;              // slant widening
+  const beamAlong = BEAM_KM / (sinE * sinE);      // stretch along the look direction
+  const beamAcross = BEAM_KM / sinE;              // slant widening
   const cellAreaKm2 = (Math.PI / 4) * beamAlong * beamAcross;
   const dutyFrac = patchStats(fleet).duty;   // area-weighted cell count (Panel 3b), not nadir-sized
   const cellAvgMbps = perBeam * dutyFrac;     // averaged over the hop schedule
@@ -4798,7 +4820,7 @@ function ServiceabilityTab() {
               you get {Math.round(perBeam)} Mbps; averaged over the hop schedule, and assuming every cell in
               the patch wants service equally, the cell's share is {cellAvgMbps < 10 ? cellAvgMbps.toFixed(1) : Math.round(cellAvgMbps)} Mbps.
               <br /><br />
-              And that uniform-demand assumption is deliberately conservative. Most 4.4 km cells over land are empty —
+              And that uniform-demand assumption is deliberately conservative. Most ~9 km cells over land are empty —
               schedulers chase demand, so a cell with real users gets beams far more often than its uniform share. Read
               the time-averaged figure as a floor for planning, not a prediction of what one user experiences.
               <br /><br />
@@ -5343,7 +5365,15 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v91 · Panel 1b edge-on view</span>
+        <span className="buildTag">build v92 · beam model on primary sources</span>
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
+          {CHANGELOG.map((c) => (
+            <p key={c.v} style={{ fontSize: 11.5, lineHeight: 1.55, color: C.dim, maxWidth: 680, margin: "6px 0 0" }}>
+              <strong style={{ color: C.text }}>{c.v}</strong> — {c.d}
+            </p>
+          ))}
+        </details>
       </header>
 
       <nav className="tabs wrap" role="tablist">
@@ -5373,6 +5403,6 @@ function StarlinkMobileRoadmap() {
 
 ReactDOM.createRoot(document.getElementById("root")).render(<StarlinkMobileRoadmap />);
 </script>
-<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "976026915bb749b6bc334f9d61042c42"}'></script><!-- End Cloudflare Web Analytics -->
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "976026915bb749b6bc334f9d61042c42"}'></script>
 </body>
 </html>
