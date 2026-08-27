@@ -2105,6 +2105,72 @@ function BeamSizeLab() {
           )}
         </svg>
       </div>
+      {/* ---- edge-on view: the same four knobs, seen from the side ---- */}
+      <div style={{ marginTop: 12 }}>
+        <div className="statL" style={{ marginBottom: 5 }}>Edge-on — the same beam, seen from the side</div>
+        {(() => {
+          const VW = 880, VH = 250;
+          const satY = 34, gndY = 214;                     // altitude maps to this vertical run
+          const EXAG = 26;                                 // horizontal exaggeration (angle is ~0.8°, invisible true-scale)
+          const pxPerKmH = ((gndY - satY) / h) * EXAG;     // horizontal km → px, exaggerated
+          const halfSpot = Math.max(1.5, (nadirKm / 2) * pxPerKmH);
+          const cx = VW * 0.30;
+          const apHalf = Math.max(7, (D / 1000) * pxPerKmH * 40); // aperture, further exaggerated to be visible
+          const slantX = be < 90 ? (gndY - satY) / Math.tan((be * Math.PI) / 180) * (pxPerKmH / (((gndY - satY) / h))) / h * h : 0;
+          const gx = cx + Math.min(slantX, VW * 0.55);
+          const halfAcross = Math.max(1.5, (across / 2) * pxPerKmH);
+          return (
+            <svg viewBox={`0 0 ${VW} ${VH}`} style={{ width: "100%", height: "auto", display: "block", background: C.panel2, borderRadius: 8 }}>
+              {/* ground */}
+              <line x1="20" y1={gndY} x2={VW - 20} y2={gndY} stroke={C.line} strokeWidth="2" />
+              <text x="24" y={gndY + 16} fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">GROUND</text>
+              {/* altitude ladder */}
+              <line x1={cx} y1={satY} x2={cx} y2={gndY} stroke={C.line} strokeDasharray="3 4" strokeWidth="1" />
+              <text x={cx - 8} y={(satY + gndY) / 2} textAnchor="end" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">
+                h = {h} km
+              </text>
+              {/* beam cone */}
+              <polygon points={`${cx},${satY + 8} ${gx - halfAcross},${gndY} ${gx + halfAcross},${gndY}`}
+                fill="#C79BFF" fillOpacity="0.16" stroke="#C79BFF" strokeOpacity="0.75" strokeWidth="1" />
+              <line x1={cx} y1={satY + 8} x2={gx} y2={gndY} stroke="#C79BFF" strokeOpacity="0.5" strokeDasharray="2 3" strokeWidth="1" />
+              {/* satellite + aperture */}
+              <rect x={cx - apHalf} y={satY - 5} width={apHalf * 2} height="10" rx="2" fill={C.text} />
+              <text x={cx} y={satY - 12} textAnchor="middle" fill={C.text} fontSize="10" fontFamily="var(--mono)">
+                aperture D = {D.toFixed(1)} m
+              </text>
+              {/* the angle */}
+              <path d={`M ${cx} ${satY + 46} A 46 46 0 0 1 ${cx + Math.min(halfAcross * 0.42, 40)} ${satY + 46}`}
+                fill="none" stroke={C.amber} strokeWidth="1.4" />
+              <text x={cx + 54} y={satY + 52} fill={C.amber} fontSize="11" fontFamily="var(--mono)">
+                θ = λ/D = {(th * 1000).toFixed(1)} mrad ({((th * 180) / Math.PI).toFixed(2)}°)
+              </text>
+              {/* spot on the ground */}
+              <line x1={gx - halfAcross} y1={gndY} x2={gx + halfAcross} y2={gndY} stroke="#C79BFF" strokeWidth="4" />
+              <text x={gx} y={gndY + 30} textAnchor="middle" fill="#C79BFF" fontSize="11" fontFamily="var(--mono)">
+                {be >= 89.5 ? nadirKm.toFixed(2) + " km spot" : across.toFixed(1) + " km across · " + along.toFixed(1) + " km along"}
+              </text>
+              {/* wavelength inset — what λ/D actually means */}
+              <g transform={`translate(${VW - 250}, 24)`}>
+                <rect x="0" y="0" width="230" height="88" rx="6" fill={C.panel} stroke={C.line} strokeWidth="1" />
+                <text x="12" y="17" fill={C.dim} fontSize="9" fontFamily="var(--mono)">WHY λ/D — THE DIFFRACTION RATIO</text>
+                <line x1="12" y1="46" x2={12 + 190} y2="46" stroke={C.text} strokeWidth="2.5" />
+                <text x={12 + 95} y="60" textAnchor="middle" fill={C.text} fontSize="9" fontFamily="var(--mono)">panel D = {D.toFixed(1)} m</text>
+                {(() => { const wpx = Math.max(3, (lam / D) * 190); return (
+                  <g>
+                    <path d={`M 12 34 q ${wpx / 4} -9 ${wpx / 2} 0 q ${wpx / 4} 9 ${wpx / 2} 0`} fill="none" stroke={C.amber} strokeWidth="2" />
+                    <text x={12 + wpx + 6} y="37" fill={C.amber} fontSize="9" fontFamily="var(--mono)">λ = {(lam * 100).toFixed(1)} cm</text>
+                  </g>); })()}
+                <text x="12" y="79" fill={C.dim} fontSize="9" fontFamily="var(--mono)">
+                  {(D / lam).toFixed(0)} wavelengths across → beam {(th * 1000).toFixed(1)} mrad wide
+                </text>
+              </g>
+              <text x={VW - 24} y={VH - 8} textAnchor="end" fill={C.dim} fontSize="9" fontFamily="var(--mono)">
+                horizontal scale exaggerated ×{EXAG} — at true scale this cone is {(nadirKm / h * 100).toFixed(2)}% as wide as it is tall
+              </text>
+            </svg>
+          );
+        })()}
+      </div>
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
         Model: beamwidth ≈ λ/D — this k = 1 convention is the site-wide canonical beam size, used identically by the budget card, the Stitching panel, and Serviceability (half-power conventions vary by taper; treat sizes as ±30% estimates); spot at elevation ε
         widens by the longer slant (h/sin ε) and stretches 1/sin ε along the look direction; scan loss not included. Preset
@@ -5277,7 +5343,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v90 · state area under the selector</span>
+        <span className="buildTag">build v91 · Panel 1b edge-on view</span>
       </header>
 
       <nav className="tabs wrap" role="tablist">
