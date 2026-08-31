@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v98", d: "Bear scenario corrected. It was built on the T-Mobile G-block \u2014 spectrum the Spectrum tab already documents as a revocable SCS lease, partner-channel only, that cannot underwrite a competing carrier and defaults OFF in every scenario. Running a Starlink Mobile bear case on it was incoherent. Bear now stands on the owned H-block (5/5, 1915\u20131920 / 1995\u20132000) \u2014 the smallest holding SpaceX actually controls, same MHz so the arithmetic is unchanged, correct premise. The G-block preset remains available in the Gap Lab, relabelled \u201cT-Mobile SCS (not SpaceX\u2019s)\u201d for reference only, and the conditional-spectrum warning now says plainly that leased partner spectrum cannot underwrite a competing carrier however much of it is flying today." },
   { v: "v97", d: "Scenario bar added to Serviceability: Bear / Canonical / Bull set take-up, spectrum split, fleet, equipment class and overlay class together, across all four panels at once \u2014 previously a coherent scenario took four clicks in three panels and it was easy to end up comparing incompatible states. Panel controls still work and take you off-scenario. The ground-layer overlay is renamed and relabelled (it was still calling 38 dBm pole small cells \u201cfemtocells\u201d and quoting a fixed 180 m radius in its provenance footer, both now driven by the live class selector). Fixed literal \\uXXXX escape sequences that were rendering as raw text in the Equip Lab prose." },
   { v: "v96", d: "Equipment class unified across the site. The Femtocell Overlay was implicitly putting a 20 dBm home-class radio on a lamp post — the right radius for a femtocell, the wrong equipment for outdoor metro coverage — which is where the 4.3M box figure came from. An OUTDOOR CLASS selector (femtocell 20 dBm / rooftop small cell 30 / pole small cell 38) now drives the radius in that panel and shares one uplink-capped radius function with the Equip Lab, so the two cannot disagree. The cap matters: the handset still transmits ~23 dBm however loud the cell is, so 20 → 38 dBm buys ~7× fewer boxes rather than the ~11× raw power implies. Top-10 metros at 90% outdoor, organic: 4.3M femtocells → 1.2M rooftop small cells → 598k pole small cells. At 5 MHz of femto spectrum the high-power classes flip the binding constraint from coverage to capacity — power buys area, never throughput." },
   { v: "v95b", d: "Two corrections. Household counts were multiplying built-up local density by total tier land area — the clustering error the two-density structure exists to prevent — overcounting suburban ~4.7× and undercounting rural; households now derive from tier population (indoor total 18.7M → 9.34M). And a vehicle signal-booster archetype was added alongside the vehicle femtocell: a repeater buys back penetration loss but creates no capacity, so it can never beat the outdoor verdict — sufficient exactly where outdoor already passes (very rural, rural) and insufficient from suburban up. Booster instead of femtocell drops the in-vehicle count from 8.76M to 3.61M and the licensed-radio total from 15.6M to 10.4M." },
@@ -2995,9 +2996,12 @@ const SNR0_DB = 10 * Math.log10(Math.pow(2, 2.48) - 1); // 6.6 dB, calibrated to
    are read straight off BLOCKS, so the Spectrum tab is the single source of truth
    and these two panels cannot drift apart. Adding a block there updates this. */
 const SPEC_ROLES = [
-  { k: "scs",  n: "SCS today · PCS G", src: "flying now",
+  { k: "scs",  n: "T-Mobile SCS (not SpaceX's)", src: "reference only · leased",
     roles: { g: "both" },
-    note: "T-Mobile's G block only — what Gen1 actually runs on today." },
+    note: "What Gen1 flies on today — but it is T-Mobile's licence under a revocable SCS lease, partner-channel only. It cannot underwrite a competing Starlink Mobile carrier, so it is shown for reference, never as a Starlink Mobile scenario." },
+  { k: "hblk", n: "H-block only", src: "owned · minimum viable",
+    roles: { h: "both" },
+    note: "The smallest OWNED holding that could carry a Starlink Mobile service: H-block 1915–1920 / 1995–2000, bought outright. The honest floor case — no leased partner spectrum." },
   { k: "n252", n: "n252 satellite", src: "site model · D2C application",
     roles: { a4main: "ul", a4dl: "dl" },
     note: "AWS-4 as the Spectrum tab models it: 2180–2200 downlink, 2000–2020 as satellite uplink in n252 mode." },
@@ -3085,9 +3089,9 @@ function GapLab({ rows, g, spec, setSpec, mhz, setMhz, fleet, setFleet, loss, se
       </p>
       {specNote.gates && specNote.gates.length > 0 && (
         <p className="body" style={{ fontSize: 11.5, color: C.amber, margin: "0 0 6px", paddingLeft: 8, borderLeft: `2px solid ${C.amber}` }}>
-          <strong>Conditional from orbit.</strong> {specNote.gates.join(" · ")}. This split is licensed terrestrially;
-          using it from space needs authorisation that has not been granted, so treat these rows as the ground layer's
-          spectrum or as a satellite scenario contingent on that ruling.
+          <strong>Conditional.</strong> {specNote.gates.join(" · ")}. Treat this split as contingent on those
+          rulings and licence terms rather than as available capacity — leased partner spectrum in particular cannot
+          underwrite a competing carrier, however much of it is flying today.
         </p>
       )}
       <div className="split2" style={{ gap: 12 }}>
@@ -3429,9 +3433,9 @@ function EquipLab({ rows, g, mhz, fleet, loss, floorDb, spec, specNote, scenario
    ServiceabilityTab owns the scenario and each panel applies it on change. Panel
    controls still work afterwards — they just take you off-scenario. */
 const SITE_SCEN = [
-  { k: "bear", n: "Bear", tier: "bear", takeMul: 0.5, spec: "scs", fleet: 15000,
+  { k: "bear", n: "Bear", tier: "bear", takeMul: 0.5, spec: "hblk", fleet: 15000,
     eqk: "femto", bandk: "2ghz", clsDbm: 20, ovBand: "2ghz",
-    blurb: "Today's flying spectrum (PCS G, 5/5), half the take-up, and home-class radios doing outdoor work — the configuration Starlink actually operates in right now." },
+    blurb: "Owned H-block only (5/5), half the take-up, and home-class radios doing outdoor work. Deliberately NOT the T-Mobile G-block: that is a revocable partner-channel lease which cannot underwrite a competing Starlink Mobile carrier, so it can never be this business's spectrum." },
   { k: "canon", n: "Canonical", tier: "canonical", takeMul: 1.0, spec: "n252", fleet: 15000,
     eqk: "pole", bandk: "cbrs", clsDbm: 38, ovBand: "35",
     blurb: "AWS-4 as the Spectrum tab models it (20/20), canonical take-up, pole small cells on CBRS — the site's central case." },
@@ -6224,7 +6228,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v97 · scenario chain</span>
+        <span className="buildTag">build v98 · bear case rebased on owned spectrum</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.bg, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
