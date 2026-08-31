@@ -53,7 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
-  { v: "v95", d: "Equip Lab added: the supply\u2013demand gap converted into boxes on the ground. Two counts computed independently \u2014 coverage (Poisson blanket at the archetype\u2019s radius) and capacity (leftover traffic \u00f7 per-box throughput) \u2014 with the answer being the larger. Power buys coverage and never capacity, so sparse tiers are coverage-bound and dense tiers capacity-bound; the panel shows which binds per tier. Four equipment archetypes (rooftop femtocell 20 dBm, rooftop small cell 30, pole small cell 38, vehicle femtocell), three bands (Band 70 / CBRS / Upper C), radius scaled from the Hybrid Network tab\u2019s own link-budget calibration. Spectrum scenarios are now DERIVED from the Spectrum tab\u2019s BLOCKS rather than hardcoded, so the panels cannot drift; satellite-use gates (AWS-3 needs FCC Earth-to-space authorisation) now surface as warnings where they apply." },
+  { v: "v95", d: "Equip Lab added: the supply\u2013demand gap converted into boxes on the ground. Two counts computed independently \u2014 coverage (Poisson blanket at the archetype\u2019s radius) and capacity (leftover traffic \u00f7 per-box throughput) \u2014 with the answer being the larger. Power buys coverage and never capacity, so sparse tiers are coverage-bound and dense tiers capacity-bound; the panel shows which binds per tier. A combined-build summary sums all three environments, because the archetypes are complementary rather than competing \u2014 a pole cell cannot reach indoors and a rooftop femtocell cannot serve a sidewalk. Four equipment archetypes (rooftop femtocell 20 dBm, rooftop small cell 30, pole small cell 38, vehicle femtocell), three bands (Band 70 / CBRS / Upper C), radius scaled from the Hybrid Network tab\u2019s own link-budget calibration. Spectrum scenarios are now DERIVED from the Spectrum tab\u2019s BLOCKS rather than hardcoded, so the panels cannot drift; satellite-use gates (AWS-3 needs FCC Earth-to-space authorisation) now surface as warnings where they apply." },
   { v: "v94", d: "Gap Lab added: satellite supply tested against tier demand across three environments (outdoor / in-vehicle / indoor). Supply is deliberately not per-tier \u2014 a satellite delivers capacity per unit area regardless of what is underneath \u2014 so one supply number per environment is tested against six demand numbers, with the unit of test being a single beam and the demand beneath it. Environment derating is Shannon on a power-limited link, calibrated so outdoor reproduces the site\u2019s 2.48 bps/Hz. Tier Lab and Gap Lab now share one state, so they cannot disagree. Headline: the satellite layer holds very rural and rural outdoors and fails from suburban up; uplink binds in every failing tier; indoors the link does not close in any tier." },
   { v: "v93", d: "Tier Lab added (Serviceability): six canonical density tiers with boundaries measured on the 40 km census raster, plus a full demand model \u2014 uplink and downlink kept separate throughout. Each tier now carries two densities (raster area-mean for land/population totals; local built-up density for demand and equipment counts), because conflating them is how this class of model goes wrong; the clustering factor runs ~4.7\u00d7 in the middle tiers. Every input is editable with bull/bear/peak scenario presets. Uplink spectral efficiency (~0.8 bps/Hz) is derived from SpaceX\u2019s own 40/15 MHz spectrum split. Documented resolution limit: only 3 raster squares in CONUS exceed 2,000 people/km\u00b2, so Urban and Dense urban are sub-grid archetypes, not measured regions." },
   { v: "v92", d: "Beam model rebuilt on primary sources: FCC Schedule S gain ladder (SAT-MOD-20230207-00021) + Ookla Aug-2026 crowdsourced measurements. Gen1 beams run 32–45 km in service — the ~25 m² array is four panels and beams form on sub-panels — not the ~16 km ideal previously derived. 2027 beam re-bracketed 4.4 / 8.9 / 19.9 km (floor / canonical center / Gen1-panel upper); cell counts and duty cycles recomputed. Capacity-per-km², reuse crossovers, and femtocell conclusions unchanged. CONUS overhead count keeps ×1.3, now labeled conservative (exact 53°-shell average ≈ ×1.39 → ~330 of 15k). Video narration still cites v91 beam figures pending re-cut." },
@@ -3230,6 +3230,7 @@ const EQUIP = [
   { k: "roof",   n: "Rooftop small cell", dbm: 30, sub: "SpaceX-provided, same bracket", who: "SpaceX", indoor: false },
   { k: "pole",   n: "Pole / lamp small cell", dbm: 38, sub: "street furniture, site lease + permit", who: "SpaceX", indoor: false },
   { k: "veh",    n: "Vehicle femtocell", dbm: 20, sub: "external antenna, in-cabin redistribution", who: "Vehicle owner", indoor: false },
+  { k: "wifi",   n: "WiFi over the dish", dbm: 20, sub: "radio already in the Starlink router", who: "Subscriber (bundled)", indoor: true, unlicensed: true },
 ];
 const EQ_BANDS = [
   { k: "2ghz", n: "Band 70 · 2 GHz", f: 2.0, note: "owned; collides with the satellite layer unless partitioned by tier" },
@@ -3389,6 +3390,103 @@ function EquipLab({ rows, g, mhz, fleet, loss, floorDb, spec, specNote }) {
         which cuts coverage counts and raises capacity counts); no site-acquisition, permitting or backhaul constraint —
         those bind pole deployments harder than physics does; and the Band 70 option collides with the satellite layer
         unless the two are partitioned by tier, per the dovetail rule.
+      </p>
+      <BuildSummary rows={rows} g={g} mhz={mhz} fleet={fleet} loss={loss} floorDb={floorDb}
+        bandk={bandk} covT={covT} eqEff={eqEff} hhSize={hhSize} />
+    </div>
+  );
+}
+
+
+/* Combined build (v95b). The archetypes are COMPLEMENTARY, not alternatives:
+   a pole cell cannot serve indoors (same wall that defeats the satellite) and a
+   rooftop femtocell cannot serve a sidewalk. The real build assigns one archetype
+   per environment and sums. Indoor defaults to WiFi-over-dish: no licensed
+   spectrum, no site rights, and the radio is already in the router. */
+const BUILD_DEFAULT = { out: "pole", veh: "veh", in: "wifi" };
+const BUILD_BASIS = { out: "area", veh: "home", in: "home" };
+
+function BuildSummary({ rows, g, mhz, fleet, loss, floorDb, bandk, covT, eqEff, hhSize }) {
+  const [pick, setPick] = useState({ ...BUILD_DEFAULT });
+  const bd = EQ_BANDS.find((b) => b.k === bandk);
+  const ps = patchStats(fleet), duty = Math.min(1, ps.duty);
+  const A = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2);
+
+  const perEnv = GAP_ENVS.map((env, ei) => {
+    const eq = EQUIP.find((e) => e.k === pick[env.k]);
+    const basis = BUILD_BASIS[env.k];
+    const rKm = R_BASE_KM * Math.pow(10, (eq.dbm - 20) / (10 * PATH_N)) * Math.pow(bd.f / 2.0, -FREQ_X);
+    const lamCov = -Math.log(1 - covT / 100) / (Math.PI * rKm * rKm);
+    const snr = SNR0_DB - loss[ei];
+    const effSat = snr < floorDb ? 0 : Math.log2(1 + Math.pow(10, snr / 10));
+    const sDl = (mhz.dl * effSat * duty) / A, sUl = (mhz.ul * effSat * (g.ulEff / 2.48) * duty) / A;
+    const perBox = mhz.dl * eqEff, perBoxUl = mhz.ul * eqEff * 0.4;
+    let total = 0; const byTier = [];
+    TIERS.forEach((t, i) => {
+      const r = rows[i], geo = TIER_GEO[i];
+      const act = r.dLocal * (r.take / 100) * (g.act / 100);
+      const gapDl = Math.max(0, act * g.dlU - sDl), gapUl = Math.max(0, act * g.ulU - sUl);
+      if (gapDl + gapUl <= 0) { byTier.push(0); return; }
+      const nCov = basis === "home" ? (r.dLocal / hhSize) * (r.take / 100) : lamCov;
+      const nCap = Math.max(gapDl / perBox, gapUl / perBoxUl);
+      const n = Math.max(nCov, nCap) * geo.land;
+      byTier.push(n); total += n;
+    });
+    return { env, eq, basis, total, byTier, rKm, satOk: effSat > 0 };
+  });
+  const licensed = perEnv.filter((e) => !e.eq.unlicensed).reduce((a, e) => a + e.total, 0);
+  const grand = perEnv.reduce((a, e) => a + e.total, 0);
+  const fmt = (v) => v >= 1e6 ? (v / 1e6).toFixed(2) + "M" : v >= 1e3 ? (v / 1e3).toFixed(0) + "k" : v.toFixed(0);
+  const cellS = { padding: "4px 6px", borderBottom: `1px solid ${C.line}`, fontFamily: "var(--mono)", fontSize: 11 };
+
+  return (
+    <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
+      <div className="eyebrow" style={{ color: C.green }}>The combined build — all three environments, summed</div>
+      <p className="body" style={{ fontSize: 12.5 }}>
+        These archetypes are complementary, not competing. A pole cell cannot reach indoors — it faces the same wall
+        that defeats the satellite — and a rooftop femtocell does nothing for a sidewalk. So a real deployment assigns
+        one archetype per environment and adds them up. Indoor defaults to WiFi over the household dish: no licensed
+        spectrum, no site rights, and the radio is already in the router.
+      </p>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 560 }}>
+          <thead>
+            <tr style={{ color: C.dim, fontFamily: "var(--mono)", fontSize: 10, textAlign: "left" }}>
+              <th style={cellS}>ENVIRONMENT</th><th style={cellS}>EQUIPMENT</th><th style={cellS}>BASIS</th>
+              <th style={{ ...cellS, textAlign: "right" }}>SATELLITE</th><th style={{ ...cellS, textAlign: "right" }}>BOXES</th>
+            </tr>
+          </thead>
+          <tbody>
+            {perEnv.map((pe) => (
+              <tr key={pe.env.k}>
+                <td style={{ ...cellS, color: C.text }}>{pe.env.n}</td>
+                <td style={cellS}>
+                  <select value={pick[pe.env.k]} onChange={(e) => setPick({ ...pick, [pe.env.k]: e.target.value })}
+                    style={{ background: "transparent", color: C.text, border: `1px solid ${C.line}`, borderRadius: 3, fontFamily: "var(--mono)", fontSize: 11, padding: "1px 3px" }}>
+                    {EQUIP.map((e) => <option key={e.k} value={e.k} style={{ background: "#0E1116" }}>{e.n}</option>)}
+                  </select>
+                </td>
+                <td style={{ ...cellS, color: C.dim }}>{pe.basis === "home" ? "per household" : covT + "% blanket"}</td>
+                <td style={{ ...cellS, textAlign: "right", color: pe.satOk ? C.green : "#FF8FA0" }}>{pe.satOk ? "contributes" : "no link"}</td>
+                <td style={{ ...cellS, textAlign: "right", fontWeight: 700, color: pe.eq.unlicensed ? C.green : "#C79BFF" }}>
+                  {fmt(pe.total)}{pe.eq.unlicensed && <span style={{ fontSize: 9, color: C.dim, fontWeight: 400 }}> unlicensed</span>}
+                </td>
+              </tr>
+            ))}
+            <tr style={{ fontWeight: 700 }}>
+              <td style={cellS} colSpan={4}>TOTAL · of which licensed radios</td>
+              <td style={{ ...cellS, textAlign: "right" }}>{fmt(grand)} <span style={{ color: "#C79BFF" }}>/ {fmt(licensed)}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 6 }}>
+        The split between those two totals is the strategic point. Indoor is the largest count by far and the cheapest
+        to satisfy, because WiFi needs no spectrum, no site acquisition and no permit — but it inherits a hard
+        dependency: it only works for households that already have broadband and a router. The residual, homes without
+        it, is the real indoor gap and it is not solved by any box on this list.
+        {" "}Outdoor is the smallest count and the most expensive per unit — site leases, power, backhaul and
+        municipal permitting, none of which this model prices.
       </p>
     </div>
   );
@@ -6019,7 +6117,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v95 · equipment counts</span>
+        <span className="buildTag">build v95 · equipment counts + combined build</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.bg, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
