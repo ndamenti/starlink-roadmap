@@ -53,6 +53,8 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v99b", d: "In-vehicle now defaults to the signal booster rather than the femtocell. A repeater re-radiates the serving carrier and creates no competing cell; a vehicle femtocell is a roaming licensed-spectrum transmitter sitting beside a satellite downlink of about \u2212121 dBm, which it swamps from a lane away. More fundamentally, the dovetail rule separating the satellite and ground layers is enforceable only for fixed infrastructure \u2014 a femtocell driving out of a metro carries the terrestrial regime into rural territory at highway speed, where the partition is undefined rather than merely hard to police. The femtocell remains selectable and earns its place only in vehicles with genuine independent backhaul (a Ku/Ka terminal, not the D2C link it would otherwise relay)." },
+  { v: "v99", d: "Fixed circular logic in the vehicle rows. The booster\u2019s penetration-loss recovery was applied BEFORE computing the gap, so tiers the booster fixes reported zero gap and therefore zero boxes \u2014 the equipment closed the gap and then was not counted for closing it (booster showed 3.61M vs the femtocell\u2019s 8.76M when both address identical vehicles). Need is now judged at the raw environment loss; the equipment choice decides only SUFFICIENCY. Both vehicle options now show the same count, with the booster flagged \u201cstill short\u201d in the tiers where restoring the link to outdoor-equivalent still is not enough." },
   { v: "v98", d: "Bear scenario corrected. It was built on the T-Mobile G-block \u2014 spectrum the Spectrum tab already documents as a revocable SCS lease, partner-channel only, that cannot underwrite a competing carrier and defaults OFF in every scenario. Running a Starlink Mobile bear case on it was incoherent. Bear now stands on the owned H-block (5/5, 1915\u20131920 / 1995\u20132000) \u2014 the smallest holding SpaceX actually controls, same MHz so the arithmetic is unchanged, correct premise. The G-block preset remains available in the Gap Lab, relabelled \u201cT-Mobile SCS (not SpaceX\u2019s)\u201d for reference only, and the conditional-spectrum warning now says plainly that leased partner spectrum cannot underwrite a competing carrier however much of it is flying today." },
   { v: "v97", d: "Scenario bar added to Serviceability: Bear / Canonical / Bull set take-up, spectrum split, fleet, equipment class and overlay class together, across all four panels at once \u2014 previously a coherent scenario took four clicks in three panels and it was easy to end up comparing incompatible states. Panel controls still work and take you off-scenario. The ground-layer overlay is renamed and relabelled (it was still calling 38 dBm pole small cells \u201cfemtocells\u201d and quoting a fixed 180 m radius in its provenance footer, both now driven by the live class selector). Fixed literal \\uXXXX escape sequences that were rendering as raw text in the Equip Lab prose." },
   { v: "v96", d: "Equipment class unified across the site. The Femtocell Overlay was implicitly putting a 20 dBm home-class radio on a lamp post — the right radius for a femtocell, the wrong equipment for outdoor metro coverage — which is where the 4.3M box figure came from. An OUTDOOR CLASS selector (femtocell 20 dBm / rooftop small cell 30 / pole small cell 38) now drives the radius in that panel and shares one uplink-capped radius function with the Equip Lab, so the two cannot disagree. The cap matters: the handset still transmits ~23 dBm however loud the cell is, so 20 → 38 dBm buys ~7× fewer boxes rather than the ~11× raw power implies. Top-10 metros at 90% outdoor, organic: 4.3M femtocells → 1.2M rooftop small cells → 598k pole small cells. At 5 MHz of femto spectrum the high-power classes flip the binding constraint from coverage to capacity — power buys area, never throughput." },
@@ -3236,8 +3238,8 @@ const EQUIP = [
   { k: "femto",  n: "Rooftop femtocell", dbm: 20, sub: "subscriber-bought, dish-backhauled", who: "Subscriber", indoor: true },
   { k: "roof",   n: "Rooftop small cell", dbm: 30, sub: "SpaceX-provided, same bracket", who: "SpaceX", indoor: false },
   { k: "pole",   n: "Pole / lamp small cell", dbm: 38, sub: "street furniture, site lease + permit", who: "SpaceX", indoor: false },
-  { k: "veh",    n: "Vehicle femtocell", dbm: 20, sub: "external antenna, in-cabin redistribution", who: "Vehicle owner", indoor: false },
-  { k: "boost",  n: "Vehicle signal booster", dbm: 20, sub: "external antenna + amplifier, re-radiates the same carrier", who: "Vehicle owner", repeater: true },
+  { k: "boost",  n: "Vehicle signal booster", dbm: 20, sub: "external antenna + amplifier, re-radiates the serving carrier — cooperative, no new cell", who: "Vehicle owner", repeater: true },
+  { k: "veh",    n: "Vehicle femtocell", dbm: 20, sub: "roaming base station — needs real backhaul, and interferes with nearby satellite users", who: "Vehicle owner", indoor: false },
   { k: "wifi",   n: "WiFi over the dish", dbm: 20, sub: "radio already in the Starlink router", who: "Subscriber (bundled)", indoor: true, unlicensed: true },
 ];
 const EQ_BANDS = [
@@ -3279,9 +3281,12 @@ function EquipLab({ rows, g, mhz, fleet, loss, floorDb, spec, specNote, scenario
 
   // satellite supply in this environment (same model as the Gap Lab)
   const ps = patchStats(fleet), duty = Math.min(1, ps.duty);
-  const snr = SNR0_DB - loss[ei];
+  const snr = SNR0_DB - loss[ei];               // RAW environment — decides whether equipment is needed
   const effSat = snr < floorDb ? 0 : Math.log2(1 + Math.pow(10, snr / 10));
   const satDl = mhz.dl * effSat * duty, satUl = mhz.ul * effSat * (g.ulEff / 2.48) * duty;
+  const snrFix = SNR0_DB - 1;                  // a repeater restores the link to ~outdoor
+  const effFix = eq.repeater ? Math.log2(1 + Math.pow(10, snrFix / 10)) : effSat;
+  const fixDl = mhz.dl * effFix * duty, fixUl = mhz.ul * effFix * (g.ulEff / 2.48) * duty;
   const A = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2);
 
   const lamCov = -Math.log(1 - covT / 100) / (Math.PI * rKm * rKm); // boxes per km² for coverage
@@ -3291,8 +3296,9 @@ function EquipLab({ rows, g, mhz, fleet, loss, floorDb, spec, specNote, scenario
     const dDl = act * g.dlU, dUl = act * g.ulU;
     const sDl = satDl / A, sUl = satUl / A;             // satellite supply expressed per km²
     const gapDl = Math.max(0, dDl - sDl), gapUl = Math.max(0, dUl - sUl);
-    const nCapDl = gapDl / perBox, nCapUl = gapUl / perBoxUl;
+    const nCapDl = eq.repeater ? 0 : gapDl / perBox, nCapUl = eq.repeater ? 0 : gapUl / perBoxUl;
     const nCap = Math.max(nCapDl, nCapUl);
+    const stillShort = eq.repeater && (dDl - fixDl / A > 0 || dUl - fixUl / A > 0);
     // Coverage basis. Blanketing by AREA is right for outdoor street coverage but absurd
     // indoors, where "covered" means a box inside a home: 3.4M km2 of near-empty very-rural
     // land needs ~0 boxes by household and ~19M by area. Indoor defaults to households.
@@ -3301,7 +3307,8 @@ function EquipLab({ rows, g, mhz, fleet, loss, floorDb, spec, specNote, scenario
     const hhPerKm2 = geo.land > 0 ? ((geo.pop / hhSize) * (r.take / 100)) / geo.land : 0;
     const nCov = gapDl + gapUl > 0 ? (basis === "home" ? hhPerKm2 : lamCov) : 0;
     const boxes = Math.max(nCov, nCap);
-    return { ...t, geo, gapDl, gapUl, nCov, nCap, boxes, bound: nCap > nCov ? "capacity" : "coverage",
+    return { ...t, geo, gapDl, gapUl, nCov, nCap, boxes, stillShort,
+      bound: eq.repeater ? (stillShort ? "insufficient" : "restores link") : (nCap > nCov ? "capacity" : "coverage"),
       total: boxes * geo.land, ulDrives: nCapUl > nCapDl };
   });
   const grand = out.reduce((a, o) => a + o.total, 0);
@@ -3425,7 +3432,13 @@ function EquipLab({ rows, g, mhz, fleet, loss, floorDb, spec, specNote, scenario
    a pole cell cannot serve indoors (same wall that defeats the satellite) and a
    rooftop femtocell cannot serve a sidewalk. The real build assigns one archetype
    per environment and sums. Indoor defaults to WiFi-over-dish: no licensed
-   spectrum, no site rights, and the radio is already in the router. */
+   spectrum, no site rights, and the radio is already in the router. In-vehicle defaults to the <strong>booster</strong>,
+        not a femtocell: a repeater re-radiates the serving carrier and creates no competing cell, whereas a vehicle
+        femtocell is a roaming licensed transmitter sitting beside a satellite downlink that arrives at about −121 dBm —
+        one lane away, it swamps it. And the dovetail rule keeping the two layers apart is enforceable only for fixed
+        infrastructure: a femtocell driving out of a metro carries the terrestrial regime into rural at highway speed,
+        where the partition is not merely hard to police but undefined. The femtocell earns its place only in vehicles
+        with genuine independent backhaul — a Ku/Ka terminal, not the D2C link it would otherwise be relaying. */
 /* Site scenarios (v97). A coherent scenario needs four knobs that live in three
    different components: take-up (Tier Lab), spectrum split + fleet (Gap Lab),
    equipment class + band (Equip Lab), and the overlay's outdoor class. Setting
@@ -3444,7 +3457,14 @@ const SITE_SCEN = [
     blurb: "Every owned block pointed at the network, 1.5× take-up, pole small cells on owned 2 GHz — the most favourable reading the licences support." },
 ];
 
-const BUILD_DEFAULT = { out: "pole", veh: "veh", in: "wifi" };
+// In-vehicle defaults to the BOOSTER, not the femtocell. A repeater re-radiates the
+// serving carrier (cooperative, no competing cell); a vehicle femtocell is a roaming
+// licensed-spectrum base station, and the satellite downlink beside it arrives at about
+// -121 dBm — a 20 dBm transmitter one lane away swamps it. Worse, the dovetail rule
+// (satellite owns the band in rural, ground owns it in metro) is enforceable only for
+// FIXED infrastructure: a femtocell driving out of a metro carries the terrestrial regime
+// across that boundary at highway speed, where the partition becomes undefined.
+const BUILD_DEFAULT = { out: "pole", veh: "boost", in: "wifi" };
 const BUILD_BASIS = { out: "area", veh: "home", in: "home" };
 
 function BuildSummary({ rows, g, mhz, fleet, loss, floorDb, bandk, covT, eqEff, hhSize }) {
@@ -3458,14 +3478,20 @@ function BuildSummary({ rows, g, mhz, fleet, loss, floorDb, bandk, covT, eqEff, 
     const basis = BUILD_BASIS[env.k];
     const rKm = classRadiusKm(eq.dbm, bd.f);   // uplink-capped
     const lamCov = -Math.log(1 - covT / 100) / (Math.PI * rKm * rKm);
-    // A repeater re-radiates the serving carrier: it buys back the penetration loss
-    // (down to ~1 dB residual) but creates no new capacity — it cannot beat the outdoor verdict.
-    const effLoss = eq.repeater ? 1 : loss[ei];
-    const snr = SNR0_DB - effLoss;
-    const effSat = snr < floorDb ? 0 : Math.log2(1 + Math.pow(10, snr / 10));
-    const sDl = (mhz.dl * effSat * duty) / A, sUl = (mhz.ul * effSat * (g.ulEff / 2.48) * duty) / A;
+    // NEED is judged at the RAW environment loss — the equipment is what fixes it, so it
+    // cannot be assumed present when deciding whether it is required. A repeater then buys
+    // the loss back (to ~1 dB residual) but creates no capacity, so it decides SUFFICIENCY
+    // only: sufficient exactly where that tier's outdoor verdict already passes.
+    const supplyAt = (lossDb) => {
+      const snr = SNR0_DB - lossDb;
+      const e = snr < floorDb ? 0 : Math.log2(1 + Math.pow(10, snr / 10));
+      return { dl: (mhz.dl * e * duty) / A, ul: (mhz.ul * e * (g.ulEff / 2.48) * duty) / A };
+    };
+    const raw = supplyAt(loss[ei]);                       // decides whether equipment is needed
+    const fixed = eq.repeater ? supplyAt(1) : raw;        // decides whether a repeater is enough
+    const sDl = raw.dl, sUl = raw.ul;
     const perBox = mhz.dl * eqEff, perBoxUl = mhz.ul * eqEff * 0.4;
-    let total = 0; const byTier = [];
+    let total = 0; const byTier = []; const unmetTiers = [];
     TIERS.forEach((t, i) => {
       const r = rows[i], geo = TIER_GEO[i];
       const act = r.dLocal * (r.take / 100) * (g.act / 100);
@@ -3476,9 +3502,12 @@ function BuildSummary({ rows, g, mhz, fleet, loss, floorDb, bandk, covT, eqEff, 
         : lamCov;
       const nCap = eq.repeater ? 0 : Math.max(gapDl / perBox, gapUl / perBoxUl);
       const n = Math.max(nCov, nCap) * geo.land;
-      byTier.push({ n, unmet: eq.repeater }); total += n;
+      // a repeater leaves a residual gap wherever the restored (outdoor-equivalent) link still fails
+      const stillShort = eq.repeater && (act * g.dlU - fixed.dl > 0 || act * g.ulU - fixed.ul > 0);
+      byTier.push({ n, unmet: stillShort });
+      total += n; if (stillShort) unmetTiers.push(t.n);
     });
-    return { env, eq, basis, total, byTier, rKm, satOk: effSat > 0 };
+    return { env, eq, basis, total, byTier, rKm, unmetTiers, satOk: raw.dl > 0 };
   });
   const licensed = perEnv.filter((e) => !e.eq.unlicensed).reduce((a, e) => a + e.total, 0);
   const grand = perEnv.reduce((a, e) => a + e.total, 0);
@@ -3515,6 +3544,11 @@ function BuildSummary({ rows, g, mhz, fleet, loss, floorDb, bandk, covT, eqEff, 
                 <td style={{ ...cellS, color: C.dim }}>{pe.basis === "home" ? "per household" : covT + "% blanket"}</td>
                 <td style={{ ...cellS, textAlign: "right", color: pe.satOk ? C.green : "#FF8FA0" }}>
                   {pe.satOk ? (pe.eq.repeater ? "restored to outdoor" : "contributes") : "no link"}
+                  {pe.unmetTiers.length > 0 && (
+                    <div style={{ fontSize: 9, color: C.amber, fontWeight: 400 }}>
+                      still short: {pe.unmetTiers.join(", ")}
+                    </div>
+                  )}
                 </td>
                 <td style={{ ...cellS, textAlign: "right", fontWeight: 700, color: pe.eq.unlicensed ? C.green : "#C79BFF" }}>
                   {fmt(pe.total)}{pe.eq.unlicensed && <span style={{ fontSize: 9, color: C.dim, fontWeight: 400 }}> unlicensed</span>}
@@ -6228,7 +6262,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v98 · bear case rebased on owned spectrum</span>
+        <span className="buildTag">build v99 · vehicle default = booster</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.bg, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
