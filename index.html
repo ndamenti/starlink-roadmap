@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v96", d: "Equipment class unified across the site. The Femtocell Overlay was implicitly putting a 20 dBm home-class radio on a lamp post \u2014 the right radius for a femtocell, the wrong equipment for outdoor metro coverage \u2014 which is where the 4.3M box figure came from. An OUTDOOR CLASS selector (femtocell 20 dBm / rooftop small cell 30 / pole small cell 38) now drives the radius in that panel and shares one uplink-capped radius function with the Equip Lab, so the two cannot disagree. The cap matters: the handset still transmits ~23 dBm however loud the cell is, so 20 \u2192 38 dBm buys ~7\u00d7 fewer boxes rather than the ~11\u00d7 raw power implies. Top-10 metros at 90% outdoor, organic: 4.3M femtocells \u2192 1.2M rooftop small cells \u2192 598k pole small cells. At 5 MHz of femto spectrum the high-power classes flip the binding constraint from coverage to capacity \u2014 power buys area, never throughput." },
   { v: "v95b", d: "Two corrections. Household counts were multiplying built-up local density by total tier land area \u2014 the clustering error the two-density structure exists to prevent \u2014 overcounting suburban ~4.7\u00d7 and undercounting rural; households now derive from tier population (indoor total 18.7M \u2192 9.34M). And a vehicle signal-booster archetype was added alongside the vehicle femtocell: a repeater buys back penetration loss but creates no capacity, so it can never beat the outdoor verdict \u2014 sufficient exactly where outdoor already passes (very rural, rural) and insufficient from suburban up. Booster instead of femtocell drops the in-vehicle count from 8.76M to 3.61M and the licensed-radio total from 15.6M to 10.4M." },
   { v: "v95", d: "Equip Lab added: the supply\u2013demand gap converted into boxes on the ground. Two counts computed independently \u2014 coverage (Poisson blanket at the archetype\u2019s radius) and capacity (leftover traffic \u00f7 per-box throughput) \u2014 with the answer being the larger. Power buys coverage and never capacity, so sparse tiers are coverage-bound and dense tiers capacity-bound; the panel shows which binds per tier. A combined-build summary sums all three environments, because the archetypes are complementary rather than competing \u2014 a pole cell cannot reach indoors and a rooftop femtocell cannot serve a sidewalk. Four equipment archetypes (rooftop femtocell 20 dBm, rooftop small cell 30, pole small cell 38, vehicle femtocell), three bands (Band 70 / CBRS / Upper C), radius scaled from the Hybrid Network tab\u2019s own link-budget calibration. Spectrum scenarios are now DERIVED from the Spectrum tab\u2019s BLOCKS rather than hardcoded, so the panels cannot drift; satellite-use gates (AWS-3 needs FCC Earth-to-space authorisation) now surface as warnings where they apply." },
   { v: "v94", d: "Gap Lab added: satellite supply tested against tier demand across three environments (outdoor / in-vehicle / indoor). Supply is deliberately not per-tier \u2014 a satellite delivers capacity per unit area regardless of what is underneath \u2014 so one supply number per environment is tested against six demand numbers, with the unit of test being a single beam and the demand beneath it. Environment derating is Shannon on a power-limited link, calibrated so outdoor reproduces the site\u2019s 2.48 bps/Hz. Tier Lab and Gap Lab now share one state, so they cannot disagree. Headline: the satellite layer holds very rural and rural outdoors and fails from suburban up; uplink binds in every failing tier; indoors the link does not close in any tier." },
@@ -3242,6 +3243,15 @@ const EQ_BANDS = [
 const R_BASE_KM = 0.18;   // outdoor femtocell-class radius at 2 GHz, 20 dBm (Hybrid Network calibration)
 const PATH_N = 3.5;       // path-loss exponent
 const FREQ_X = 0.88;      // radius ~ f^-0.88, fitted to the site's own 180 m -> 110 m scrub
+// The handset transmits ~23 dBm no matter how loud the base station is. Adding the base
+// station's receive advantage (antenna gain + noise figure, ~12 dB) gives an equivalent
+// ~35 dBm uplink, so usable radius is min(downlink, uplink): a high-power small cell is
+// heard further than it can hear. Used by BOTH this panel and the Hybrid Network overlay.
+const UL_EQ_DBM = 35;
+function classRadiusKm(dbm, fGHz) {
+  const scale = (d) => R_BASE_KM * Math.pow(10, (d - 20) / (10 * PATH_N)) * Math.pow(fGHz / 2.0, -FREQ_X);
+  return Math.min(scale(dbm), scale(UL_EQ_DBM));
+}
 
 function EquipLab({ rows, g, mhz, fleet, loss, floorDb, spec, specNote }) {
   const [eqk, setEqk] = useState("pole");
@@ -3254,7 +3264,7 @@ function EquipLab({ rows, g, mhz, fleet, loss, floorDb, spec, specNote }) {
 
   const eq = EQUIP.find((e) => e.k === eqk), bd = EQ_BANDS.find((b) => b.k === bandk);
   const ei = GAP_ENVS.findIndex((e) => e.k === envk);
-  const rKm = R_BASE_KM * Math.pow(10, (eq.dbm - 20) / (10 * PATH_N)) * Math.pow(bd.f / 2.0, -FREQ_X);
+  const rKm = classRadiusKm(eq.dbm, bd.f);   // uplink-capped
   const perBox = mhz.dl * eqEff;                       // terrestrial box: same spectrum, better SINR
   const perBoxUl = mhz.ul * eqEff * 0.4;               // uplink handicapped by handset power, not by the box
 
@@ -3419,7 +3429,7 @@ function BuildSummary({ rows, g, mhz, fleet, loss, floorDb, bandk, covT, eqEff, 
   const perEnv = GAP_ENVS.map((env, ei) => {
     const eq = EQUIP.find((e) => e.k === pick[env.k]);
     const basis = BUILD_BASIS[env.k];
-    const rKm = R_BASE_KM * Math.pow(10, (eq.dbm - 20) / (10 * PATH_N)) * Math.pow(bd.f / 2.0, -FREQ_X);
+    const rKm = classRadiusKm(eq.dbm, bd.f);   // uplink-capped
     const lamCov = -Math.log(1 - covT / 100) / (Math.PI * rKm * rKm);
     // A repeater re-radiates the serving carrier: it buys back the penetration loss
     // (down to ~1 dB residual) but creates no new capacity — it cannot beat the outdoor verdict.
@@ -5287,6 +5297,7 @@ function ServiceabilityTab() {
   const [depMode, setDepMode] = useState("organic");
   const [hostile, setHostile] = useState(40);
   const [strategy, setStrategy] = useState("sidewalk");
+  const [clsDbm, setClsDbm] = useState(38);   // outdoor equipment class: 20 femto · 30 rooftop SC · 38 pole SC
   const [popMode, setPopMode] = useState("uniform");
   const [beamMode, setBeamMode] = useState("ceiling"); // "ceiling" = nadir-class · "elev" = elevation-adjusted
   const eff = effMode === "claim" ? 2.48 : 0.62;
@@ -5363,7 +5374,12 @@ function ServiceabilityTab() {
   const landPct = (landFull / Math.max(1, cellsIn.length)) * 100;
   const scopeName = stSel < 0 ? "the continental US" : US_STATES[stSel].n;
   // ---- femtocell overlay model ----
-  const rOut = band === "2ghz" ? 0.18 : 0.11, rIn = band === "2ghz" ? 0.05 : 0.035; // km, calibrated per link-budget scrub
+  // v96: outdoor radius depends on the EQUIPMENT CLASS, not the band alone. The old
+  // implicit assumption was a 20 dBm femtocell on a lamp post; a real outdoor build uses
+  // 30–38 dBm small cells. Radius is uplink-capped, so the gain is ~7×, not ~11×.
+  const fG = band === "2ghz" ? 2.0 : 3.5;
+  const rOut = classRadiusKm(clsDbm, fG);
+  const rIn = band === "2ghz" ? 0.05 : 0.035; // indoor-grade is femto-class by definition
   const rFem = strategy === "blanket" ? rIn : rOut;
   const Cf = covT / 100, cellAf = Math.PI * rFem * rFem;
   const lamOrg = -Math.log(1 - Cf) / cellAf;
@@ -5667,10 +5683,25 @@ function ServiceabilityTab() {
         <div className="eyebrow" style={{ color: C.blue }}>The femtocell overlay — painting the red green</div>
         <p className="body" style={{ marginBottom: 10 }}>
           Metro territory (≥250 people/sq mi, clustered to the nearest of the top-{nMetros} metro anchors) is where the
-          satellite map runs red — and where the femtocell layer takes over. Femto counts are <strong>coverage-driven,
-          not capacity-driven</strong>: tiny cells must tile big areas (count scales as 1/radius²), while capacity comes
-          along nearly free. Two strategies below; the box-count gap between them is ~10×.
+          satellite map runs red — and where the ground layer takes over. <strong>Outdoor coverage is small-cell work,
+          not femtocell work</strong> — a 20 dBm home-class radio on a lamp post was the old implicit assumption here,
+          and the OUTDOOR CLASS selector above is now the single biggest lever on the box count. Counts are
+          <strong> coverage-driven, not capacity-driven</strong>: cells must tile area (count scales as 1/radius²) while
+          capacity comes along nearly free. Radius is uplink-capped — the handset still transmits ~23 dBm however loud
+          the cell is — so going 20 → 38 dBm buys ~7× fewer boxes, not the ~11× raw power would suggest. Watch the
+          capacity card as you climb the classes: at {femMhz} MHz, high-power cells trade a coverage problem for a
+          capacity one, because power buys area and never throughput. Exploiting the bigger cells requires more
+          spectrum — which is exactly the coupling the Spectrum tab describes.
         </p>
+        <div className="tglRow" style={{ gap: 5, flexWrap: "wrap", marginBottom: 6 }}>
+          <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, alignSelf: "center" }}>OUTDOOR CLASS:</span>
+          {[[20, "Femtocell 20 dBm"], [30, "Rooftop small cell 30"], [38, "Pole small cell 38"]].map(([d, nm]) => (
+            <button key={d} className={"genBtn" + (clsDbm === d ? " on" : "")} onClick={() => setClsDbm(d)}>{nm}</button>
+          ))}
+          <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.amber, alignSelf: "center" }}>
+            r = {(rOut * 1000).toFixed(0)} m{clsDbm >= 38 ? " · uplink-capped" : ""}
+          </span>
+        </div>
         <div className="tglRow" style={{ marginBottom: 6 }}>
           <button className={"genBtn" + (strategy === "sidewalk" ? " on" : "")} onClick={() => setStrategy("sidewalk")}>Sidewalk femto + WiFi indoors (SpaceX-likely)</button>
           <button className={"genBtn" + (strategy === "blanket" ? " on" : "")} onClick={() => setStrategy("blanket")}>Indoor-grade femto blanket</button>
@@ -6134,7 +6165,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v95 · equipment + combined build</span>
+        <span className="buildTag">build v96 · equipment classes unified</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.bg, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
