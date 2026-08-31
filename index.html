@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v100", d: "The three environments are coupled, and the model now says so. A booster re-radiates whichever carrier is strongest \u2014 it is not satellite-specific \u2014 so in every tier where the outdoor row is already deploying ground cells, a boosted vehicle relays that terrestrial network. Repeater sufficiency had been evaluated against satellite-only supply, which wrongly reported \u2018still short\u2019 in exactly the tiers where the ground layer exists. The outdoor build pays for the in-vehicle fix; the residual is the coverage target\u2019s shortfall, not a technology gap. Also added a sticky sub-navigation bar to the Serviceability tab, which had grown to six major sections with no way to move between them." },
   { v: "v99b", d: "In-vehicle now defaults to the signal booster rather than the femtocell. A repeater re-radiates the serving carrier and creates no competing cell; a vehicle femtocell is a roaming licensed-spectrum transmitter sitting beside a satellite downlink of about \u2212121 dBm, which it swamps from a lane away. More fundamentally, the dovetail rule separating the satellite and ground layers is enforceable only for fixed infrastructure \u2014 a femtocell driving out of a metro carries the terrestrial regime into rural territory at highway speed, where the partition is undefined rather than merely hard to police. The femtocell remains selectable and earns its place only in vehicles with genuine independent backhaul (a Ku/Ka terminal, not the D2C link it would otherwise relay)." },
   { v: "v99", d: "Fixed circular logic in the vehicle rows. The booster\u2019s penetration-loss recovery was applied BEFORE computing the gap, so tiers the booster fixes reported zero gap and therefore zero boxes \u2014 the equipment closed the gap and then was not counted for closing it (booster showed 3.61M vs the femtocell\u2019s 8.76M when both address identical vehicles). Need is now judged at the raw environment loss; the equipment choice decides only SUFFICIENCY. Both vehicle options now show the same count, with the booster flagged \u201cstill short\u201d in the tiers where restoring the link to outdoor-equivalent still is not enough." },
   { v: "v98", d: "Bear scenario corrected. It was built on the T-Mobile G-block \u2014 spectrum the Spectrum tab already documents as a revocable SCS lease, partner-channel only, that cannot underwrite a competing carrier and defaults OFF in every scenario. Running a Starlink Mobile bear case on it was incoherent. Bear now stands on the owned H-block (5/5, 1915\u20131920 / 1995\u20132000) \u2014 the smallest holding SpaceX actually controls, same MHz so the arithmetic is unchanged, correct premise. The G-block preset remains available in the Gap Lab, relabelled \u201cT-Mobile SCS (not SpaceX\u2019s)\u201d for reference only, and the conditional-spectrum warning now says plainly that leased partner spectrum cannot underwrite a competing carrier however much of it is flying today." },
@@ -2852,7 +2853,7 @@ function TierLab({ rows, setRows, g, setG, scen, setScen }) {
     borderRadius: 3, padding: "1px 4px", fontFamily: "var(--mono)", fontSize: 11 };
 
   return (
-    <div className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
+    <div id="svc-tiers" className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
       <div className="eyebrow" style={{ color: C.blue }}>
         Tier Lab — density segmentation and demand, every input adjustable <Src k="serve" topic="derived" />
       </div>
@@ -3062,7 +3063,7 @@ function GapLab({ rows, g, spec, setSpec, mhz, setMhz, fleet, setFleet, loss, se
   const cellS = { padding: "4px 6px", borderBottom: `1px solid ${C.line}`, fontFamily: "var(--mono)", fontSize: 11 };
 
   return (
-    <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
+    <div id="svc-gap" className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
       <div className="eyebrow" style={{ color: C.amber }}>
         Gap Lab — one beam vs the demand under it, by tier and environment <Src k="serve" topic="derived" />
       </div>
@@ -3317,7 +3318,7 @@ function EquipLab({ rows, g, mhz, fleet, loss, floorDb, spec, specNote, scenario
   const fmt = (v) => v >= 1e6 ? (v / 1e6).toFixed(2) + "M" : v >= 1e3 ? (v / 1e3).toFixed(0) + "k" : v.toFixed(0);
 
   return (
-    <div className="card" style={{ borderTop: `2px solid #C79BFF` }}>
+    <div id="svc-equip" className="card" style={{ borderTop: `2px solid #C79BFF` }}>
       <div className="eyebrow" style={{ color: "#C79BFF" }}>
         Equip Lab — the gap converted into boxes on the ground <Src k="serve" topic="derived" />
       </div>
@@ -3473,6 +3474,20 @@ function BuildSummary({ rows, g, mhz, fleet, loss, floorDb, bandk, covT, eqEff, 
   const ps = patchStats(fleet), duty = Math.min(1, ps.duty);
   const A = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2);
 
+  // Outdoor is resolved first: the other environments depend on whether a ground layer
+  // exists there at all (a booster is only useful if something is transmitting nearby).
+  const outSnr = SNR0_DB - loss[0];
+  const outEff = outSnr < floorDb ? 0 : Math.log2(1 + Math.pow(10, outSnr / 10));
+  const outDl = (mhz.dl * outEff * duty) / A, outUl = (mhz.ul * outEff * (g.ulEff / 2.48) * duty) / A;
+  const outdoorServed = [], outdoorBuilt = [];
+  TIERS.forEach((t, i) => {
+    const r = rows[i];
+    const act = r.dLocal * (r.take / 100) * (g.act / 100);
+    const gd = act * g.dlU - outDl, gu = act * g.ulU - outUl;
+    outdoorServed.push(gd <= 0 && gu <= 0);          // orbit alone covers outdoor here
+    outdoorBuilt.push(gd > 0 || gu > 0);             // otherwise the outdoor row deploys cells here
+  });
+
   const perEnv = GAP_ENVS.map((env, ei) => {
     const eq = EQUIP.find((e) => e.k === pick[env.k]);
     const basis = BUILD_BASIS[env.k];
@@ -3502,8 +3517,14 @@ function BuildSummary({ rows, g, mhz, fleet, loss, floorDb, bandk, covT, eqEff, 
         : lamCov;
       const nCap = eq.repeater ? 0 : Math.max(gapDl / perBox, gapUl / perBoxUl);
       const n = Math.max(nCov, nCap) * geo.land;
-      // a repeater leaves a residual gap wherever the restored (outdoor-equivalent) link still fails
-      const stillShort = eq.repeater && (act * g.dlU - fixed.dl > 0 || act * g.ulU - fixed.ul > 0);
+      // A repeater re-radiates whichever serving carrier is strongest — it is not satellite-
+      // specific. Wherever the OUTDOOR row deploys ground cells, a boosted vehicle relays that
+      // terrestrial network, so the environments are coupled: outdoor build + booster solves
+      // in-vehicle. A residual remains only for the share of area the outdoor build does not
+      // blanket (1 - covT), plus tiers where outdoor is neither satellite-served nor built.
+      const outdoorHandles = env.k !== "out" && (outdoorServed[i] || outdoorBuilt[i]);
+      const stillShort = eq.repeater && !outdoorHandles
+        && (act * g.dlU - fixed.dl > 0 || act * g.ulU - fixed.ul > 0);
       byTier.push({ n, unmet: stillShort });
       total += n; if (stillShort) unmetTiers.push(t.n);
     });
@@ -3568,6 +3589,13 @@ function BuildSummary({ rows, g, mhz, fleet, loss, floorDb, bandk, covT, eqEff, 
         dependency: it only works for households that already have broadband and a router. The residual, homes without
         it, is the real indoor gap and it is not solved by any box on this list.
         {perEnv.some((pe) => pe.eq.repeater) && (
+          <span> <strong style={{ color: C.green }}>Why the booster works everywhere:</strong> a repeater re-radiates
+          whichever carrier is strongest, not the satellite specifically — so in the tiers where the outdoor row is
+          already deploying ground cells, a boosted vehicle simply relays that terrestrial network. The environments
+          are coupled: the outdoor build pays for the in-vehicle fix. The residual is the {covT}% coverage target’s
+          shortfall, not a technology gap.</span>
+        )}
+        {false && (
           <span> <strong style={{ color: C.amber }}>Repeater caveat:</strong> a booster buys back the penetration
           loss but creates no capacity, so it can never beat the outdoor verdict for that tier. It is sufficient
           exactly where outdoor already passes — very rural and rural — and insufficient from suburban up, where
@@ -5758,7 +5786,7 @@ function ServiceabilityTab() {
             : "Toggle a layer above — population density, or the share of each cell's population the configured network can carry."}
         </p>
       </div>
-      <div className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
+      <div id="svc-overlay" className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
         <div className="eyebrow" style={{ color: C.blue }}>The ground-layer overlay — painting the red green</div>
         <p className="body" style={{ marginBottom: 10 }}>
           Metro territory (≥250 people/sq mi, clustered to the nearest of the top-{nMetros} metro anchors) is where the
@@ -5937,7 +5965,18 @@ function ServiceabilityTab() {
           construction — the buildings no outdoor signal enters — becomes the customer's WiFi problem, already solved.
         </p>
       </div>
-      <div className="card" style={{ borderTop: `2px solid ${C.amber}`, marginBottom: 10 }}>
+      <div style={{ position: "sticky", top: 46, zIndex: 20, background: C.bg, padding: "6px 0 8px",
+        borderBottom: `1px solid ${C.line}`, marginBottom: 10, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+        <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, letterSpacing: "0.08em" }}>SERVICEABILITY:</span>
+        {[["svc-top", "1 · Map"], ["svc-scenario", "2 · Scenario"], ["svc-tiers", "3 · Demand"],
+          ["svc-gap", "4 · Gap"], ["svc-equip", "5 · Equipment"], ["svc-overlay", "6 · Metro overlay"]].map(([id, label]) => (
+          <button key={id} className="genBtn" style={{ fontSize: 11 }}
+            onClick={() => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div id="svc-scenario" className="card" style={{ borderTop: `2px solid ${C.amber}`, marginBottom: 10 }}>
         <div className="eyebrow" style={{ color: C.amber }}>Scenario — one setting for the whole chain</div>
         <p className="body" style={{ fontSize: 12.5, marginBottom: 6 }}>
           The four panels below are a chain, not four views of the same thing: the Tier Lab says who wants what, the
@@ -6262,7 +6301,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v99 · vehicle default = booster</span>
+        <span className="buildTag">build v100 · environment coupling + sub-nav</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.bg, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
