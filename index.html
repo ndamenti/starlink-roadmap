@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v93", d: "Tier Lab added (Serviceability): six canonical density tiers with boundaries measured on the 40 km census raster, plus a full demand model \u2014 uplink and downlink kept separate throughout. Each tier now carries two densities (raster area-mean for land/population totals; local built-up density for demand and equipment counts), because conflating them is how this class of model goes wrong; the clustering factor runs ~4.7\u00d7 in the middle tiers. Every input is editable with bull/bear/peak scenario presets. Uplink spectral efficiency (~0.8 bps/Hz) is derived from SpaceX\u2019s own 40/15 MHz spectrum split. Documented resolution limit: only 3 raster squares in CONUS exceed 2,000 people/km\u00b2, so Urban and Dense urban are sub-grid archetypes, not measured regions." },
   { v: "v92", d: "Beam model rebuilt on primary sources: FCC Schedule S gain ladder (SAT-MOD-20230207-00021) + Ookla Aug-2026 crowdsourced measurements. Gen1 beams run 32–45 km in service — the ~25 m² array is four panels and beams form on sub-panels — not the ~16 km ideal previously derived. 2027 beam re-bracketed 4.4 / 8.9 / 19.9 km (floor / canonical center / Gen1-panel upper); cell counts and duty cycles recomputed. Capacity-per-km², reuse crossovers, and femtocell conclusions unchanged. CONUS overhead count keeps ×1.3, now labeled conservative (exact 53°-shell average ≈ ×1.39 → ~330 of 15k). Video narration still cites v91 beam figures pending re-cut." },
 ];
 
@@ -2763,6 +2764,211 @@ const DENS_CELLS = (() => {
   return cells;
 })();
 
+
+/* ============================================================
+   TIER MODEL (v93) — canonical density segmentation + demand
+   Boundaries are area-density brackets measured on US_DENS (40 km raster).
+   Two densities per tier, deliberately:
+     dArea  = raster area-mean (drives land + population totals)
+     dLocal = built-up/local density (drives demand per km² and equipment counts)
+   Their ratio is the clustering factor: a 1,600 km² raster square holding a
+   suburb plus its farmland reads ~106/km² while the suburb itself is ~500/km².
+   dLocal + take are inherited from the v91 SETTLE array (unchanged defaults).
+   Every field here is a DEFAULT — the Tier Lab panel edits all of them live.
+   ============================================================ */
+const TIERS = [
+  { k: "vrural", n: "Very rural",     lo: 0,    hi: 5,     dLocal: 2,      take: 0.25 },
+  { k: "rural",  n: "Rural",          lo: 5,    hi: 50,    dLocal: 10,     take: 0.20 },
+  { k: "sub",    n: "Suburban",       lo: 50,   hi: 200,   dLocal: 500,    take: 0.05 },
+  { k: "dsub",   n: "Dense suburban", lo: 200,  hi: 800,   dLocal: 1500,   take: 0.03 },
+  { k: "urban",  n: "Urban",          lo: 800,  hi: 3000,  dLocal: 4000,   take: 0.02 },
+  { k: "durban", n: "Dense urban",    lo: 3000, hi: 1e9,   dLocal: 10000,  take: 0.01 },
+];
+
+// Land + population per tier, measured from the raster at load (not hardcoded).
+const TIER_GEO = (() => {
+  const A = US_DENS.cell * US_DENS.cell;
+  return TIERS.map((t) => {
+    const sel = DENS_CELLS.filter((c) => c.d >= t.lo && c.d < t.hi);
+    const land = sel.length * A;
+    const pop = sel.reduce((a, c) => a + c.d * A, 0);
+    return { land, pop, dArea: land > 0 ? pop / land : 0 };
+  });
+})();
+
+// Global demand assumptions (defaults; all editable in the Tier Lab).
+const DEMAND0 = {
+  act: 10,      // % of subscribers simultaneously active in the busy hour
+  dlU: 3.0,     // Mbps per active user, downlink
+  ulU: 0.4,     // Mbps per active user, uplink (~8:1 consumer mobile asymmetry)
+  ulEff: 0.8,   // bps/Hz uplink — derived-from-design: 40/15 MHz split matches 8:1
+};                //   traffic only if UL runs ~1/3 of DL's 2.48. Bracket 0.6–1.0.
+
+const TIER_SCEN = {
+  canonical: { lbl: "Canonical", take: 1.0, act: 1.0 },
+  bull:      { lbl: "Bull — 1.5× take", take: 1.5, act: 1.0 },
+  bear:      { lbl: "Bear — 0.5× take", take: 0.5, act: 1.0 },
+  peak:      { lbl: "Peak hour — 2× active", take: 1.0, act: 2.0 },
+};
+
+function TierLab() {
+  const [rows, setRows] = useState(TIERS.map((t) => ({ dLocal: t.dLocal, take: t.take * 100 })));
+  const [g, setG] = useState({ ...DEMAND0 });
+  const [scen, setScen] = useState("canonical");
+
+  const applyScen = (key) => {
+    const s = TIER_SCEN[key];
+    setScen(key);
+    setRows(TIERS.map((t) => ({ dLocal: t.dLocal, take: Math.min(100, t.take * 100 * s.take) })));
+    setG({ ...DEMAND0, act: DEMAND0.act * s.act });
+  };
+  const setRow = (i, field, v) => {
+    setRows((r) => r.map((x, j) => (j === i ? { ...x, [field]: v } : x)));
+    setScen("custom");
+  };
+
+  const calc = TIERS.map((t, i) => {
+    const r = rows[i], geo = TIER_GEO[i];
+    const take = r.take / 100;
+    const subsKm2 = r.dLocal * take;
+    const actKm2 = subsKm2 * (g.act / 100);
+    const dl = actKm2 * g.dlU, ul = actKm2 * g.ulU;
+    const subs = geo.pop * take;
+    return { ...t, ...geo, take, subsKm2, actKm2, dl, ul, subs,
+      gdl: (subs * (g.act / 100) * g.dlU) / 1000, gul: (subs * (g.act / 100) * g.ulU) / 1000 };
+  });
+  const tot = calc.reduce((a, c) => ({ subs: a.subs + c.subs, gdl: a.gdl + c.gdl, gul: a.gul + c.gul,
+    pop: a.pop + c.pop, land: a.land + c.land }), { subs: 0, gdl: 0, gul: 0, pop: 0, land: 0 });
+
+  const beamDL = 40 * 2.48, beamUL = 15 * g.ulEff;
+  const num = (v, d = 0) => v.toLocaleString(undefined, { maximumFractionDigits: d });
+  const cellS = { padding: "3px 6px", borderBottom: `1px solid ${C.line}`, fontFamily: "var(--mono)", fontSize: 11 };
+  const inS = { width: 62, background: "transparent", color: C.text, border: `1px solid ${C.line}`,
+    borderRadius: 3, padding: "1px 4px", fontFamily: "var(--mono)", fontSize: 11 };
+
+  return (
+    <div className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
+      <div className="eyebrow" style={{ color: C.blue }}>
+        Tier Lab — density segmentation and demand, every input adjustable <Src k="serve" topic="derived" />
+      </div>
+      <p className="body" style={{ fontSize: 13 }}>
+        Six density tiers, boundaries measured on the same 40 km census raster the Serviceability map uses.
+        Each tier carries <em>two</em> densities on purpose: the raster's area-mean sets how much land and how many
+        people the tier holds; the local built-up density sets what a beam or a base station actually sees. Their
+        ratio — the clustering factor — runs {(TIER_GEO[2].dArea > 0 ? TIERS[2].dLocal / TIER_GEO[2].dArea : 0).toFixed(1)}× through the middle tiers, and conflating the two is the
+        commonest way this kind of model goes wrong. Demand = local density × take × busy-hour activity × per-user rate,
+        uplink and downlink kept separate throughout.
+      </p>
+
+      <div className="tglRow" style={{ gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
+        {Object.entries(TIER_SCEN).map(([k, s]) => (
+          <button key={k} className={"genBtn" + (scen === k ? " on" : "")} onClick={() => applyScen(k)}>{s.lbl}</button>
+        ))}
+        {scen === "custom" && <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.amber, alignSelf: "center" }}>CUSTOM — edited</span>}
+      </div>
+
+      <div className="split2" style={{ gap: 12 }}>
+        <label className="sliderL">
+          Busy-hour active: <strong>{g.act.toFixed(0)}%</strong> <span style={{ color: C.dim }}>({(100 / g.act).toFixed(0)}:1 oversubscription)</span>
+          <input type="range" min="2" max="40" step="1" value={g.act} onChange={(e) => { setG({ ...g, act: +e.target.value }); setScen("custom"); }} />
+        </label>
+        <label className="sliderL">
+          Per-user DL: <strong>{g.dlU.toFixed(1)}</strong> Mbps · UL: <strong>{g.ulU.toFixed(2)}</strong>{" "}
+          <span style={{ color: C.dim }}>({(g.dlU / g.ulU).toFixed(1)}:1 traffic asymmetry)</span>
+          <input type="range" min="0.5" max="15" step="0.5" value={g.dlU}
+            onChange={(e) => { const d = +e.target.value; setG({ ...g, dlU: d, ulU: +(d / (DEMAND0.dlU / DEMAND0.ulU)).toFixed(2) }); setScen("custom"); }} />
+        </label>
+      </div>
+
+      <div style={{ overflowX: "auto", marginTop: 8 }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 640 }}>
+          <thead>
+            <tr style={{ color: C.dim, fontFamily: "var(--mono)", fontSize: 10, textAlign: "right" }}>
+              <th style={{ ...cellS, textAlign: "left" }}>TIER</th>
+              <th style={cellS}>ppl/km² RANGE</th>
+              <th style={cellS}>AREA MEAN</th>
+              <th style={cellS}>LOCAL ✎</th>
+              <th style={cellS}>TAKE % ✎</th>
+              <th style={cellS}>SUBS/km²</th>
+              <th style={{ ...cellS, color: C.amber }}>DL Mbps/km²</th>
+              <th style={{ ...cellS, color: C.green }}>UL Mbps/km²</th>
+              <th style={cellS}>SUBS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {calc.map((c, i) => (
+              <tr key={c.k} style={{ textAlign: "right" }}>
+                <td style={{ ...cellS, textAlign: "left", color: C.text }}>{c.n}</td>
+                <td style={{ ...cellS, color: C.dim }}>{c.lo}–{c.hi > 1e8 ? "∞" : c.hi}</td>
+                <td style={{ ...cellS, color: C.dim }}>{num(c.dArea, 1)}</td>
+                <td style={cellS}><input type="number" style={inS} value={rows[i].dLocal}
+                  onChange={(e) => setRow(i, "dLocal", Math.max(0, +e.target.value))} /></td>
+                <td style={cellS}><input type="number" style={inS} step="0.5" value={rows[i].take}
+                  onChange={(e) => setRow(i, "take", Math.max(0, Math.min(100, +e.target.value)))} /></td>
+                <td style={cellS}>{num(c.subsKm2, 1)}</td>
+                <td style={{ ...cellS, color: C.amber }}>{num(c.dl, 2)}</td>
+                <td style={{ ...cellS, color: C.green }}>{num(c.ul, 2)}</td>
+                <td style={cellS}>{(c.subs / 1e6).toFixed(2)}M</td>
+              </tr>
+            ))}
+            <tr style={{ textAlign: "right", fontWeight: 700 }}>
+              <td style={{ ...cellS, textAlign: "left" }}>TOTAL</td>
+              <td style={cellS} colSpan={4}></td>
+              <td style={cellS}></td>
+              <td style={{ ...cellS, color: C.amber }}>{num(tot.gdl, 0)} Gbps</td>
+              <td style={{ ...cellS, color: C.green }}>{num(tot.gul, 0)} Gbps</td>
+              <td style={cellS}>{(tot.subs / 1e6).toFixed(1)}M</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="statGrid" style={{ marginTop: 8 }}>
+        <div className="stat" style={{ borderColor: C.amber }}>
+          <div className="statL">Where the subscribers are</div>
+          <div className="statV" style={{ fontSize: 20, color: C.amber }}>
+            {((calc[0].subs + calc[1].subs) / tot.subs * 100).toFixed(0)}%<span style={{ fontSize: 12, color: C.dim }}> rural + very rural</span>
+          </div>
+          <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
+            vs {((calc[4].subs + calc[5].subs) / tot.subs * 100).toFixed(1)}% urban + dense urban. Population spans{" "}
+            {num(calc[5].dArea / Math.max(calc[0].dArea, 0.01), 0)}× across tiers; subscribers only{" "}
+            {num(calc[5].subsKm2 / Math.max(calc[0].subsKm2, 0.01), 0)}× — the take-rate curve is doing that work,
+            and it is the single most consequential assumption here.
+          </div>
+        </div>
+        <div className="stat" style={{ borderColor: C.green }}>
+          <div className="statL" style={{ color: C.green }}>Uplink spectral efficiency — derived from the spectrum split</div>
+          <label className="sliderL" style={{ margin: "2px 0 0" }}>
+            <strong>{g.ulEff.toFixed(2)}</strong> bps/Hz
+            <input type="range" min="0.4" max="1.4" step="0.05" value={g.ulEff}
+              onChange={(e) => { setG({ ...g, ulEff: +e.target.value }); setScen("custom"); }} />
+          </label>
+          <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
+            40 MHz DL × 2.48 = {beamDL.toFixed(0)} Mbps vs 15 MHz UL × {g.ulEff.toFixed(2)} = {beamUL.toFixed(0)} Mbps
+            → <strong style={{ color: beamDL / beamUL > 10 ? C.amber : C.green }}>{(beamDL / beamUL).toFixed(1)}:1</strong> capacity
+            against {(g.dlU / g.ulU).toFixed(1)}:1 traffic demand.{" "}
+            {Math.abs(beamDL / beamUL - g.dlU / g.ulU) < 1.2
+              ? "Balanced — which is why 0.8 is the canonical estimate: SpaceX sized 40/15 for it."
+              : beamDL / beamUL > g.dlU / g.ulU ? "Uplink-starved at this efficiency." : "Uplink-rich at this efficiency."}
+          </div>
+        </div>
+      </div>
+
+      <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 8 }}>
+        <strong style={{ color: C.text }}>Provenance.</strong> Boundaries: log-spaced, measured on US_DENS — the tiers
+        hold {(TIER_GEO[0].land + TIER_GEO[1].land) / (tot.land) * 100 > 0 ? (((TIER_GEO[0].land + TIER_GEO[1].land) / tot.land) * 100).toFixed(0) : 0}% of
+        land at the bottom two and {(((TIER_GEO[4].pop + TIER_GEO[5].pop) / tot.pop) * 100).toFixed(0)}% of people at the top two.
+        Local densities and take rates inherit the v91 SETTLE defaults. Per-user rates are consumption, not the 3 Mbps
+        <em> served</em> threshold the map uses — they are separate inputs on purpose. <strong style={{ color: C.amber }}>Resolution
+        limit:</strong> the 40 km raster averages Manhattan with its harbour — only {DENS_CELLS.filter((c) => c.d > 2000).length} squares
+        in CONUS exceed 2,000/km², so tiers 1–4 are measured while Urban and Dense urban are sub-grid archetypes
+        anchored to their local densities, not painted regions. Their population totals are real; their densities are
+        assumptions you can edit above.
+      </p>
+    </div>
+  );
+}
+
 function StitchPanel() {
   const [fleet, setFleet] = useState(2000);
   const [spd, setSpd] = useState(60);
@@ -5059,6 +5265,7 @@ function ServiceabilityTab() {
           construction — the buildings no outdoor signal enters — becomes the customer's WiFi problem, already solved.
         </p>
       </div>
+      <TierLab />
       <div className="card">
         <div className="eyebrow">Model, provenance, and honest limits</div>
         <p className="body" style={{ fontSize: 13 }}>
@@ -5365,7 +5572,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v92 · beam model on primary sources</span>
+        <span className="buildTag">build v93 · tier model + demand</span>
         <details style={{ marginTop: 8 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
