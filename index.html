@@ -2986,10 +2986,29 @@ const GAP_ENVS = [
 ];
 const SNR0_DB = 10 * Math.log10(Math.pow(2, 2.48) - 1); // 6.6 dB, calibrated to the site's DL efficiency
 
+/* Spectrum scenarios. The DL/UL split is NOT a fact to be settled — it is a
+   configuration SpaceX has not disclosed, and different reads of it drive
+   materially different outcomes on the ground. So it is a switch, not a constant. */
+const SPEC_SCEN = [
+  { k: "scs",  n: "SCS today · PCS G", dl: 5,  ul: 5,  src: "flying now",
+    note: "T-Mobile's G block, 1990–1995 DL / 1910–1915 UL — what Gen1 actually runs on today." },
+  { k: "n252", n: "n252 satellite", dl: 20, ul: 20, src: "site model · D2C application",
+    note: "AWS-4 exactly as the Spectrum tab already models it: 2180–2200 downlink, 2000–2020 as satellite uplink in n252 mode." },
+  { k: "terr", n: "Terrestrial read", dl: 40, ul: 15, src: "analyst speculation",
+    note: "Goemmer's read of the picocell plan (Light Reading, Aug 2026): 40 MHz AWS-4 downlink, AWS-3 unpaired as uplink. Terrestrial, and a guess." },
+  { k: "full", n: "Full holding", dl: 40, ul: 35, src: "derived · upper bound",
+    note: "Everything owned pointed at one layer: 40 MHz downlink, plus 2000–2020 and the AWS-3 unpaired blocks as uplink." },
+];
+
 function GapLab({ rows, g }) {
   const [fleet, setFleet] = useState(15000);
   const [loss, setLoss] = useState(GAP_ENVS.map((e) => e.loss));
   const [floorDb, setFloorDb] = useState(-6);
+
+  const [spec, setSpec] = useState("n252");
+  const [mhz, setMhz] = useState({ dl: 20, ul: 20 });
+  const pickSpec = (k) => { const q = SPEC_SCEN.find((x) => x.k === k); setSpec(k); setMhz({ dl: q.dl, ul: q.ul }); };
+  const specNote = SPEC_SCEN.find((x) => x.k === spec) || SPEC_SCEN[1];
 
   const ps = patchStats(fleet);
   const duty = Math.min(1, ps.duty);
@@ -2999,12 +3018,14 @@ function GapLab({ rows, g }) {
     return Math.log2(1 + Math.pow(10, snrDb / 10));
   };
   // per-beam capacity: 20 MHz DL (site convention); UL scaled by SpaceX's own 40/15 split
-  const ulMhz = 20 * (15 / 40);
   const supply = GAP_ENVS.map((e, i) => {
     const eff = effFor(loss[i]);
-    const effUl = eff * (g.ulEff / 2.48); // uplink runs ~1/3 of downlink efficiency, same derating
-    return { dl: 20 * eff * duty, ul: ulMhz * effUl * duty, eff, snr: SNR0_DB - loss[i] };
+    const effUl = eff * (g.ulEff / 2.48); // uplink efficiency, same environment derating
+    return { dl: mhz.dl * eff * duty, ul: mhz.ul * effUl * duty, eff, snr: SNR0_DB - loss[i] };
   });
+  const capRatio = supply[0].ul > 0 ? supply[0].dl / supply[0].ul : Infinity;
+  const trafRatio = g.dlU / g.ulU;
+  const binds = capRatio > trafRatio ? "Uplink" : "Downlink";
 
   const demand = TIERS.map((t, i) => {
     const r = rows[i];
@@ -3017,7 +3038,7 @@ function GapLab({ rows, g }) {
     if (!isFinite(w)) return { lbl: "NO LINK", c: "#7A1F2B", t: "#FFB4BE" };
     if (w <= 1) return { lbl: "SERVED", c: "#12351F", t: C.green };
     if (w <= 2) return { lbl: "MARGINAL", c: "#3A3210", t: C.amber };
-    return { lbl: "\u00d7" + (w < 10 ? w.toFixed(1) : Math.round(w)), c: "#3A1520", t: "#FF8FA0" };
+    return { lbl: "×" + (w < 10 ? w.toFixed(1) : Math.round(w)), c: "#3A1520", t: "#FF8FA0" };
   };
   const cellS = { padding: "4px 6px", borderBottom: `1px solid ${C.line}`, fontFamily: "var(--mono)", fontSize: 11 };
 
@@ -3029,17 +3050,45 @@ function GapLab({ rows, g }) {
       <p className="body" style={{ fontSize: 13 }}>
         Supply is not per-tier. A satellite pours capacity onto ground area and has no idea what is underneath, so
         there is <em>one</em> supply number per environment tested against six demand numbers. The unit of the test is a
-        single beam \u2014 {(Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2)).toFixed(0)} km\u00b2 at nadir \u2014 and whatever demand sits
-        under it. Environments do not change demand; they change supply, because 10\u201315 dB of penetration lands on a link
+        single beam — {(Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2)).toFixed(0)} km² at nadir — and whatever demand sits
+        under it. Environments do not change demand; they change supply, because 10–15 dB of penetration lands on a link
         that only just closes outdoors. Derating is Shannon on a power-limited link, calibrated so outdoor returns the
         site's 2.48 bps/Hz (SNR {SNR0_DB.toFixed(1)} dB); below the decode floor the link does not close at all.
-        Inputs come live from the Tier Lab above \u2014 edit a take rate there and every box here moves.
+        Inputs come live from the Tier Lab above — edit a take rate there and every box here moves.
       </p>
 
+      <div className="tglRow" style={{ gap: 5, flexWrap: "wrap", marginBottom: 4 }}>
+        {SPEC_SCEN.map((sc) => (
+          <button key={sc.k} className={"genBtn" + (spec === sc.k ? " on" : "")} onClick={() => pickSpec(sc.k)}>
+            {sc.n} <span style={{ opacity: 0.6 }}>{sc.dl}/{sc.ul}</span>
+          </button>
+        ))}
+      </div>
+      <p className="body" style={{ fontSize: 11.5, color: C.dim, margin: "0 0 6px" }}>
+        <strong style={{ color: spec === "custom" ? C.amber : C.text }}>
+          {spec === "custom" ? "Custom split" : specNote.n + " — " + specNote.src}
+        </strong>{spec === "custom" ? " — your own numbers." : ". " + specNote.note}{" "}
+        SpaceX has not disclosed this split, so it is a switch rather than a constant. Watch the verdicts flip as you change it.
+      </p>
+      <div className="split2" style={{ gap: 12 }}>
+        <label className="sliderL">
+          Downlink: <strong>{mhz.dl}</strong> MHz/beam
+          <input type="range" min="5" max="60" step="1" value={mhz.dl}
+            onChange={(e) => { setMhz({ ...mhz, dl: +e.target.value }); setSpec("custom"); }} />
+        </label>
+        <label className="sliderL">
+          Uplink: <strong>{mhz.ul}</strong> MHz/beam{" "}
+          <span style={{ color: capRatio > trafRatio ? C.amber : C.green }}>
+            ({capRatio.toFixed(1)}:1 capacity vs {trafRatio.toFixed(1)}:1 traffic → {binds} binds)
+          </span>
+          <input type="range" min="1" max="60" step="1" value={mhz.ul}
+            onChange={(e) => { setMhz({ ...mhz, ul: +e.target.value }); setSpec("custom"); }} />
+        </label>
+      </div>
       <div className="split2" style={{ gap: 12 }}>
         <label className="sliderL">
           D2C fleet: <strong>{fleet.toLocaleString()}</strong>{" "}
-          <span style={{ color: C.dim }}>\u2014 duty {(duty * 100).toFixed(0)}% \u00b7 {Math.round(ps.N).toLocaleString()} cells/patch</span>
+          <span style={{ color: C.dim }}>— duty {(duty * 100).toFixed(0)}% · {Math.round(ps.N).toLocaleString()} cells/patch</span>
           <input type="range" min="650" max="46000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
         </label>
         <label className="sliderL">
@@ -3111,30 +3160,32 @@ function GapLab({ rows, g }) {
             {(() => {
               const A = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2);
               const ok = demand.filter((d) => supply[0].dl > 0 && Math.max((d.dl * A) / supply[0].dl, (d.ul * A) / supply[0].ul) <= 1);
-              return ok.length ? ok.map((o) => o.n).join(" \u00b7 ") : "no tier, outdoors";
+              return ok.length ? ok.map((o) => o.n).join(" · ") : "no tier, outdoors";
             })()}
           </div>
           <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
-            Outdoors only. The break falls between rural and suburban and it is a cliff, not a slope \u2014 demand jumps
-            ~12\u00d7 across that boundary while supply is flat.
+            Outdoors only. The break falls between rural and suburban and it is a cliff, not a slope — demand jumps
+            ~12× across that boundary while supply is flat.
           </div>
         </div>
         <div className="stat" style={{ borderColor: C.amber }}>
           <div className="statL" style={{ color: C.amber }}>Which link binds</div>
-          <div className="statV" style={{ fontSize: 18, color: C.amber }}>Uplink, everywhere it fails</div>
+          <div className="statV" style={{ fontSize: 18, color: C.amber }}>{binds}, at {mhz.dl}/{mhz.ul} MHz</div>
           <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
-            Traffic asymmetry is {(g.dlU / g.ulU).toFixed(1)}:1 but delivered capacity is{" "}
-            {(supply[0].ul > 0 ? supply[0].dl / supply[0].ul : 0).toFixed(1)}:1, so uplink runs out first in every failing
-            tier. Fill-in equipment must be sized on uplink, not downlink \u2014 the usual instinct is backwards here.
+            Traffic asymmetry is {trafRatio.toFixed(1)}:1; delivered capacity at this split is {capRatio.toFixed(1)}:1.{" "}
+            {capRatio > trafRatio
+              ? "Capacity is more lopsided than demand, so uplink starves first and fill-in equipment must be sized on uplink."
+              : "Capacity is less lopsided than demand, so downlink binds and uplink has headroom at this split."}{" "}
+            Crossover is at {(mhz.dl / trafRatio).toFixed(0)} MHz uplink — drag the slider through it and this card flips.
           </div>
         </div>
       </div>
 
       <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 8 }}>
         <strong style={{ color: C.text }}>Read the indoor column first.</strong> At {loss[2]} dB the SNR is{" "}
-        {(SNR0_DB - loss[2]).toFixed(1)} dB \u2014 {SNR0_DB - loss[2] < floorDb ? "below the decode floor, so the satellite delivers nothing indoors in any tier, rural included" : "still decoding, but at a fraction of outdoor capacity"}.
+        {(SNR0_DB - loss[2]).toFixed(1)} dB — {SNR0_DB - loss[2] < floorDb ? "below the decode floor, so the satellite delivers nothing indoors in any tier, rural included" : "still decoding, but at a fraction of outdoor capacity"}.
         That is the single most consequential result here: the satellite layer is an <em>outdoor</em> network everywhere,
-        and the indoor question is identical in all six tiers \u2014 only the economics of the answer change.
+        and the indoor question is identical in all six tiers — only the economics of the answer change.
         <strong style={{ color: C.text }}> Caveats:</strong> the beam is {BEAM_KM} km at nadir and stretches off-nadir, so
         this is the best-case footprint; duty cycle is applied but scheduler concentration is not, so a satellite that
         aims beams at towns does better than this in sparse tiers and no better in dense ones.
@@ -5758,7 +5809,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v94 · supply-vs-demand gap</span>
+        <span className="buildTag">build v94 · gap lab + spectrum scenarios</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.bg, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
