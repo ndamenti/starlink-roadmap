@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v101", d: "Serviceability rebuilt as real sub-tabs. It had grown to six stacked sections in one ~9,000px scroll with no way to tell what was off screen or how the pieces related; v100 added jump links, which did not fix orientation. Now one section shows at a time (1 Map \u00b7 2 Demand \u00b7 3 Gap \u00b7 4 Equipment \u00b7 5 Metro overlay), with arrows drawn between the middle three to show they are a chain, a one-line statement under the tab bar saying what the current step takes in and hands on, and the scenario selector pinned in the sticky header so it stays visible and applies across all of them." },
   { v: "v100", d: "The three environments are coupled, and the model now says so. A booster re-radiates whichever carrier is strongest \u2014 it is not satellite-specific \u2014 so in every tier where the outdoor row is already deploying ground cells, a boosted vehicle relays that terrestrial network. Repeater sufficiency had been evaluated against satellite-only supply, which wrongly reported \u2018still short\u2019 in exactly the tiers where the ground layer exists. The outdoor build pays for the in-vehicle fix; the residual is the coverage target\u2019s shortfall, not a technology gap. Also added a sticky sub-navigation bar to the Serviceability tab, which had grown to six major sections with no way to move between them." },
   { v: "v99b", d: "In-vehicle now defaults to the signal booster rather than the femtocell. A repeater re-radiates the serving carrier and creates no competing cell; a vehicle femtocell is a roaming licensed-spectrum transmitter sitting beside a satellite downlink of about \u2212121 dBm, which it swamps from a lane away. More fundamentally, the dovetail rule separating the satellite and ground layers is enforceable only for fixed infrastructure \u2014 a femtocell driving out of a metro carries the terrestrial regime into rural territory at highway speed, where the partition is undefined rather than merely hard to police. The femtocell remains selectable and earns its place only in vehicles with genuine independent backhaul (a Ku/Ka terminal, not the D2C link it would otherwise relay)." },
   { v: "v99", d: "Fixed circular logic in the vehicle rows. The booster\u2019s penetration-loss recovery was applied BEFORE computing the gap, so tiers the booster fixes reported zero gap and therefore zero boxes \u2014 the equipment closed the gap and then was not counted for closing it (booster showed 3.61M vs the femtocell\u2019s 8.76M when both address identical vehicles). Need is now judged at the raw environment loss; the equipment choice decides only SUFFICIENCY. Both vehicle options now show the same count, with the booster flagged \u201cstill short\u201d in the tiers where restoring the link to outdoor-equivalent still is not enough." },
@@ -3465,6 +3466,22 @@ const SITE_SCEN = [
 // (satellite owns the band in rural, ground owns it in metro) is enforceable only for
 // FIXED infrastructure: a femtocell driving out of a metro carries the terrestrial regime
 // across that boundary at highway speed, where the partition becomes undefined.
+/* Serviceability sub-tabs. The middle three are a CHAIN (demand -> gap -> equipment):
+   the arrow between them is drawn, and each tab states what it takes in and hands on,
+   so a reader always knows where they are and what they have not seen yet. */
+const SVC_SUBS = [
+  { k: "map", n: "1 · Map", chain: false,
+    why: "Where the satellite layer runs green and where it runs red, painted on the census raster. This is the result the rest of the tab explains." },
+  { k: "tiers", n: "2 · Demand", chain: true,
+    why: "Who wants what. Six density tiers, subscribers and Mbps/km², uplink and downlink separate. Hands the demand figures to the Gap tab." },
+  { k: "gap", n: "3 · Gap", chain: true,
+    why: "Takes that demand and tests one satellite beam against it, in three environments. Hands the shortfall to the Equipment tab." },
+  { k: "equip", n: "4 · Equipment", chain: true,
+    why: "Takes the shortfall and converts it into boxes on the ground — archetype, band, coverage basis — then sums all three environments." },
+  { k: "overlay", n: "5 · Metro overlay", chain: false,
+    why: "The same equipment maths painted onto the top-10 metros: which cities, how many boxes, and what the class choice does to the count." },
+];
+
 const BUILD_DEFAULT = { out: "pole", veh: "boost", in: "wifi" };
 const BUILD_BASIS = { out: "area", veh: "home", in: "home" };
 
@@ -3608,7 +3625,7 @@ function BuildSummary({ rows, g, mhz, fleet, loss, floorDb, bandk, covT, eqEff, 
   );
 }
 
-function TierSystem({ scenario }) {
+function TierSystem({ scenario, sub }) {
   const [rows, setRows] = useState(TIERS.map((t) => ({ dLocal: t.dLocal, take: t.take * 100 })));
   const [g, setG] = useState({ ...DEMAND0 });
   const [scen, setScen] = useState("canonical");
@@ -3631,11 +3648,11 @@ function TierSystem({ scenario }) {
   }, [scenario]);
   return (
     <>
-      <TierLab rows={rows} setRows={setRows} g={g} setG={setG} scen={scen} setScen={setScen} />
-      <GapLab rows={rows} g={g} spec={spec} setSpec={setSpec} mhz={mhz} setMhz={setMhz}
+      {sub === "tiers" && <TierLab rows={rows} setRows={setRows} g={g} setG={setG} scen={scen} setScen={setScen} />}
+      {sub === "gap" && <GapLab rows={rows} g={g} spec={spec} setSpec={setSpec} mhz={mhz} setMhz={setMhz}
         fleet={fleet} setFleet={setFleet} loss={loss} setLoss={setLoss}
-        floorDb={floorDb} setFloorDb={setFloorDb} specNote={specNote} pickSpec={pickSpec} />
-      <EquipLab rows={rows} g={g} mhz={mhz} fleet={fleet} loss={loss} floorDb={floorDb} spec={spec} specNote={specNote} scenario={scenario} />
+        floorDb={floorDb} setFloorDb={setFloorDb} specNote={specNote} pickSpec={pickSpec} />}
+      {sub === "equip" && <EquipLab rows={rows} g={g} mhz={mhz} fleet={fleet} loss={loss} floorDb={floorDb} spec={spec} specNote={specNote} scenario={scenario} />}
     </>
   );
 }
@@ -5398,6 +5415,7 @@ function ServiceabilityTab() {
   const [strategy, setStrategy] = useState("sidewalk");
   const [clsDbm, setClsDbm] = useState(38);   // outdoor equipment class: 20 femto · 30 rooftop SC · 38 pole SC
   const [scenario, setScenario] = useState("canon");
+  const [sub, setSub] = useState("map");
   useEffect(() => {
     const sc = SITE_SCEN.find((x) => x.k === scenario);
     if (!sc) return;
@@ -5528,6 +5546,31 @@ function ServiceabilityTab() {
   const SLEG = [["100%", "#2FBF71"], ["50–99%", "#A8C94C"], ["20–50%", "#E6B357"], ["5–20%", "#E67E4C"], ["<5%", "#D64545"]];
   return (
     <div id="svc-top">
+      <div style={{ position: "sticky", top: 44, zIndex: 25, background: C.bg, paddingTop: 6,
+        paddingBottom: 8, borderBottom: `1px solid ${C.line}`, marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+          {SVC_SUBS.map((t, i) => (
+            <span key={t.k} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              {i > 0 && <span style={{ color: t.chain ? C.amber : C.line, fontFamily: "var(--mono)", fontSize: 12 }}>{t.chain ? "\u2192" : "\u00b7"}</span>}
+              <button className={"genBtn" + (sub === t.k ? " on" : "")} onClick={() => setSub(t.k)} style={{ fontSize: 11.5 }}>{t.n}</button>
+            </span>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "baseline", marginTop: 6, flexWrap: "wrap" }}>
+          <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, letterSpacing: "0.08em" }}>SCENARIO:</span>
+          {SITE_SCEN.map((sc) => (
+            <button key={sc.k} className={"genBtn" + (scenario === sc.k ? " on" : "")} onClick={() => setScenario(sc.k)} style={{ fontSize: 11 }}>{sc.n}</button>
+          ))}
+          <span style={{ fontSize: 11, color: C.dim, flex: "1 1 300px" }}>
+            {(SITE_SCEN.find((x) => x.k === scenario) || SITE_SCEN[1]).blurb}
+          </span>
+        </div>
+        <p style={{ fontSize: 11.5, color: C.dim, margin: "6px 0 0", lineHeight: 1.5 }}>
+          <strong style={{ color: C.text }}>{SVC_SUBS.find((t) => t.k === sub).n}.</strong>{" "}
+          {SVC_SUBS.find((t) => t.k === sub).why}
+        </p>
+      </div>
+      {sub === "map" && (<>
       <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
         <div className="eyebrow" style={{ color: C.amber }}>Serviceability — what share of America can this network actually carry? <Src k="serve" topic="derived" /></div>
         <p className="body" style={{ marginBottom: 12 }}>
@@ -5786,6 +5829,11 @@ function ServiceabilityTab() {
             : "Toggle a layer above — population density, or the share of each cell's population the configured network can carry."}
         </p>
       </div>
+      </>)}
+      {sub === "tiers" && <TierSystem scenario={scenario} sub="tiers" />}
+      {sub === "gap" && <TierSystem scenario={scenario} sub="gap" />}
+      {sub === "equip" && <TierSystem scenario={scenario} sub="equip" />}
+      {sub === "overlay" && (<>
       <div id="svc-overlay" className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
         <div className="eyebrow" style={{ color: C.blue }}>The ground-layer overlay — painting the red green</div>
         <p className="body" style={{ marginBottom: 10 }}>
@@ -5965,36 +6013,7 @@ function ServiceabilityTab() {
           construction — the buildings no outdoor signal enters — becomes the customer's WiFi problem, already solved.
         </p>
       </div>
-      <div style={{ position: "sticky", top: 46, zIndex: 20, background: C.bg, padding: "6px 0 8px",
-        borderBottom: `1px solid ${C.line}`, marginBottom: 10, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-        <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, letterSpacing: "0.08em" }}>SERVICEABILITY:</span>
-        {[["svc-top", "1 · Map"], ["svc-scenario", "2 · Scenario"], ["svc-tiers", "3 · Demand"],
-          ["svc-gap", "4 · Gap"], ["svc-equip", "5 · Equipment"], ["svc-overlay", "6 · Metro overlay"]].map(([id, label]) => (
-          <button key={id} className="genBtn" style={{ fontSize: 11 }}
-            onClick={() => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
-            {label}
-          </button>
-        ))}
-      </div>
-      <div id="svc-scenario" className="card" style={{ borderTop: `2px solid ${C.amber}`, marginBottom: 10 }}>
-        <div className="eyebrow" style={{ color: C.amber }}>Scenario — one setting for the whole chain</div>
-        <p className="body" style={{ fontSize: 12.5, marginBottom: 6 }}>
-          The four panels below are a chain, not four views of the same thing: the Tier Lab says who wants what, the
-          Gap Lab says whether orbit alone can deliver it, the Equip Lab converts what is left into boxes, and the
-          overlay paints that onto real metros. A coherent scenario means setting take-up, spectrum, fleet and equipment
-          class consistently across all four — so set them here, once. Individual controls still work; using them
-          takes you off-scenario, which is the point of exploring.
-        </p>
-        <div className="tglRow" style={{ gap: 5, flexWrap: "wrap" }}>
-          {SITE_SCEN.map((sc) => (
-            <button key={sc.k} className={"genBtn" + (scenario === sc.k ? " on" : "")} onClick={() => setScenario(sc.k)}>{sc.n}</button>
-          ))}
-        </div>
-        <p className="body" style={{ fontSize: 11.5, color: C.dim, margin: "6px 0 0" }}>
-          {(SITE_SCEN.find((x) => x.k === scenario) || SITE_SCEN[1]).blurb}
-        </p>
-      </div>
-      <TierSystem scenario={scenario} />
+      </>)}
       <div className="card">
         <div className="eyebrow">Model, provenance, and honest limits</div>
         <p className="body" style={{ fontSize: 13 }}>
@@ -6301,7 +6320,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v100 · environment coupling + sub-nav</span>
+        <span className="buildTag">build v101 · serviceability sub-tabs</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.bg, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
