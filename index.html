@@ -5573,10 +5573,10 @@ function StarlinkMobileRoadmap() {
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
         <span className="buildTag">build v93 · tier model + demand</span>
-        <details style={{ marginTop: 8 }}>
+        <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.bg, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
-            <p key={c.v} style={{ fontSize: 11.5, lineHeight: 1.55, color: C.dim, maxWidth: 680, margin: "6px 0 0" }}>
+            <p key={c.v} style={{ fontSize: 11.5, lineHeight: 1.55, color: C.dim, maxWidth: 680, margin: "6px 0 0", paddingBottom: 4 }}>
               <strong style={{ color: C.text }}>{c.v}</strong> — {c.d}
             </p>
           ))}
