@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v94", d: "Gap Lab added: satellite supply tested against tier demand across three environments (outdoor / in-vehicle / indoor). Supply is deliberately not per-tier \u2014 a satellite delivers capacity per unit area regardless of what is underneath \u2014 so one supply number per environment is tested against six demand numbers, with the unit of test being a single beam and the demand beneath it. Environment derating is Shannon on a power-limited link, calibrated so outdoor reproduces the site\u2019s 2.48 bps/Hz. Tier Lab and Gap Lab now share one state, so they cannot disagree. Headline: the satellite layer holds very rural and rural outdoors and fails from suburban up; uplink binds in every failing tier; indoors the link does not close in any tier." },
   { v: "v93", d: "Tier Lab added (Serviceability): six canonical density tiers with boundaries measured on the 40 km census raster, plus a full demand model \u2014 uplink and downlink kept separate throughout. Each tier now carries two densities (raster area-mean for land/population totals; local built-up density for demand and equipment counts), because conflating them is how this class of model goes wrong; the clustering factor runs ~4.7\u00d7 in the middle tiers. Every input is editable with bull/bear/peak scenario presets. Uplink spectral efficiency (~0.8 bps/Hz) is derived from SpaceX\u2019s own 40/15 MHz spectrum split. Documented resolution limit: only 3 raster squares in CONUS exceed 2,000 people/km\u00b2, so Urban and Dense urban are sub-grid archetypes, not measured regions." },
   { v: "v92", d: "Beam model rebuilt on primary sources: FCC Schedule S gain ladder (SAT-MOD-20230207-00021) + Ookla Aug-2026 crowdsourced measurements. Gen1 beams run 32–45 km in service — the ~25 m² array is four panels and beams form on sub-panels — not the ~16 km ideal previously derived. 2027 beam re-bracketed 4.4 / 8.9 / 19.9 km (floor / canonical center / Gen1-panel upper); cell counts and duty cycles recomputed. Capacity-per-km², reuse crossovers, and femtocell conclusions unchanged. CONUS overhead count keeps ×1.3, now labeled conservative (exact 53°-shell average ≈ ×1.39 → ~330 of 15k). Video narration still cites v91 beam figures pending re-cut." },
 ];
@@ -2811,10 +2812,7 @@ const TIER_SCEN = {
   peak:      { lbl: "Peak hour — 2× active", take: 1.0, act: 2.0 },
 };
 
-function TierLab() {
-  const [rows, setRows] = useState(TIERS.map((t) => ({ dLocal: t.dLocal, take: t.take * 100 })));
-  const [g, setG] = useState({ ...DEMAND0 });
-  const [scen, setScen] = useState("canonical");
+function TierLab({ rows, setRows, g, setG, scen, setScen }) {
 
   const applyScen = (key) => {
     const s = TIER_SCEN[key];
@@ -2966,6 +2964,194 @@ function TierLab() {
         assumptions you can edit above.
       </p>
     </div>
+  );
+}
+
+
+/* ============================================================
+   GAP LAB (v94) — satellite supply vs tier demand, by environment
+   Supply is NOT per-tier: a satellite delivers capacity per unit area and has
+   no idea what is underneath it. So there is ONE supply number per environment,
+   compared against six demand numbers. Environments change supply, not demand:
+   penetration loss lands on a link that only just closes outdoors.
+   Derating is first-principles Shannon on a power-limited link. The site's
+   2.48 bps/Hz outdoor convention implies SNR = 2^2.48 - 1 = 4.58 -> 6.6 dB.
+   Subtract penetration loss in dB, recompute log2(1+SNR); below the decode
+   floor the link does not close at all and capacity is zero, not merely small.
+   ============================================================ */
+const GAP_ENVS = [
+  { k: "out", n: "Outdoor",    loss: 0,  note: "clear sky" },
+  { k: "veh", n: "In-vehicle", loss: 10, note: "glass + body" },
+  { k: "in",  n: "Indoor",     loss: 15, note: "exterior wall" },
+];
+const SNR0_DB = 10 * Math.log10(Math.pow(2, 2.48) - 1); // 6.6 dB, calibrated to the site's DL efficiency
+
+function GapLab({ rows, g }) {
+  const [fleet, setFleet] = useState(15000);
+  const [loss, setLoss] = useState(GAP_ENVS.map((e) => e.loss));
+  const [floorDb, setFloorDb] = useState(-6);
+
+  const ps = patchStats(fleet);
+  const duty = Math.min(1, ps.duty);
+  const effFor = (lossDb) => {
+    const snrDb = SNR0_DB - lossDb;
+    if (snrDb < floorDb) return 0;
+    return Math.log2(1 + Math.pow(10, snrDb / 10));
+  };
+  // per-beam capacity: 20 MHz DL (site convention); UL scaled by SpaceX's own 40/15 split
+  const ulMhz = 20 * (15 / 40);
+  const supply = GAP_ENVS.map((e, i) => {
+    const eff = effFor(loss[i]);
+    const effUl = eff * (g.ulEff / 2.48); // uplink runs ~1/3 of downlink efficiency, same derating
+    return { dl: 20 * eff * duty, ul: ulMhz * effUl * duty, eff, snr: SNR0_DB - loss[i] };
+  });
+
+  const demand = TIERS.map((t, i) => {
+    const r = rows[i];
+    const act = r.dLocal * (r.take / 100) * (g.act / 100);
+    return { n: t.n, k: t.k, dl: act * g.dlU, ul: act * g.ulU };
+  });
+
+  const verdict = (dRatio, uRatio) => {
+    const w = Math.max(dRatio, uRatio);
+    if (!isFinite(w)) return { lbl: "NO LINK", c: "#7A1F2B", t: "#FFB4BE" };
+    if (w <= 1) return { lbl: "SERVED", c: "#12351F", t: C.green };
+    if (w <= 2) return { lbl: "MARGINAL", c: "#3A3210", t: C.amber };
+    return { lbl: "\u00d7" + (w < 10 ? w.toFixed(1) : Math.round(w)), c: "#3A1520", t: "#FF8FA0" };
+  };
+  const cellS = { padding: "4px 6px", borderBottom: `1px solid ${C.line}`, fontFamily: "var(--mono)", fontSize: 11 };
+
+  return (
+    <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
+      <div className="eyebrow" style={{ color: C.amber }}>
+        Gap Lab — one beam vs the demand under it, by tier and environment <Src k="serve" topic="derived" />
+      </div>
+      <p className="body" style={{ fontSize: 13 }}>
+        Supply is not per-tier. A satellite pours capacity onto ground area and has no idea what is underneath, so
+        there is <em>one</em> supply number per environment tested against six demand numbers. The unit of the test is a
+        single beam \u2014 {(Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2)).toFixed(0)} km\u00b2 at nadir \u2014 and whatever demand sits
+        under it. Environments do not change demand; they change supply, because 10\u201315 dB of penetration lands on a link
+        that only just closes outdoors. Derating is Shannon on a power-limited link, calibrated so outdoor returns the
+        site's 2.48 bps/Hz (SNR {SNR0_DB.toFixed(1)} dB); below the decode floor the link does not close at all.
+        Inputs come live from the Tier Lab above \u2014 edit a take rate there and every box here moves.
+      </p>
+
+      <div className="split2" style={{ gap: 12 }}>
+        <label className="sliderL">
+          D2C fleet: <strong>{fleet.toLocaleString()}</strong>{" "}
+          <span style={{ color: C.dim }}>\u2014 duty {(duty * 100).toFixed(0)}% \u00b7 {Math.round(ps.N).toLocaleString()} cells/patch</span>
+          <input type="range" min="650" max="46000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
+        </label>
+        <label className="sliderL">
+          Decode floor: <strong>{floorDb}</strong> dB SNR <span style={{ color: C.dim }}>(below this the link does not close)</span>
+          <input type="range" min="-12" max="0" step="0.5" value={floorDb} onChange={(e) => setFloorDb(+e.target.value)} />
+        </label>
+      </div>
+
+      <div className="tglRow" style={{ gap: 10, flexWrap: "wrap", margin: "6px 0 8px" }}>
+        {GAP_ENVS.map((e, i) => (
+          <label key={e.k} className="sliderL" style={{ flex: "1 1 150px", margin: 0 }}>
+            {e.n} loss: <strong>{loss[i]}</strong> dB <span style={{ color: C.dim }}>({e.note})</span>
+            <input type="range" min="0" max="30" step="1" value={loss[i]}
+              onChange={(ev) => setLoss(loss.map((x, j) => (j === i ? +ev.target.value : x)))} />
+          </label>
+        ))}
+      </div>
+
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 560 }}>
+          <thead>
+            <tr style={{ color: C.dim, fontFamily: "var(--mono)", fontSize: 10 }}>
+              <th style={{ ...cellS, textAlign: "left" }}>TIER</th>
+              <th style={{ ...cellS, textAlign: "right" }}>DL NEED</th>
+              <th style={{ ...cellS, textAlign: "right" }}>UL NEED</th>
+              {GAP_ENVS.map((e, i) => (
+                <th key={e.k} style={{ ...cellS, textAlign: "center" }}>
+                  {e.n.toUpperCase()}<br />
+                  <span style={{ color: supply[i].dl > 0 ? C.dim : "#FF8FA0", fontSize: 9 }}>
+                    {supply[i].dl > 0 ? `${supply[i].dl.toFixed(0)}/${supply[i].ul.toFixed(1)} Mbps` : "no link"}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {demand.map((d, ti) => {
+              const A = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2);
+              return (
+                <tr key={d.k}>
+                  <td style={{ ...cellS, color: C.text }}>{d.n}</td>
+                  <td style={{ ...cellS, textAlign: "right", color: C.amber }}>{(d.dl * A).toFixed(0)}</td>
+                  <td style={{ ...cellS, textAlign: "right", color: C.green }}>{(d.ul * A).toFixed(0)}</td>
+                  {GAP_ENVS.map((e, ei) => {
+                    const s = supply[ei];
+                    const rd = s.dl > 0 ? (d.dl * A) / s.dl : Infinity;
+                    const ru = s.ul > 0 ? (d.ul * A) / s.ul : Infinity;
+                    const v = verdict(rd, ru);
+                    return (
+                      <td key={e.k} style={{ ...cellS, textAlign: "center", background: v.c, color: v.t, fontWeight: 700 }}>
+                        {v.lbl}
+                        {isFinite(rd) && Math.max(rd, ru) > 1 && (
+                          <div style={{ fontSize: 8.5, fontWeight: 400, opacity: 0.75 }}>{ru > rd ? "UL-bound" : "DL-bound"}</div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="statGrid" style={{ marginTop: 8 }}>
+        <div className="stat" style={{ borderColor: C.green }}>
+          <div className="statL">Where the satellite layer holds</div>
+          <div className="statV" style={{ fontSize: 18, color: C.green }}>
+            {(() => {
+              const A = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2);
+              const ok = demand.filter((d) => supply[0].dl > 0 && Math.max((d.dl * A) / supply[0].dl, (d.ul * A) / supply[0].ul) <= 1);
+              return ok.length ? ok.map((o) => o.n).join(" \u00b7 ") : "no tier, outdoors";
+            })()}
+          </div>
+          <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
+            Outdoors only. The break falls between rural and suburban and it is a cliff, not a slope \u2014 demand jumps
+            ~12\u00d7 across that boundary while supply is flat.
+          </div>
+        </div>
+        <div className="stat" style={{ borderColor: C.amber }}>
+          <div className="statL" style={{ color: C.amber }}>Which link binds</div>
+          <div className="statV" style={{ fontSize: 18, color: C.amber }}>Uplink, everywhere it fails</div>
+          <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
+            Traffic asymmetry is {(g.dlU / g.ulU).toFixed(1)}:1 but delivered capacity is{" "}
+            {(supply[0].ul > 0 ? supply[0].dl / supply[0].ul : 0).toFixed(1)}:1, so uplink runs out first in every failing
+            tier. Fill-in equipment must be sized on uplink, not downlink \u2014 the usual instinct is backwards here.
+          </div>
+        </div>
+      </div>
+
+      <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 8 }}>
+        <strong style={{ color: C.text }}>Read the indoor column first.</strong> At {loss[2]} dB the SNR is{" "}
+        {(SNR0_DB - loss[2]).toFixed(1)} dB \u2014 {SNR0_DB - loss[2] < floorDb ? "below the decode floor, so the satellite delivers nothing indoors in any tier, rural included" : "still decoding, but at a fraction of outdoor capacity"}.
+        That is the single most consequential result here: the satellite layer is an <em>outdoor</em> network everywhere,
+        and the indoor question is identical in all six tiers \u2014 only the economics of the answer change.
+        <strong style={{ color: C.text }}> Caveats:</strong> the beam is {BEAM_KM} km at nadir and stretches off-nadir, so
+        this is the best-case footprint; duty cycle is applied but scheduler concentration is not, so a satellite that
+        aims beams at towns does better than this in sparse tiers and no better in dense ones.
+      </p>
+    </div>
+  );
+}
+
+function TierSystem() {
+  const [rows, setRows] = useState(TIERS.map((t) => ({ dLocal: t.dLocal, take: t.take * 100 })));
+  const [g, setG] = useState({ ...DEMAND0 });
+  const [scen, setScen] = useState("canonical");
+  return (
+    <>
+      <TierLab rows={rows} setRows={setRows} g={g} setG={setG} scen={scen} setScen={setScen} />
+      <GapLab rows={rows} g={g} />
+    </>
   );
 }
 
@@ -5265,7 +5451,7 @@ function ServiceabilityTab() {
           construction — the buildings no outdoor signal enters — becomes the customer's WiFi problem, already solved.
         </p>
       </div>
-      <TierLab />
+      <TierSystem />
       <div className="card">
         <div className="eyebrow">Model, provenance, and honest limits</div>
         <p className="body" style={{ fontSize: 13 }}>
@@ -5572,7 +5758,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v93 · tier model + demand</span>
+        <span className="buildTag">build v94 · supply-vs-demand gap</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.bg, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
