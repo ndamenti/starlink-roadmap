@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v108", d: "The live map annotation now speaks each layer\u2019s own language. The capacity layer had inherited the hybrid layer\u2019s text, including a clause that was flatly wrong there (\u2018CBRS moves this ceiling, not the colours\u2019 \u2014 on the capacity layer the colours are exactly what CBRS moves). Capacity layer now says what the multiple means in words (\u2018the metro boxes can carry 2.7\u00d7 the people living under them\u2019); the hybrid layer explains its colours show WHO gets service and points to the capacity layer for what CBRS changes; the yellow legend band is relabelled \u2018full, no margin\u2019; the caption rewritten in plain language." },
   { v: "v107", d: "Fourth map layer: capacity headroom (capacity \u00f7 demand, uncapped), added because share-served can mislead \u2014 a cell at 100% served with 1.05\u00d7 capacity is technically served and practically saturated, slow at the busy hour. The yellow 1\u20132\u00d7 band is exactly that trap. Metro cells (blue-edged) paint the ground layer\u2019s throughput ceiling, so this is the view the CBRS bracket moves directly; everywhere else paints the satellite layer\u2019s headroom per cell. Same live annotation line as the hybrid layer." },
   { v: "v106", d: "The hybrid map layer now carries a live annotation line answering the question the CBRS chips kept raising: metro served share, the ground layer\u2019s capacity ceiling as a multiple of metro population, and which one binds \u2014 recomputed on every chip click, red when capacity binds. The map colours themselves are honest and were never broken: they paint share-of-people-served, which is coverage-limited at ~90% in metros, so CBRS above the floor moves the ceiling without moving the colours \u2014 and even the zero case (90% \u2192 84%) lands in the same legend bucket. The chips were changing a number no nearby view displayed; now the map itself says so. Third instance of the same design failure (a control whose effect is invisible where the control sits), now with the general fix: every control cluster gets feedback in its own line of sight." },
   { v: "v105", d: "Three fixes from the v104 production review. The sticky Serviceability header referenced a colour that does not exist in the palette (C.bg), making its background transparent \u2014 the map scrolled visibly through the controls; it now uses the real page colour (the v93 changelog fix carried the same latent bug and is corrected too). The CBRS zero position is renamed from \u2018foreclosed\u2019 to plain language: none \u2014 a competitor (likely Verizon) buys EchoStar\u2019s PALs before SpaceX does. And the Hybrid box now shows the ground layer\u2019s throughput ceiling versus metro population, because the CBRS chips were changing a number nothing displayed: above ~6 MHz the build is coverage-limited, so extra CBRS buys headroom margin rather than more people served \u2014 the chips now visibly move that headroom figure, and the line flips red when capacity binds." },
@@ -5581,7 +5582,7 @@ function ServiceabilityTab() {
   // Capacity headroom = capacity ÷ demand. ≈1× means "served but saturated — slow at busy hour":
   // exactly the case the share-served view paints green and a user experiences as unattractive.
   const capColor = (m) => (m >= 5 ? "#2FBF71" : m >= 2 ? "#A8C94C" : m >= 1 ? "#E6B357" : m >= 0.5 ? "#E67E4C" : "#D64545");
-  const CLEG = [["≥5×", "#2FBF71"], ["2–5×", "#A8C94C"], ["1–2× saturated", "#E6B357"], ["0.5–1×", "#E67E4C"], ["<0.5×", "#D64545"]];
+  const CLEG = [["≥5×", "#2FBF71"], ["2–5×", "#A8C94C"], ["1–2× · full, no margin", "#E6B357"], ["0.5–1×", "#E67E4C"], ["<0.5×", "#D64545"]];
   const gMult = popM > 0 ? femSubCap / popM : 0;
   return (
     <div id="svc-top">
@@ -5669,10 +5670,15 @@ function ServiceabilityTab() {
             {(layer === "hybrid" || layer === "cap") && (
             <div style={{ fontFamily: "var(--mono)", fontSize: 11, marginBottom: 6,
               color: servedFracCap < servedFrac - 0.005 ? "#FF8FA0" : C.green }}>
-              LIVE · metro cells: {(servedFracCap * 100).toFixed(0)}% served · ground ceiling {(popM > 0 ? femSubCap / popM : 0).toFixed(1)}× metro population (CBRS {cbrsMhz} MHz)
-              {servedFracCap < servedFrac - 0.005
-                ? " — CAPACITY BINDS: boxes out of spectrum before people"
-                : " — coverage-limited: CBRS moves this ceiling, not the colours — served share is already pinned at the coverage target"}
+              {layer === "cap"
+                ? <>LIVE · CBRS {cbrsMhz} MHz → the metro boxes can carry {(popM > 0 ? femSubCap / popM : 0).toFixed(1)}× the people living under them (at {minMbps} Mbps each, busy hour).{" "}
+                  {servedFracCap < servedFrac - 0.005
+                    ? "Below 1× — the boxes cannot carry everyone they cover."
+                    : "Above 1× is spare margin; the blue-edged cells recolour as you change CBRS."}</>
+                : <>LIVE · metro cells: {(servedFracCap * 100).toFixed(0)}% of people served (set by the {covT}% coverage target) · box capacity = {(popM > 0 ? femSubCap / popM : 0).toFixed(1)}× what’s needed (CBRS {cbrsMhz} MHz).{" "}
+                  {servedFracCap < servedFrac - 0.005
+                    ? "CAPACITY BINDS — the boxes run out of throughput before they run out of people."
+                    : "These colours show WHO gets service, so extra CBRS doesn’t change them — switch to the Capacity headroom layer to see what it does change."}</>}
             </div>
           )}
           <div className="statL" style={{ marginBottom: 6 }}>{layer === "dens" ? "LEGEND · POPULATION DENSITY (people per square mile)" : layer === "hybrid" ? "LEGEND · SHARE SERVED — GROUND OVERLAY IN METROS (blue-edged cells) + SATELLITE ELSEWHERE" : layer === "cap" ? "LEGEND · CAPACITY HEADROOM = CAPACITY ÷ DEMAND — GROUND CEILING IN METROS (blue-edged) + SATELLITE ELSEWHERE" : "LEGEND · SHARE OF LOCAL POPULATION THE CONFIGURED NETWORK CAN CARRY"}</div>
@@ -5691,7 +5697,7 @@ function ServiceabilityTab() {
             : layer === "serve"
             ? "Each cell: servable density ÷ actual density, capped at 100%. Green = orbit can carry everyone here; red = single-digit percentages — ground-layer country."
             : layer === "cap"
-            ? "Each cell: capacity ÷ demand, uncapped. The yellow band — 1–2× — is the trap the share-served view hides: technically served, practically saturated, slow at the busy hour. Metro cells paint the ground layer’s ceiling, so the CBRS chips move THIS map directly."
+            ? "How much spare capacity each place has: capacity ÷ demand. Green = plenty. Yellow (1–2×) = full with no margin — everyone gets service on paper, and the busy hour is slow. Red = more demand than capacity. Blue-edged metro cells show the ground boxes’ ceiling and recolour with the CBRS chips; everywhere else shows the satellite’s margin."
             : layer === "hybrid"
             ? "Blue-edged cells: top-" + nMetros + " metro clusters served by the ground-layer overlay at its configured strategy; all other cells: satellite service. This is the whole hybrid network in one picture — the overlay paints the red green."
             : "Toggle a layer above — population density, or the share of each cell's population the configured network can carry."}
@@ -6409,7 +6415,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v107 · capacity headroom layer</span>
+        <span className="buildTag">build v108 · per-layer plain language</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
