@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v102", d: "Map sub-tab restructured so the CONUS map is the first thing on screen: map card leads, headline stats follow, the input dials move into their own card below, and the Typical Cell panel \u2014 which had grown tall enough to push the map below the fold \u2014 is now a horizontal card (beam view left, stats right) at the bottom. Math audit fixes: the Typical Cell caption still said ~15 km\u00b2 at nadir (pre-v92 beam; now ~62 km\u00b2), the Verdict tab\u2019s capacity-density comparison used the same stale footprint (47 Mbps \u00f7 62 km\u00b2 \u2248 0.8 Mbps/km\u00b2, which makes the orders-of-magnitude gap larger, not smaller), and the Hybrid Network figure and map layer ignored the ground layer\u2019s capacity ceiling \u2014 they now cap at what the deployed boxes can actually carry. The Hybrid box is also reframed from femtocells to the current small-cell world and states what the 93M requires: ~1.6M pole small cells at today\u2019s class, capacity-capped at 5 MHz of femto spectrum." },
   { v: "v101", d: "Serviceability rebuilt as real sub-tabs. It had grown to six stacked sections in one ~9,000px scroll with no way to tell what was off screen or how the pieces related; v100 added jump links, which did not fix orientation. Now one section shows at a time (1 Map \u00b7 2 Demand \u00b7 3 Gap \u00b7 4 Equipment \u00b7 5 Metro overlay), with arrows drawn between the middle three to show they are a chain, a one-line statement under the tab bar saying what the current step takes in and hands on, and the scenario selector pinned in the sticky header so it stays visible and applies across all of them." },
   { v: "v100", d: "The three environments are coupled, and the model now says so. A booster re-radiates whichever carrier is strongest \u2014 it is not satellite-specific \u2014 so in every tier where the outdoor row is already deploying ground cells, a boosted vehicle relays that terrestrial network. Repeater sufficiency had been evaluated against satellite-only supply, which wrongly reported \u2018still short\u2019 in exactly the tiers where the ground layer exists. The outdoor build pays for the in-vehicle fix; the residual is the coverage target\u2019s shortfall, not a technology gap. Also added a sticky sub-navigation bar to the Serviceability tab, which had grown to six major sections with no way to move between them." },
   { v: "v99b", d: "In-vehicle now defaults to the signal booster rather than the femtocell. A repeater re-radiates the serving carrier and creates no competing cell; a vehicle femtocell is a roaming licensed-spectrum transmitter sitting beside a satellite downlink of about \u2212121 dBm, which it swamps from a lane away. More fundamentally, the dovetail rule separating the satellite and ground layers is enforceable only for fixed infrastructure \u2014 a femtocell driving out of a metro carries the terrestrial regime into rural territory at highway speed, where the partition is undefined rather than merely hard to police. The femtocell remains selectable and earns its place only in vehicles with genuine independent backhaul (a Ku/Ka terminal, not the D2C link it would otherwise relay)." },
@@ -1564,10 +1565,10 @@ function VerdictTab() {
           · <em>Urban macro sector:</em> ~100 MHz × ~5 bps/Hz ≈ 500 Mbps, serving perhaps 0.2 km² → on the order of
           <strong> 2,500 Mbps per km²</strong>, and that is before small cells.
           <br />
-          · <em>Satellite beam at the end-state:</em> ~47 Mbps shared across ~15 km² → about
-          <strong> 3 Mbps per km²</strong>.
+          · <em>Satellite beam at the end-state:</em> ~47 Mbps shared across ~62 km² → about
+          <strong> 0.8 Mbps per km²</strong>.
           <br />
-          That is a difference of roughly <strong>three orders of magnitude</strong> in delivered capacity density.
+          That is a difference of more than <strong>three orders of magnitude</strong> in delivered capacity density.
           Buying more spectrum narrows the first term; it does nothing to the second.
           <br /><br />
           <strong>Why this doesn't make the satellite layer useless — it makes it different.</strong> Capacity density
@@ -5520,11 +5521,15 @@ function ServiceabilityTab() {
     ? Cf * (1 - 0.8 * (hostile / 100)) // pure-cellular: indoor usage (80%) served only in penetrable stock — no WiFi crutch; that's this strategy's premise
     : 0.9 * 0.8 + Cf * 0.2; // WiFi indoors (90% home-internet × 80% indoor share) + sidewalk femto × 20% outdoor share
   const peopleFem = Math.min(popM * servedFrac, femSubCap);
+  // v102 audit fix: the hybrid figures used the coverage fraction alone, ignoring the
+  // ground layer's capacity ceiling — so at high-power classes with thin femto spectrum
+  // (where capacity binds), the map and the headline overstated. Cap the fraction.
+  const servedFracCap = popM > 0 ? Math.min(servedFrac, femSubCap / popM) : 0;
   // hybrid: femto-served metros + satellite everywhere else
   let hybServ = 0, hybTot = 0;
   for (const c of DENS_CELLS) {
     const p = c.d * CELLA; hybTot += p;
-    hybServ += (c.mi >= 0 && c.mi < nMetros) ? p * servedFrac : p * Math.min(1, servDens / c.d);
+    hybServ += (c.mi >= 0 && c.mi < nMetros) ? p * servedFracCap : p * Math.min(1, servDens / c.d);
   }
   // map geometry: same frame as Panel 6
   const MW = 5140, kpx = 880 / MW, ox = 10, oy = 8;
@@ -5571,15 +5576,98 @@ function ServiceabilityTab() {
         </p>
       </div>
       {sub === "map" && (<>
+      <div className="card">
+        <div className="tglRow" style={{ marginBottom: 8, alignItems: "center" }}>
+          <button className={"genBtn" + (layer === "plain" ? " on" : "")} onClick={() => setLayer("plain")}>Plain map</button>
+          <button className={"genBtn" + (layer === "dens" ? " on" : "")} onClick={() => setLayer("dens")}>Population density</button>
+          <button className={"genBtn" + (layer === "serve" ? " on" : "")} onClick={() => setLayer("serve")}>% of population servable</button>
+          <button className={"genBtn" + (layer === "hybrid" ? " on" : "")} onClick={() => setLayer("hybrid")}>Hybrid (orbit + ground)</button>
+          <select value={stSel} onChange={(e) => setStSel(+e.target.value)}
+            style={{ marginLeft: "auto", background: C.panel2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 6, padding: "8px 10px", fontFamily: "var(--mono)", fontSize: 12 }}>
+            <option value={-1}>Whole US</option>
+            {US_STATES.map((st, i) => <option key={i} value={i}>{st.n}</option>)}
+          </select>
+        </div>
+        <svg viewBox={vb} style={{ width: "100%", maxHeight: 600, display: "block", margin: "0 auto" }} role="img" aria-label="Heatmap of population density or percent of population servable by the configured satellite network, whole-US or per state">
+          <defs>
+            <clipPath id="svcClip"><path d={CONUS_PATH} transform={`translate(${ox},${oy}) scale(${kpx})`} /></clipPath>
+            {stSel >= 0 && <clipPath id="svcStClip"><path d={US_STATES[stSel].d} transform={`translate(${ox},${oy}) scale(${kpx})`} /></clipPath>}
+          </defs>
+          <g clipPath={stSel >= 0 ? "url(#svcStClip)" : "url(#svcClip)"}>
+            {layer !== "plain" && cellsIn.map((c, i) => {
+              const inMetro = c.mi >= 0 && c.mi < nMetros;
+              const satFr = satVacatesMetros && inMetro ? 0 : Math.min(1, servDens / c.d);
+              const fill = layer === "dens" ? densColor(c.d)
+                : layer === "hybrid" ? servColor(inMetro ? servedFracCap : satFr)
+                : servColor(satFr);
+              return <rect key={i} x={ox + c.gx * cpx} y={oy + c.gy * cpx} width={cpx + 0.4} height={cpx + 0.4} fill={fill} opacity="0.85" stroke={layer === "hybrid" && inMetro ? C.blue : "none"} strokeWidth={layer === "hybrid" && inMetro ? 0.35 : 0} />;
+            })}
+          </g>
+          <g clipPath="url(#svcClip)">
+            {US_STATES.map((st, i) => (
+              <path key={i} d={st.d} transform={`translate(${ox},${oy}) scale(${kpx})`} fill="none"
+                stroke={i === stSel ? C.amber : "#8A98B0"} strokeWidth={i === stSel ? 1.6 : 0.6}
+                vectorEffect="non-scaling-stroke" opacity={i === stSel ? 0.95 : 0.4} />
+            ))}
+          </g>
+          <path d={CONUS_PATH} transform={`translate(${ox},${oy}) scale(${kpx})`} fill={layer === "plain" ? "rgba(91,168,255,0.05)" : "none"} stroke={C.line} strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+        </svg>
+        {layer !== "plain" && (
+          <div style={{ marginTop: 10 }}>
+            <div className="statL" style={{ marginBottom: 6 }}>{layer === "dens" ? "LEGEND · POPULATION DENSITY (people per square mile)" : layer === "hybrid" ? "LEGEND · SHARE SERVED — GROUND OVERLAY IN METROS (blue-edged cells) + SATELLITE ELSEWHERE" : "LEGEND · SHARE OF LOCAL POPULATION THE CONFIGURED NETWORK CAN CARRY"}</div>
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+              {(layer === "dens" ? DLEG : SLEG).map(([lab, col], i) => (
+                <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "var(--mono)", fontSize: 11, color: C.dim }}>
+                  <span style={{ width: 12, height: 12, background: col, borderRadius: 2, display: "inline-block" }} />{lab}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 8 }}>
+          {layer === "dens"
+            ? "Census 2024 county populations rasterized to 40 km cells (people per square mile) — the raster reconstructs 99% of national population."
+            : layer === "serve"
+            ? "Each cell: servable density ÷ actual density, capped at 100%. Green = orbit can carry everyone here; red = single-digit percentages — femtocell country."
+            : layer === "hybrid"
+            ? "Blue-edged cells: top-" + nMetros + " metro clusters served by the femtocell overlay at its configured strategy; all other cells: satellite service. This is the whole hybrid network in one picture — the overlay paints the red green."
+            : "Toggle a layer above — population density, or the share of each cell's population the configured network can carry."}
+        </p>
+      </div>
       <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
         <div className="eyebrow" style={{ color: C.amber }}>Serviceability — what share of America can this network actually carry? <Src k="serve" topic="derived" /></div>
         <p className="body" style={{ marginBottom: 12 }}>
-          The satellite layer's capacity is finite and spreads over each satellite's whole service patch — so the honest
-          question is not "is there signal?" but <strong>"what population density saturates the network?"</strong> This
-          panel divides per-satellite capacity by patch area to get a servable subscriber density, then holds it against
-          the real population of every 40 km cell of the continental US (Census 2024, county-level). Every input is a
-          slider; every number inherits the site's measured-vs-claimed bracket.
+          The satellite layer’s capacity is finite and spreads over each satellite’s whole service patch, so the honest
+          question is <strong>“what population density saturates the network?”</strong> The map above holds that servable
+          density against every 40 km census cell; the dials below drive it, and every number inherits the site’s
+          measured-vs-claimed bracket.
         </p>
+        <div className="statGrid" style={{ marginTop: 4 }}>
+          <div className="stat" style={{ borderColor: C.amber }}>
+            <div className="statL">People this network can carry — {scopeName}</div>
+            <div className="statV" style={{ color: C.amber, fontSize: 34, fontWeight: 700, lineHeight: 1.1 }}>
+              {popServ >= 995e3 ? (popServ / 1e6).toFixed(popServ < 9.95e6 ? 1 : 0) + "M" : Math.round(popServ / 1e3) + "k"}
+              <span style={{ fontSize: 13, color: C.dim, fontWeight: 400 }}> of {(popTot / 1e6).toFixed(popTot < 9.95e6 ? 1 : 0)}M ({natPct.toFixed(natPct < 9.5 ? 1 : 0)}%)</span>
+            </div>
+          </div>
+          <div className="stat"><div className="statL">Land area fully green (100% servable)</div><div className="statV" style={{ fontSize: 20 }}>{landPct.toFixed(0)}%<span style={{ fontSize: 12, color: C.dim }}> of {stSel < 0 ? "CONUS" : US_STATES[stSel].a} cells</span></div></div>
+          <div className="stat" style={{ borderColor: C.green }}>
+            <div className="statL">Hybrid network — orbit + ground-layer overlay (CONUS)</div>
+            <div className="statV" style={{ color: C.green, fontSize: 34, fontWeight: 700, lineHeight: 1.1 }}>
+              {(hybServ / 1e6).toFixed(0)}M
+              <span style={{ fontSize: 13, color: C.dim, fontWeight: 400 }}> of {(hybTot / 1e6).toFixed(0)}M ({((hybServ / hybTot) * 100).toFixed(0)}%) — the gap vs orbit-alone is the ground layer's business case</span>
+            </div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginTop: 4 }}>
+              what it takes: ~{femtos >= 995e3 ? (femtos / 1e6).toFixed(1) + "M" : Math.round(femtos / 1e3) + "k"}{" "}
+              {clsDbm === 20 ? "femtocells" : clsDbm === 30 ? "rooftop small cells" : "pole small cells"} ({clsDbm} dBm,{" "}
+              {Math.round(rOut * 1000)} m) across the top-{nMetros} metros — class and count set in the Metro overlay tab
+              {servedFracCap < servedFrac - 0.005 ? " · capacity-capped at this femto spectrum" : ""}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="card">
+        <div className="eyebrow">The dials — every number above inherits these</div>
         <div className="tglRow" style={{ marginBottom: 4 }}>
           <button className={"genBtn" + (effMode === "measured" ? " on" : "")} onClick={() => setEffMode("measured")}>Measured efficiency · 0.62 bps/Hz</button>
           <button className={"genBtn" + (effMode === "claim" ? " on" : "")} onClick={() => setEffMode("claim")}>Claim-anchored · 2.48 bps/Hz (4×)</button>
@@ -5623,17 +5711,11 @@ function ServiceabilityTab() {
           <strong style={{ color: C.amber }}> ~{servDens.toFixed(1)} servable subscribers/km²</strong> (~{(servDens * 2.59).toFixed(1)}/sq mi).
           {feederFlag && <span style={{ color: C.red }}> ⚠ ~{(satCapMbps / 1000).toFixed(0)} Gbps/satellite approaches feeder/power class limits (~100 Gbps) — treat as a ceiling on a ceiling.</span>}
         </p>
-        <div className="statGrid" style={{ marginTop: 4 }}>
-          <div className="stat" style={{ borderColor: C.amber }}>
-            <div className="statL">People this network can carry — {scopeName}</div>
-            <div className="statV" style={{ color: C.amber, fontSize: 34, fontWeight: 700, lineHeight: 1.1 }}>
-              {popServ >= 995e3 ? (popServ / 1e6).toFixed(popServ < 9.95e6 ? 1 : 0) + "M" : Math.round(popServ / 1e3) + "k"}
-              <span style={{ fontSize: 13, color: C.dim, fontWeight: 400 }}> of {(popTot / 1e6).toFixed(popTot < 9.95e6 ? 1 : 0)}M ({natPct.toFixed(natPct < 9.5 ? 1 : 0)}%)</span>
-            </div>
-          </div>
-          <div className="stat"><div className="statL">Land area fully green (100% servable)</div><div className="statV" style={{ fontSize: 20 }}>{landPct.toFixed(0)}%<span style={{ fontSize: 12, color: C.dim }}> of {stSel < 0 ? "CONUS" : US_STATES[stSel].a} cells</span></div></div>
-          <div className="stat" style={{ borderColor: C.blue, gridRow: "span 2" }}>
-            <div className="statL" style={{ color: C.blue }}>The typical cell — one beam at this fleet's geometry</div>
+      </div>
+      <div className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
+        <div className="eyebrow" style={{ color: C.blue }}>The typical cell — one beam at this fleet’s geometry</div>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
+          <div style={{ flex: "0 1 300px", minWidth: 240 }}>
             <svg viewBox="0 0 320 176" style={{ width: "100%", height: "auto", display: "block", marginTop: 4 }}>
               <defs>
                 <radialGradient id="beamG" cx="50%" cy="50%" r="50%">
@@ -5667,9 +5749,11 @@ function ServiceabilityTab() {
                 );
               })()}
             </svg>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginTop: 2 }}>
               <div>
                 <div className="statL">Beam rate here{beamMode === "elev" ? "" : " (nadir ceiling)"}</div>
+          </div>
+          <div style={{ flex: "1 1 400px", minWidth: 300 }}>
                 <div className="statV" style={{ fontSize: 19, color: beamMode === "elev" ? C.amber : C.green }}>
                   {Math.round(perBeam)}<span style={{ fontSize: 11, color: C.dim }}> Mbps</span>
                 </div>
@@ -5692,7 +5776,7 @@ function ServiceabilityTab() {
               <div>
                 <div className="statL">Cell footprint</div>
                 <div className="statV" style={{ fontSize: 19 }}>{Math.round(cellAreaKm2)}<span style={{ fontSize: 11, color: C.dim }}> km²</span></div>
-                <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim }}>vs ~15 km² at nadir</div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim }}>vs ~62 km² at nadir (8.9 km beam — Panel 1b bracket center)</div>
               </div>
               <div>
                 <div className="statL">Subscribers served here</div>
@@ -5762,72 +5846,7 @@ function ServiceabilityTab() {
                 onClick={() => window.__navTo("coverage", "cov-7-patch")}>See the machine itself → Panel 3b: the patch, tiled</button>
             </Info>
           </div>
-          <div className="stat" style={{ borderColor: C.green }}>
-            <div className="statL">Hybrid network — orbit + femtocell overlay (CONUS)</div>
-            <div className="statV" style={{ color: C.green, fontSize: 34, fontWeight: 700, lineHeight: 1.1 }}>
-              {(hybServ / 1e6).toFixed(0)}M
-              <span style={{ fontSize: 13, color: C.dim, fontWeight: 400 }}> of {(hybTot / 1e6).toFixed(0)}M ({((hybServ / hybTot) * 100).toFixed(0)}%) — the gap vs orbit-alone is the femtocell layer's business case</span>
-            </div>
-          </div>
         </div>
-      </div>
-      <div className="card">
-        <div className="tglRow" style={{ marginBottom: 8, alignItems: "center" }}>
-          <button className={"genBtn" + (layer === "plain" ? " on" : "")} onClick={() => setLayer("plain")}>Plain map</button>
-          <button className={"genBtn" + (layer === "dens" ? " on" : "")} onClick={() => setLayer("dens")}>Population density</button>
-          <button className={"genBtn" + (layer === "serve" ? " on" : "")} onClick={() => setLayer("serve")}>% of population servable</button>
-          <button className={"genBtn" + (layer === "hybrid" ? " on" : "")} onClick={() => setLayer("hybrid")}>Hybrid (orbit + femto)</button>
-          <select value={stSel} onChange={(e) => setStSel(+e.target.value)}
-            style={{ marginLeft: "auto", background: C.panel2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 6, padding: "8px 10px", fontFamily: "var(--mono)", fontSize: 12 }}>
-            <option value={-1}>Whole US</option>
-            {US_STATES.map((st, i) => <option key={i} value={i}>{st.n}</option>)}
-          </select>
-        </div>
-        <svg viewBox={vb} style={{ width: "100%", maxHeight: 600, display: "block", margin: "0 auto" }} role="img" aria-label="Heatmap of population density or percent of population servable by the configured satellite network, whole-US or per state">
-          <defs>
-            <clipPath id="svcClip"><path d={CONUS_PATH} transform={`translate(${ox},${oy}) scale(${kpx})`} /></clipPath>
-            {stSel >= 0 && <clipPath id="svcStClip"><path d={US_STATES[stSel].d} transform={`translate(${ox},${oy}) scale(${kpx})`} /></clipPath>}
-          </defs>
-          <g clipPath={stSel >= 0 ? "url(#svcStClip)" : "url(#svcClip)"}>
-            {layer !== "plain" && cellsIn.map((c, i) => {
-              const inMetro = c.mi >= 0 && c.mi < nMetros;
-              const satFr = satVacatesMetros && inMetro ? 0 : Math.min(1, servDens / c.d);
-              const fill = layer === "dens" ? densColor(c.d)
-                : layer === "hybrid" ? servColor(inMetro ? servedFrac : satFr)
-                : servColor(satFr);
-              return <rect key={i} x={ox + c.gx * cpx} y={oy + c.gy * cpx} width={cpx + 0.4} height={cpx + 0.4} fill={fill} opacity="0.85" stroke={layer === "hybrid" && inMetro ? C.blue : "none"} strokeWidth={layer === "hybrid" && inMetro ? 0.35 : 0} />;
-            })}
-          </g>
-          <g clipPath="url(#svcClip)">
-            {US_STATES.map((st, i) => (
-              <path key={i} d={st.d} transform={`translate(${ox},${oy}) scale(${kpx})`} fill="none"
-                stroke={i === stSel ? C.amber : "#8A98B0"} strokeWidth={i === stSel ? 1.6 : 0.6}
-                vectorEffect="non-scaling-stroke" opacity={i === stSel ? 0.95 : 0.4} />
-            ))}
-          </g>
-          <path d={CONUS_PATH} transform={`translate(${ox},${oy}) scale(${kpx})`} fill={layer === "plain" ? "rgba(91,168,255,0.05)" : "none"} stroke={C.line} strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
-        </svg>
-        {layer !== "plain" && (
-          <div style={{ marginTop: 10 }}>
-            <div className="statL" style={{ marginBottom: 6 }}>{layer === "dens" ? "LEGEND · POPULATION DENSITY (people per square mile)" : layer === "hybrid" ? "LEGEND · SHARE SERVED — FEMTO OVERLAY IN METROS (blue-edged cells) + SATELLITE ELSEWHERE" : "LEGEND · SHARE OF LOCAL POPULATION THE CONFIGURED NETWORK CAN CARRY"}</div>
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-              {(layer === "dens" ? DLEG : SLEG).map(([lab, col], i) => (
-                <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "var(--mono)", fontSize: 11, color: C.dim }}>
-                  <span style={{ width: 12, height: 12, background: col, borderRadius: 2, display: "inline-block" }} />{lab}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-        <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 8 }}>
-          {layer === "dens"
-            ? "Census 2024 county populations rasterized to 40 km cells (people per square mile) — the raster reconstructs 99% of national population."
-            : layer === "serve"
-            ? "Each cell: servable density ÷ actual density, capped at 100%. Green = orbit can carry everyone here; red = single-digit percentages — femtocell country."
-            : layer === "hybrid"
-            ? "Blue-edged cells: top-" + nMetros + " metro clusters served by the femtocell overlay at its configured strategy; all other cells: satellite service. This is the whole hybrid network in one picture — the overlay paints the red green."
-            : "Toggle a layer above — population density, or the share of each cell's population the configured network can carry."}
-        </p>
       </div>
       </>)}
       {sub === "tiers" && <TierSystem scenario={scenario} sub="tiers" />}
@@ -6320,7 +6339,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v101 · serviceability sub-tabs</span>
+        <span className="buildTag">build v102 · map above the fold + hybrid audit</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.bg, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
