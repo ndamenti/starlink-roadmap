@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v111", d: "The cluster ring changes from blue to white. Nick caught it with a controlled comparison: at CBRS 15 the ring reads correctly against yellow-green interiors, but at CBRS 40 the same blue ring sits against the \u22655\u00d7 GREEN fill and the two blend into a teal that matches no legend entry \u2014 and several clusters are one or two cells wide, so nearly every cell is a boundary cell and the ring wraps most of the fill. A marker adjacent in hue to a legend colour will counterfeit a sixth colour at whichever setting produces its neighbour; the ring is now a neutral white that reads as boundary, never as data. All \u2018blue-edged\u2019 references in annotations, legends and captions updated to \u2018white-ringed\u2019." },
   { v: "v110", d: "v109 overcorrected: outlining every metro cell at 1.1px made whole clusters read solid blue at national zoom \u2014 the border covered more area than the ~10px cells\u2019 fill, hiding the very headroom colour the legend describes (at CBRS 40 the clusters ARE \u22655\u00d7 green underneath). Metro clusters are now outlined only along their perimeter \u2014 a single blue ring per cluster, interiors showing their true colour \u2014 by tracing cell edges whose neighbour lies outside the cluster." },
   { v: "v109", d: "The \u2018blue-edged\u2019 metro cells the map text kept referring to were outlined at 0.35 px \u2014 invisible at whole-US zoom, so the annotation described a marker no reader could find. Metro cells on the hybrid and capacity layers are now outlined at 1.1 px in bright blue at full opacity, and the annotation names the clusters in words (New York, LA, Chicago and the rest of the top-10) instead of relying on the reader spotting a colour." },
   { v: "v108", d: "The live map annotation now speaks each layer\u2019s own language. The capacity layer had inherited the hybrid layer\u2019s text, including a clause that was flatly wrong there (\u2018CBRS moves this ceiling, not the colours\u2019 \u2014 on the capacity layer the colours are exactly what CBRS moves). Capacity layer now says what the multiple means in words (\u2018the metro boxes can carry 2.7\u00d7 the people living under them\u2019); the hybrid layer explains its colours show WHO gets service and points to the capacity layer for what CBRS changes; the yellow legend band is relabelled \u2018full, no margin\u2019; the caption rewritten in plain language." },
@@ -5673,7 +5674,7 @@ function ServiceabilityTab() {
                 if (!inSet.has((c.gx - 1) + "," + c.gy)) d += `M${x},${y}v${w}`;
                 if (!inSet.has((c.gx + 1) + "," + c.gy)) d += `M${x + w},${y}v${w}`;
               });
-              return <path d={d} stroke={C.blue} strokeWidth={1.5} fill="none" opacity="0.95" />;
+              return <path d={d} stroke="#F2F5FA" strokeWidth={1.2} fill="none" opacity="0.9" />;
             })()}
           </g>
           <g clipPath="url(#svcClip)">
@@ -5694,14 +5695,14 @@ function ServiceabilityTab() {
                 ? <>LIVE · CBRS {cbrsMhz} MHz → the metro boxes can carry {(popM > 0 ? femSubCap / popM : 0).toFixed(1)}× the people living under them (at {minMbps} Mbps each, busy hour).{" "}
                   {servedFracCap < servedFrac - 0.005
                     ? "Below 1× — the boxes cannot carry everyone they cover."
-                    : "Above 1× is spare margin. The city clusters — the blue-outlined patches on New York, LA, Chicago and the rest of the top-" + nMetros + " — recolour as you change CBRS; everywhere else is the satellite’s margin."}</>
+                    : "Above 1× is spare margin. The city clusters — the white-ringed patches on New York, LA, Chicago and the rest of the top-" + nMetros + " — recolour as you change CBRS; everywhere else is the satellite’s margin."}</>
                 : <>LIVE · metro cells: {(servedFracCap * 100).toFixed(0)}% of people served (set by the {covT}% coverage target) · box capacity = {(popM > 0 ? femSubCap / popM : 0).toFixed(1)}× what’s needed (CBRS {cbrsMhz} MHz).{" "}
                   {servedFracCap < servedFrac - 0.005
                     ? "CAPACITY BINDS — the boxes run out of throughput before they run out of people."
                     : "These colours show WHO gets service, so extra CBRS doesn’t change them — switch to the Capacity headroom layer to see what it does change."}</>}
             </div>
           )}
-          <div className="statL" style={{ marginBottom: 6 }}>{layer === "dens" ? "LEGEND · POPULATION DENSITY (people per square mile)" : layer === "hybrid" ? "LEGEND · SHARE SERVED — GROUND OVERLAY IN METROS (blue-edged cells) + SATELLITE ELSEWHERE" : layer === "cap" ? "LEGEND · CAPACITY HEADROOM = CAPACITY ÷ DEMAND — GROUND CEILING IN METROS (blue-edged) + SATELLITE ELSEWHERE" : "LEGEND · SHARE OF LOCAL POPULATION THE CONFIGURED NETWORK CAN CARRY"}</div>
+          <div className="statL" style={{ marginBottom: 6 }}>{layer === "dens" ? "LEGEND · POPULATION DENSITY (people per square mile)" : layer === "hybrid" ? "LEGEND · SHARE SERVED — GROUND OVERLAY IN METROS (white-ringed cells) + SATELLITE ELSEWHERE" : layer === "cap" ? "LEGEND · CAPACITY HEADROOM = CAPACITY ÷ DEMAND — GROUND CEILING IN METROS (white-ringed) + SATELLITE ELSEWHERE" : "LEGEND · SHARE OF LOCAL POPULATION THE CONFIGURED NETWORK CAN CARRY"}</div>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
               {(layer === "dens" ? DLEG : layer === "cap" ? CLEG : SLEG).map(([lab, col], i) => (
                 <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "var(--mono)", fontSize: 11, color: C.dim }}>
@@ -5717,9 +5718,9 @@ function ServiceabilityTab() {
             : layer === "serve"
             ? "Each cell: servable density ÷ actual density, capped at 100%. Green = orbit can carry everyone here; red = single-digit percentages — ground-layer country."
             : layer === "cap"
-            ? "How much spare capacity each place has: capacity ÷ demand. Green = plenty. Yellow (1–2×) = full with no margin — everyone gets service on paper, and the busy hour is slow. Red = more demand than capacity. Blue-edged metro cells show the ground boxes’ ceiling and recolour with the CBRS chips; everywhere else shows the satellite’s margin."
+            ? "How much spare capacity each place has: capacity ÷ demand. Green = plenty. Yellow (1–2×) = full with no margin — everyone gets service on paper, and the busy hour is slow. Red = more demand than capacity. White-ringed metro cells show the ground boxes’ ceiling and recolour with the CBRS chips; everywhere else shows the satellite’s margin."
             : layer === "hybrid"
-            ? "Blue-edged cells: top-" + nMetros + " metro clusters served by the ground-layer overlay at its configured strategy; all other cells: satellite service. This is the whole hybrid network in one picture — the overlay paints the red green."
+            ? "White-ringed cells: top-" + nMetros + " metro clusters served by the ground-layer overlay at its configured strategy; all other cells: satellite service. This is the whole hybrid network in one picture — the overlay paints the red green."
             : "Toggle a layer above — population density, or the share of each cell's population the configured network can carry."}
         </p>
       </div>
@@ -6435,7 +6436,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v110 · cluster perimeter rings</span>
+        <span className="buildTag">build v111 · neutral ring colour</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
