@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v113", d: "The beam view\u2019s lane-status line (\u2018Transitional \u00b7 2 of 3 lanes \u2014 13.3 of 20 MHz usable\u2019) ran into the \u2018idle subscriber\u2019 legend entry on the same row. It now breaks at the em-dash into two short rows on the left, clearing the legend column." },
   { v: "v112", d: "The Typical Cell card renders as the two-column layout it was always supposed to be: beam view on the left, stats, toggles and explainers on the right. The v102 restructure\u2019s column split had been misplaced during the v103 restore \u2014 the divider landed inside the first stat entry (between its label and its value), so the markup balanced, the build passed, and everything silently flowed down one narrow column with the right two-thirds of the card empty." },
   { v: "v111", d: "The cluster ring changes from blue to white. Nick caught it with a controlled comparison: at CBRS 15 the ring reads correctly against yellow-green interiors, but at CBRS 40 the same blue ring sits against the \u22655\u00d7 GREEN fill and the two blend into a teal that matches no legend entry \u2014 and several clusters are one or two cells wide, so nearly every cell is a boundary cell and the ring wraps most of the fill. A marker adjacent in hue to a legend colour will counterfeit a sixth colour at whichever setting produces its neighbour; the ring is now a neutral white that reads as boundary, never as data. All \u2018blue-edged\u2019 references in annotations, legends and captions updated to \u2018white-ringed\u2019." },
   { v: "v110", d: "v109 overcorrected: outlining every metro cell at 1.1px made whole clusters read solid blue at national zoom \u2014 the border covered more area than the ~10px cells\u2019 fill, hiding the very headroom colour the legend describes (at CBRS 40 the clusters ARE \u22655\u00d7 green underneath). Metro clusters are now outlined only along their perimeter \u2014 a single blue ring per cluster, interiors showing their true colour \u2014 by tracing cell edges whose neighbour lies outside the cluster." },
@@ -5835,7 +5836,10 @@ function ServiceabilityTab() {
                         fill={i < nAct ? C.amber : C.dim} fillOpacity={i < nAct ? 0.95 : 0.45} />
                     ))}
                     <text x={10} y={14} fill={C.dim} style={{ fontSize: 7.5, fontFamily: "var(--mono)" }}>ELEV {cellElev.toFixed(0)}°</text>
-                    <text x={10} y={26} fill={cellElev >= 60 ? C.green : cellElev >= 42 ? C.amber : "#C79BFF"} style={{ fontSize: 7.5, fontFamily: "var(--mono)" }}>{cellReuse}</text>
+                    <text x={10} y={26} fill={cellElev >= 60 ? C.green : cellElev >= 42 ? C.amber : "#C79BFF"} style={{ fontSize: 7.5, fontFamily: "var(--mono)" }}>{cellReuse.split(" \u2014 ")[0]}</text>
+                    {cellReuse.includes(" \u2014 ") && (
+                      <text x={10} y={38} fill={cellElev >= 60 ? C.green : cellElev >= 42 ? C.amber : "#C79BFF"} style={{ fontSize: 7.5, fontFamily: "var(--mono)" }}>{cellReuse.split(" \u2014 ")[1]}</text>
+                    )}
                     <circle cx={232} cy={11} r={2.4} fill={C.amber} />
                     <text x={239} y={14} fill={C.dim} style={{ fontSize: 7.5, fontFamily: "var(--mono)" }}>active now</text>
                     <circle cx={232} cy={23} r={1.6} fill={C.dim} fillOpacity="0.45" />
@@ -6437,7 +6441,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v112 · typical cell truly horizontal</span>
+        <span className="buildTag">build v113 · beam-view label collision</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
