@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v117", d: "The self-carry scoreboard is rebuilt around Nick\u2019s correction: the self/partner/wholesale split is a function of WHERE the subscriber lives, and one blended bar hid exactly the distinction the rest of the site exists to draw. The card now models a rural subscriber (home broadband IS the dish, satellite carries the green-map outdoors, no cable to partner with) and a metro subscriber (little dish, boxes + cable JV or wholesale) as separate populations with their own bars, blended by a visible mix slider. The structural finding the mix exposes: every metro subscriber signed without a JV dilutes self-carry, while rural subscribers are accretive but few. The Metro overlay also gains a cable-partnership posture control (none / barter / co-build JV) driving the strand share, with pooled cable PALs flagged as an honest not-yet-modelled gap rather than silently mixed into the spectrum ledger." },
   { v: "v116", d: "The cable partnership stops being binary. The self-carry card\u2019s toggle becomes three positions \u2014 none / barter (roam onto what exists) / co-build JV (fund and share the radios) \u2014 with the JV raising partner coverage and relabelling the bucket JV ON-NET, plus a claim-anchored benchmark: Charter reports 88% of Spectrum Mobile traffic on own/partner infrastructure (Q3 2025), the existence proof and the bar. The Metro overlay gains a JV strand-share control: cable\u2019s strand-mounted CBRS cells carry the aerial-plant suburbs, discounting the SpaceX-built box count to the residual \u2014 capped below ~70% because downtown cores are cable deserts (underground conduit, no strand; attested from 20+ years inside the cable industry), so the cores stay SpaceX\u2019s to build. The CBRS zero chip now names its two flavours: Verizon buying EchoStar\u2019s PALs is foreclosure; a cable buyer could convert the same zero into JV inventory." },
   { v: "v115", d: "New Verdict card: \u2018The other scoreboard \u2014 self-carried traffic, not subscribers.\u2019 Built from Sebastian Barros\u2019s argument (Aug 2026) that the KPI for Starlink Mobile is the share of its customers\u2019 traffic carried on its own infrastructure rather than bought wholesale \u2014 satellite for geography, someone else\u2019s macro for mobility, boxes to grab traffic where customers stop moving. Interactive three-bucket split (self / partner / wholesale) with Barros\u2019s bands marked, plus this site\u2019s extension: a cable WiFi barter (their metro hotspots for Starlink\u2019s rural satellite) as the partner bucket, clearly labelled as unreported speculation. Scale check ties his 111M-customer ambition to the site\u2019s 87\u2013101M hybrid bracket. Every default labelled by type: convention, claim-anchored, or extension." },
   { v: "v114", d: "The combined build\u2019s equipment dropdowns now offer only archetypes germane to their environment: Outdoor lists the rooftop and pole options, In-vehicle lists the booster and vehicle femtocell, Indoor lists WiFi over the dish. Previously every row offered all six \u2014 a sidewalk could be assigned WiFi over the dish. Each archetype carries an envs tag and the selector filters on it." },
@@ -1458,31 +1459,44 @@ const VER_SECTIONS = [
 
 
 function SelfCarryCard() {
-  // Barros (Aug 15 2026): the KPI for Starlink Mobile is not subscriber share but the share
-  // of its customers' traffic it carries on its OWN infrastructure vs buys wholesale.
-  // Nick's extension: a cable barter (their WiFi for our satellite) adds a third bucket —
-  // partner-carried — which cuts the wholesale bill without being owned infrastructure.
-  const [subsM, setSubsM] = useState(15);
+  // v117: the self/partner/wholesale split is a FUNCTION OF WHERE THE SUBSCRIBER LIVES
+  // (Nick's correction) - a rural subscriber's home broadband IS the dish and there is no
+  // cable plant to partner with; a metro subscriber is the mirror image. So the card models
+  // two subscriber populations and blends by mix, instead of one averaged phantom customer.
+  const [metroShare, setMetroShare] = useState(60);
   const [atHome, setAtHome] = useState(55);
   const [awayStat, setAwayStat] = useState(25);
-  const [dishShare, setDishShare] = useState(60);
+  // rural subscriber
+  const [dishR, setDishR] = useState(85);
+  const [satR, setSatR] = useState(50);
+  // metro subscriber
+  const [dishM, setDishM] = useState(25);
+  const [boxShare, setBoxShare] = useState(10);
   const [depth, setDepth] = useState("barter"); // none | barter | jv
   const deal = depth !== "none";
+  const [cableHome, setCableHome] = useState(65);
+  const [venueCov, setVenueCov] = useState(50);
   useEffect(() => {
     if (depth === "barter") { setCableHome(65); setVenueCov(50); }
     if (depth === "jv") { setCableHome(80); setVenueCov(65); }
   }, [depth]);
-  const [cableHome, setCableHome] = useState(65);
-  const [venueCov, setVenueCov] = useState(50);
-  const [boxShare, setBoxShare] = useState(10);
-  const [satMove, setSatMove] = useState(10);
   const onMove = Math.max(0, 100 - atHome - awayStat);
-  const selfPct = (atHome * dishShare + awayStat * boxShare + onMove * satMove) / 100;
-  const partnerPct = deal ? (atHome * (100 - dishShare) / 100 * cableHome + awayStat * (100 - boxShare) / 100 * venueCov) / 100 : 0;
-  const wholesalePct = Math.max(0, 100 - selfPct - partnerPct);
-  const band = selfPct < 10 ? { t: "a large MVNO with an expensive satellite feature", c: "#D64545" }
-    : selfPct < 30 ? { t: "meaningful offload, but the host still owns the economics", c: "#E6B357" }
-    : selfPct < 50 ? { t: "stripping serious traffic from the wholesale host — the economics get interesting", c: "#A8C94C" }
+  // rural: dish at home; satellite outside it (rural IS the green map); no cable anywhere
+  const selfR = (atHome * dishR + (awayStat + onMove) * satR) / 100;
+  const ruralSeg = { self: selfR, partner: 0, wholesale: Math.max(0, 100 - selfR) };
+  // metro: dish rare, boxes + JV carry the stationary world, on-the-move is wholesale macro
+  const selfM = (atHome * dishM + awayStat * boxShare) / 100;
+  const partnerM = deal ? (atHome * (100 - dishM) / 100 * cableHome + awayStat * (100 - boxShare) / 100 * venueCov) / 100 : 0;
+  const metroSeg = { self: selfM, partner: partnerM, wholesale: Math.max(0, 100 - selfM - partnerM) };
+  const w = metroShare / 100;
+  const blend = {
+    self: metroSeg.self * w + ruralSeg.self * (1 - w),
+    partner: metroSeg.partner * w + ruralSeg.partner * (1 - w),
+  };
+  blend.wholesale = Math.max(0, 100 - blend.self - blend.partner);
+  const band = blend.self < 10 ? { t: "a large MVNO with an expensive satellite feature", c: "#D64545" }
+    : blend.self < 30 ? { t: "meaningful offload, but the host still owns the economics", c: "#E6B357" }
+    : blend.self < 50 ? { t: "stripping serious traffic from the wholesale host — the economics get interesting", c: "#A8C94C" }
     : { t: "a genuine infrastructure competitor", c: "#2FBF71" };
   const SL = ({ v }) => <strong style={{ color: C.text }}>{v}</strong>;
   const slider = (lbl, val, set, min, max, note) => (
@@ -1491,57 +1505,68 @@ function SelfCarryCard() {
       <input type="range" min={min} max={max} step="5" value={val} onChange={(e) => set(+e.target.value)} />
     </div>
   );
+  const Bar = ({ seg, label }) => (
+    <div style={{ marginBottom: 5 }}>
+      <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginBottom: 2 }}>{label}</div>
+      <div style={{ display: "flex", height: 22, borderRadius: 4, overflow: "hidden", fontFamily: "var(--mono)", fontSize: 10 }}>
+        <div style={{ width: seg.self + "%", background: "#2FBF71", display: "flex", alignItems: "center", justifyContent: "center", color: "#062517" }}>{seg.self >= 11 ? "SELF " + seg.self.toFixed(0) + "%" : ""}</div>
+        <div style={{ width: seg.partner + "%", background: "#5BA8FF", display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1B33" }}>{seg.partner >= 11 ? (depth === "jv" ? "JV " : "PARTNER ") + seg.partner.toFixed(0) + "%" : ""}</div>
+        <div style={{ width: seg.wholesale + "%", background: "#D64545", display: "flex", alignItems: "center", justifyContent: "center", color: "#2B0A0A" }}>{seg.wholesale >= 11 ? "WHOLESALE " + seg.wholesale.toFixed(0) + "%" : ""}</div>
+      </div>
+    </div>
+  );
   return (
     <div className="card" id="ver-selfcarry" style={{ borderLeft: `2px solid ${C.blue}`, marginTop: 16 }}>
       <div className="eyebrow" style={{ color: C.blue }}>The other scoreboard — self-carried traffic, not subscribers</div>
       <p className="body" style={{ fontSize: 13 }}>
         Everything above asks whether this network can <em>replace</em> a carrier. Analyst Sebastian Barros argues that is
-        the wrong scoreboard: satellite handles geography, someone else’s macro network handles continuous mobility, and
-        the boxes exist to grab traffic where customers <em>stop moving</em> — so the KPI is the share of traffic SpaceX
-        carries on its own infrastructure instead of buying wholesale. A cable barter (their metro WiFi for Starlink’s
-        rural satellite — each side trading capacity it values at nearly nothing) adds a third bucket: partner-carried.
+        the wrong scoreboard: the KPI is the share of customer traffic SpaceX carries on its own infrastructure instead of
+        buying wholesale. And that share is a <strong>function of where the subscriber lives</strong>: a rural
+        subscriber’s home broadband IS the dish and their outdoor world is the satellite’s green map — they never
+        see the cable partnership. A metro subscriber is the mirror image: little dish, no satellite margin, and the
+        stationary world is carried by boxes, cable WiFi and CBRS strand cells — or bought wholesale. So the scoreboard
+        is shown per subscriber type, then blended by mix.
       </p>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 6 }}>
+        {slider("Subscribers in metro / cable territory", metroShare, setMetroShare, 0, 100, "the mix lever — today's dish map skews rural (Barros's geographic mismatch), the mobile TAM skews metro")}
         {slider("Traffic consumed at home", atHome, setAtHome, 30, 70, "industry convention: 70–80% of mobile traffic is indoor/stationary")}
         {slider("At other stationary places", awayStat, setAwayStat, 10, 40, "venues, work, campuses — on-the-move gets the remainder (" + onMove + "%)")}
-        {slider("Subs whose home has dish + WiFi", dishShare, setDishShare, 0, 100, "the bundle assumption — this is the single biggest lever")}
       </div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 6 }}>
-        {slider("Own metro boxes carry (of venue traffic)", boxShare, setBoxShare, 0, 60, "0 unless the Metro overlay build happens")}
-        {slider("Satellite share of on-the-move", satMove, setSatMove, 0, 30, "rural/highway driving inside the green map")}
+        {slider("RURAL sub · home has dish + WiFi", dishR, setDishR, 40, 100, "their broadband IS Starlink")}
+        {slider("RURAL sub · satellite carries outside the home", satR, setSatR, 0, 80, "stationary-away + on-the-move, inside the green map")}
       </div>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
-        <span style={{ fontSize: 11.5, color: C.dim }}>Cable partnership:</span>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 6 }}>
+        {slider("METRO sub · home has dish + WiFi", dishM, setDishM, 0, 60, "cable country — the bundle has to fight for these homes")}
+        {slider("METRO sub · own boxes carry (of venue traffic)", boxShare, setBoxShare, 0, 60, "0 unless the Metro overlay build happens")}
+      </div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 6 }}>
+        <span style={{ fontSize: 11.5, color: C.dim }}>Cable partnership (metro only):</span>
         {[["none", "None"], ["barter", "Barter — roam onto what exists"], ["jv", "Co-build JV — fund + share the radios"]].map(([k, n]) => (
           <button key={k} className={"genBtn" + (depth === k ? " on" : "")} onClick={() => setDepth(k)} style={{ fontSize: 11 }}>{n}</button>
         ))}
-        {deal && slider("Non-dish homes inside partner WiFi", cableHome, setCableHome, 0, 90, "cable passes ~60%+ of US homes")}
-        {deal && slider("Venues with partner hotspots", venueCov, setVenueCov, 0, 80, "Passpoint/OpenRoaming — works today")}
+        {deal && slider("Non-dish metro homes inside partner WiFi", cableHome, setCableHome, 0, 90, "cable passes ~60%+ of US homes")}
+        {deal && slider("Venues with partner coverage", venueCov, setVenueCov, 0, 80, "WiFi Passpoint + CBRS strand cells")}
       </div>
-      <div style={{ display: "flex", height: 26, borderRadius: 4, overflow: "hidden", fontFamily: "var(--mono)", fontSize: 10.5, marginBottom: 4 }}>
-        <div style={{ width: selfPct + "%", background: "#2FBF71", display: "flex", alignItems: "center", justifyContent: "center", color: "#062517" }}>{selfPct >= 12 ? "SELF " + selfPct.toFixed(0) + "%" : ""}</div>
-        <div style={{ width: partnerPct + "%", background: "#5BA8FF", display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1B33" }}>{partnerPct >= 12 ? (depth === "jv" ? "JV ON-NET " : "PARTNER ") + partnerPct.toFixed(0) + "%" : ""}</div>
-        <div style={{ width: wholesalePct + "%", background: "#D64545", display: "flex", alignItems: "center", justifyContent: "center", color: "#2B0A0A" }}>{wholesalePct >= 12 ? "WHOLESALE " + wholesalePct.toFixed(0) + "%" : ""}</div>
-      </div>
+      <Bar seg={ruralSeg} label={"RURAL SUBSCRIBER (" + (100 - metroShare) + "% of base)"} />
+      <Bar seg={metroSeg} label={"METRO SUBSCRIBER (" + metroShare + "% of base)"} />
+      <Bar seg={blend} label="BLENDED — the scoreboard" />
       <div style={{ fontFamily: "var(--mono)", fontSize: 11.5, marginBottom: 6 }}>
-        Self-carried <strong style={{ color: band.c }}>{selfPct.toFixed(0)}%</strong> → on Barros’s bands ({"<"}10 · 30–40 · {">"}50):{" "}
-        <span style={{ color: band.c }}>{band.t}</span>
-        {deal && <span style={{ color: C.dim }}> · wholesale bill cut to {wholesalePct.toFixed(0)}% of traffic once the partner bucket is counted</span>}
+        Blended self-carried <strong style={{ color: band.c }}>{blend.self.toFixed(0)}%</strong> → on Barros’s bands
+        ({"<"}10 · 30\u201340 · {">"}50): <span style={{ color: band.c }}>{band.t}</span>
       </div>
       <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginBottom: 6 }}>
         benchmark: Charter reports <strong style={{ color: C.text }}>88%</strong> of Spectrum Mobile traffic on own/partner
-        infrastructure (WiFi + CBRS strand cells + partners, Q3 2025) — cable already ran this playbook; that is both the
-        existence proof and the bar. {depth === "jv" ? "The JV logic: strand mount needs AERIAL plant, and downtown cores are cable deserts — underground conduit, no strand (industry-attested). Cable’s strand covers the aerial suburbs; SpaceX’s rooftop and pole units cover the cores and footprint gaps. Each side deploys where its siting asset works." : ""}
+        infrastructure (WiFi + CBRS strand cells + partners, Q3 2025) — cable already ran this playbook in ITS territory.
+        The rural bar is where SpaceX matches that trick alone; the metro bar is where it needs the JV or the wholesale host.
       </div>
       <p className="body" style={{ fontSize: 12, color: C.dim }}>
-        Scale check: the “$100B of the $600B pie” ambition at $75/month implies ~111M customer-equivalents (Barros);
-        this site’s hybrid network brackets 87–101M people served — the ambition sits at the very top of what the
-        physics supports, and only with the full metro build and CBRS. At {subsM}M subscribers{" "}
-        <input type="range" min="1" max="111" step="1" value={subsM} onChange={(e) => setSubsM(+e.target.value)} style={{ width: 90, verticalAlign: "middle" }} />{" "}
-        the wholesale bucket is {wholesalePct.toFixed(0)}% of {subsM}M customers’ traffic bought from the very carriers
-        being competed against — which is Barros’s real point: the boxes don’t need to replace Verizon, they need to
-        make Verizon carry less of the customer. Assumption types: traffic mix = industry convention; bands + 111M =
-        claim-anchored (Barros, Aug 2026); cable barter = this site’s extension, no deal exists or is reported.
+        The structural finding the mix slider exposes: <strong>every metro subscriber signed without a JV dilutes
+        self-carry</strong> — they arrive mostly wholesale — while every rural subscriber is accretive but the rural
+        TAM is small. Scale check: the “$100B” ambition implies ~111M customer-equivalents (Barros); this site’s
+        hybrid bracket is 87\u2013101M served. Assumption types: traffic mix = industry convention; bands + 111M =
+        claim-anchored (Barros, Aug 2026); cable barter/JV = this site’s extension — no deal exists or is reported;
+        cable-desert cap = industry-attested.
       </p>
     </div>
   );
@@ -5543,6 +5568,8 @@ function ServiceabilityTab() {
   const [clsDbm, setClsDbm] = useState(38);   // outdoor equipment class: 20 femto · 30 rooftop SC · 38 pole SC
   const [scenario, setScenario] = useState("canon");
   const [strandPct, setStrandPct] = useState(0);   // share of metro coverage carried by cable strand cells under a JV
+  const [ovJv, setOvJv] = useState("none");        // none | barter | jv — the metro build's partnership posture
+  useEffect(() => { setStrandPct(ovJv === "jv" ? 60 : 0); }, [ovJv]);
   const [cbrsMhz, setCbrsMhz] = useState(15);
   const gSpec = groundSpec(scenario, cbrsMhz);
   const satSpec = SPEC_SCEN.find((x) => x.k === (SITE_SCEN.find((z) => z.k === scenario) || SITE_SCEN[1]).spec) || SPEC_SCEN[1];
@@ -6208,6 +6235,17 @@ function ServiceabilityTab() {
                 of which SpaceX builds {(femtos * (1 - strandPct / 100)) >= 995e3 ? (femtos * (1 - strandPct / 100) / 1e6).toFixed(1) + "M" : Math.round(femtos * (1 - strandPct / 100) / 1e3) + "k"} — cable strand carries {strandPct}% under the JV
               </div>
             )}
+            <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", marginTop: 6 }}>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>CABLE PARTNERSHIP:</span>
+              {[["none", "None"], ["barter", "Barter"], ["jv", "Co-build JV"]].map(([k, n]) => (
+                <button key={k} className={"genBtn" + (ovJv === k ? " on" : "")} onClick={() => setOvJv(k)} style={{ fontSize: 10, padding: "2px 8px" }}>{n}</button>
+              ))}
+              <span style={{ fontSize: 10, color: C.dim, flex: "1 1 220px" }}>
+                {ovJv === "none" ? "SpaceX builds every box below alone."
+                  : ovJv === "barter" ? "Barter = subscribers roam onto cable WiFi/CBRS where it already exists — that moves the Verdict tab’s scoreboard, not this build count."
+                  : "JV = cable’s strand-mounted radios carry their share of the blanket; pooled cable PALs (10–20 MHz/county typical) would also widen the ground spectrum — not yet added to the ledger above (flagged, honest gap)."}
+              </span>
+            </div>
             <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", marginTop: 5 }}>
               <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>JV STRAND SHARE:</span>
               {[[0, "0 · no JV"], [40, "40 · aerial suburbs"], [60, "60 · deep JV"]].map(([v, n]) => (
@@ -6553,7 +6591,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v116 · partnership depth + strand share</span>
+        <span className="buildTag">build v117 · subscriber-segmented scoreboard</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
