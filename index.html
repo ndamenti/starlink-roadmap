@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v125", d: "Deployment discipline follows WHO SITES each box (Nick\u2019s point): one global planned/organic/clustered toggle was averaging three different siting realities. In the mixed build, poles are operator-placed and get the planned grid (\u00d71.05/target), rooftops sit wherever consenting subscribers live and get organic Poisson with an adoption-clusters \u00d71.4 toggle, and cable strand is engineered along plant (planned, rooftop-class radius). The pole dividend is large: planned-grid poles need ~2.4\u00d7 fewer sites than the organic penalty was charging them, so at the canonical mix the SpaceX build drops to ~1.9M with poles at ~236k. The global deployment buttons now state that they apply only to single-class builds, and the composition line names each class\u2019s discipline." },
   { v: "v124", d: "The rooftop/pole mix slider opens to the full 0\u2013100 range \u2014 v123 had clamped it to 20\u201380, which was the binary-thinking residue in miniature: the model should let the extremes be reachable and show what they cost, not forbid them. At 0% the build is pure pole (the mono case the site started with); at 100% pure rooftop, where the composition line notes that lease-and-permit sites vanish entirely. Zero-count segments hide rather than render as \u20180k\u2019." },
   { v: "v123", d: "The 60/40 mix becomes a slider (20\u201380% rooftop, default 60) \u2014 it had shipped as a hardcoded constant, violating the site\u2019s own rule that every assumption is an adjustable input. The rooftop-share slider appears beside the class chips in mix mode and drives the blended cell area, the total box count, and the strand/rooftop/pole composition live. Also documented in place: the overlay\u2019s Ground DL spectrum input is the downlink bandwidth the metro boxes transmit on, fed from the scenario spectrum ledger (Canonical: H-block 5 + 70% of the CBRS chip)." },
   { v: "v122", d: "The ground build stops being mono-class (Nick\u2019s point: the site reasoned in binaries \u2014 all pole or all rooftop \u2014 when a mix is what a JV would actually deploy). A Mixed 60/40 roof/pole option joins the outdoor class selector and becomes the canonical scenario\u2019s default, modelled as a TERRITORY PARTITION rather than a preference blend: 60% of the residual on subscriber rooftops (30 dBm, smaller cells), the rest on poles (38 dBm). The mix RAISES the total box count (~1.6M \u2192 ~2.5M at CBRS) while collapsing the pole count \u2014 the hard lease-and-permit sites \u2014 to ~650k, the honest cost axis since siting binds harder than physics. The boxes stat shows the full composition (strand \u00b7 rooftop \u00b7 pole, pole flagged amber) and the rooftop share carries its caveat: consenting-roof density thins where apartments replace houses, so 60/40 is an assumption with its sourced bound logged open." },
@@ -5576,6 +5577,7 @@ function ServiceabilityTab() {
   const [scenario, setScenario] = useState("canon");
   const [strandPct, setStrandPct] = useState(0);   // share of metro coverage carried by cable strand cells under a JV
   const [mixRoof, setMixRoof] = useState(60);      // rooftop share of the mixed SpaceX build (%)
+  const [roofClu, setRoofClu] = useState(false);   // rooftop adoption clusters (organic ×1.4)
   const [ovJv, setOvJv] = useState("none");        // none | barter | jv — the metro build's partnership posture
   useEffect(() => { setStrandPct(ovJv === "jv" ? 60 : ovJv === "barter" ? 10 : 0); }, [ovJv]);
   const [cbrsMhz, setCbrsMhz] = useState(15);
@@ -5689,7 +5691,20 @@ function ServiceabilityTab() {
   const metroSel = US_METROS.slice(0, nMetros);
   const popM = metroSel.reduce((a, m) => a + m.p, 0);
   const areaM = metroSel.reduce((a, m) => a + m.k, 0);
-  const femtos = areaM * lam;
+  // Per-class deployment discipline (Nick's point): discipline follows WHO SITES the box.
+  // Poles are operator-placed — surveyed, RF-planned → planned grid ×1.05/Cf. Rooftops sit
+  // wherever consenting subscribers live → organic Poisson, ×1.4 more if adoption clusters.
+  // Strand is cable-engineered along plant → planned, at rooftop-class radius.
+  const mixMode = strategy !== "blanket" && clsDbm === "mix";
+  const strandShare = ovJv !== "none" ? strandPct / 100 : 0;
+  const lamPoleP = (1.05 * Cf) / (Math.PI * rPoleK * rPoleK);
+  const lamRoofO = (roofClu ? 1.4 : 1) * -Math.log(1 - Cf) / (Math.PI * rRoofK * rRoofK);
+  const lamStr = (1.05 * Cf) / (Math.PI * rRoofK * rRoofK);
+  const areaResid = areaM * (1 - strandShare);
+  const mixRoofBoxes = mixMode ? areaResid * MIX_ROOF * lamRoofO : 0;
+  const mixPoleBoxes = mixMode ? areaResid * (1 - MIX_ROOF) * lamPoleP : 0;
+  const strandBoxes = mixMode ? areaM * strandShare * lamStr : 0;
+  const femtos = mixMode ? mixRoofBoxes + mixPoleBoxes + strandBoxes : areaM * lam;
   const perFemMbps = femMhz * femEff;
   const subsPerFem = (perFemMbps / minMbps) / (activePct / 100);
   const femSubCap = femtos * subsPerFem;
@@ -6122,6 +6137,7 @@ function ServiceabilityTab() {
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, marginLeft: 10 }}>
               <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>ROOFTOP SHARE: <strong style={{ color: C.text }}>{mixRoof}%</strong> · pole {100 - mixRoof}%</span>
               <input type="range" min="0" max="100" step="5" value={mixRoof} onChange={(e) => setMixRoof(+e.target.value)} style={{ width: 130 }} />
+              <button className={"genBtn" + (roofClu ? " on" : "")} onClick={() => setRoofClu(!roofClu)} style={{ fontSize: 10, padding: "2px 7px" }}>rooftop adoption clusters ×1.4</button>
             </span>
           )}
           <span style={{ display: "none" }}>
@@ -6231,6 +6247,13 @@ function ServiceabilityTab() {
           escape hatch is the other strategy: hand indoors to WiFi and the wall problem disappears (along with the need
           for 10× the boxes).
         </Info>}
+        {clsDbm === "mix" ? (
+          <p style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, margin: "4px 0 8px" }}>
+            deployment discipline is PER CLASS in the mixed build — poles are operator-sited (planned grid ×1.05/target),
+            rooftops sit wherever consenting subscribers live (organic Poisson{"" + (roofClu ? ", clustered ×1.4" : "")}),
+            strand is cable-engineered along plant (planned). The three global buttons below apply only to single-class builds.
+          </p>
+        ) : null}
         <div className="tglRow" style={{ marginBottom: 8 }}>
           <button className={"genBtn" + (depMode === "planned" ? " on" : "")} onClick={() => setDepMode("planned")}>Planned grid ×1.0</button>
           <button className={"genBtn" + (depMode === "organic" ? " on" : "")} onClick={() => setDepMode("organic")}>Organic (Poisson) ×{(-Math.log(1 - covT / 100) / (covT / 100)).toFixed(1)}</button>
@@ -6254,18 +6277,15 @@ function ServiceabilityTab() {
           <div className="stat" style={{ borderColor: C.blue }}>
             <div className="statL">{(clsDbm === 20 ? "Femtocells" : clsDbm === 30 ? "Rooftop small cells" : clsDbm === "mix" ? "Mixed rooftop + pole small cells" : "Pole small cells")} required — top {nMetros} metros, {covT}% outdoor, {depMode}</div>
             <div className="statV" style={{ color: C.blue, fontSize: 30, fontWeight: 700 }}>{femtos >= 995e3 ? (femtos / 1e6).toFixed(1) + "M" : Math.round(femtos / 1e3) + "k"}
-              <span style={{ fontSize: 12, color: C.dim, fontWeight: 400 }}> boxes · ~{Math.round(lam)} per km² · {Math.round(rFem * 1000)} m cells</span></div>
+              <span style={{ fontSize: 12, color: C.dim, fontWeight: 400 }}> boxes · ~{Math.round(femtos / areaM)} per km² · {Math.round(rFem * 1000)} m cells</span></div>
             {clsDbm === "mix" && (() => {
-              const wR = (mixRoof / 100) / (Math.PI * rRoofK * rRoofK), wP = (1 - mixRoof / 100) / (Math.PI * rPoleK * rPoleK);
-              const roofFrac = wR / (wR + wP);
-              const resid = femtos * (1 - (ovJv !== "none" ? strandPct : 0) / 100);
               const k = (n) => n >= 995e3 ? (n / 1e6).toFixed(2) + "M" : Math.round(n / 1e3) + "k";
               return (
                 <div style={{ fontFamily: "var(--mono)", fontSize: 11, marginTop: 3 }}>
                   <span style={{ color: C.dim }}>composition: </span>
-                  {ovJv !== "none" && strandPct > 0 && <span style={{ color: C.green }}>strand {k(femtos * strandPct / 100)} (cable) · </span>}
-                  {resid * roofFrac >= 500 && <span style={{ color: C.blue }}>rooftop {k(resid * roofFrac)} (subscriber consent) · </span>}
-                  {resid * (1 - roofFrac) >= 500 ? <span style={{ color: C.amber }}>pole {k(resid * (1 - roofFrac))} — the hard sites: lease + permit</span> : <span style={{ color: C.dim }}>no pole sites — a pure-rooftop build avoids lease + permit entirely</span>}
+                  {strandBoxes >= 500 && <span style={{ color: C.green }}>strand {k(strandBoxes)} (cable, planned along plant) · </span>}
+                  {mixRoofBoxes >= 500 && <span style={{ color: C.blue }}>rooftop {k(mixRoofBoxes)} (subscriber consent · {roofClu ? "clustered organic" : "organic"}) · </span>}
+                  {mixPoleBoxes >= 500 ? <span style={{ color: C.amber }}>pole {k(mixPoleBoxes)} (planned grid) — the hard sites: lease + permit</span> : <span style={{ color: C.dim }}>no pole sites — a pure-rooftop build avoids lease + permit entirely</span>}
                   <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>
                     rooftop share is bounded by consenting-roof density — it thins exactly where apartments replace
                     houses, so the 60/40 partition is an assumption, not a measurement (sourced bound: open thread).
@@ -6275,7 +6295,7 @@ function ServiceabilityTab() {
             })()}
             {ovJv !== "none" && strandPct > 0 && (
               <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: C.green, marginTop: 2 }}>
-                of which SpaceX builds {(femtos * (1 - strandPct / 100)) >= 995e3 ? (femtos * (1 - strandPct / 100) / 1e6).toFixed(1) + "M" : Math.round(femtos * (1 - strandPct / 100) / 1e3) + "k"} — cable strand carries {strandPct}% under the {ovJv === "jv" ? "co-build JV" : "barter"}
+                of which SpaceX builds {(femtos - strandBoxes) >= 995e3 ? ((femtos - strandBoxes) / 1e6).toFixed(1) + "M" : Math.round((femtos - strandBoxes) / 1e3) + "k"} — cable strand carries {strandBoxes >= 500 ? Math.round(strandBoxes / femtos * 100) : strandPct}% under the {ovJv === "jv" ? "co-build JV" : "barter"}
               </div>
             )}
             <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", marginTop: 6 }}>
@@ -6639,7 +6659,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v124 · mix slider full range</span>
+        <span className="buildTag">build v125 · per-class deployment discipline</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
