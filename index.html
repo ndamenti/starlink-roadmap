@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v126", d: "In the mixed build the deployment row is now explicitly the ROOFTOP selector \u2014 bold label, with \u2018poles are always a planned grid\u2019 stated inline rather than in fine print \u2014 offering only the two patterns subscriber siting can actually produce (organic / clustered organic). The redundant \u00d71.4 toggle beside the mix slider is retired so the concept has one owner. Single-class builds keep the original three-button global selector." },
   { v: "v125", d: "Deployment discipline follows WHO SITES each box (Nick\u2019s point): one global planned/organic/clustered toggle was averaging three different siting realities. In the mixed build, poles are operator-placed and get the planned grid (\u00d71.05/target), rooftops sit wherever consenting subscribers live and get organic Poisson with an adoption-clusters \u00d71.4 toggle, and cable strand is engineered along plant (planned, rooftop-class radius). The pole dividend is large: planned-grid poles need ~2.4\u00d7 fewer sites than the organic penalty was charging them, so at the canonical mix the SpaceX build drops to ~1.9M with poles at ~236k. The global deployment buttons now state that they apply only to single-class builds, and the composition line names each class\u2019s discipline." },
   { v: "v124", d: "The rooftop/pole mix slider opens to the full 0\u2013100 range \u2014 v123 had clamped it to 20\u201380, which was the binary-thinking residue in miniature: the model should let the extremes be reachable and show what they cost, not forbid them. At 0% the build is pure pole (the mono case the site started with); at 100% pure rooftop, where the composition line notes that lease-and-permit sites vanish entirely. Zero-count segments hide rather than render as \u20180k\u2019." },
   { v: "v123", d: "The 60/40 mix becomes a slider (20\u201380% rooftop, default 60) \u2014 it had shipped as a hardcoded constant, violating the site\u2019s own rule that every assumption is an adjustable input. The rooftop-share slider appears beside the class chips in mix mode and drives the blended cell area, the total box count, and the strand/rooftop/pole composition live. Also documented in place: the overlay\u2019s Ground DL spectrum input is the downlink bandwidth the metro boxes transmit on, fed from the scenario spectrum ledger (Canonical: H-block 5 + 70% of the CBRS chip)." },
@@ -6137,7 +6138,6 @@ function ServiceabilityTab() {
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, marginLeft: 10 }}>
               <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>ROOFTOP SHARE: <strong style={{ color: C.text }}>{mixRoof}%</strong> · pole {100 - mixRoof}%</span>
               <input type="range" min="0" max="100" step="5" value={mixRoof} onChange={(e) => setMixRoof(+e.target.value)} style={{ width: 130 }} />
-              <button className={"genBtn" + (roofClu ? " on" : "")} onClick={() => setRoofClu(!roofClu)} style={{ fontSize: 10, padding: "2px 7px" }}>rooftop adoption clusters ×1.4</button>
             </span>
           )}
           <span style={{ display: "none" }}>
@@ -6249,16 +6249,24 @@ function ServiceabilityTab() {
         </Info>}
         {clsDbm === "mix" ? (
           <p style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, margin: "4px 0 8px" }}>
-            deployment discipline is PER CLASS in the mixed build — poles are operator-sited (planned grid ×1.05/target),
-            rooftops sit wherever consenting subscribers live (organic Poisson{"" + (roofClu ? ", clustered ×1.4" : "")}),
-            strand is cable-engineered along plant (planned). The three global buttons below apply only to single-class builds.
+            deployment discipline is PER CLASS in the mixed build: poles and strand are operator-sited (planned),
+            rooftops are subscriber-sited — choose the rooftop pattern below.
           </p>
         ) : null}
+        {clsDbm === "mix" ? (
+          <div className="tglRow" style={{ marginBottom: 8, alignItems: "center" }}>
+            <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: C.blue, fontWeight: 700 }}>ROOFTOP DEPLOYMENT</span>
+            <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>(poles are always a planned grid — operator-sited):</span>
+            <button className={"genBtn" + (!roofClu ? " on" : "")} onClick={() => setRoofClu(false)}>Organic (Poisson) ×{(-Math.log(1 - covT / 100) / (covT / 100)).toFixed(1)}</button>
+            <button className={"genBtn" + (roofClu ? " on" : "")} onClick={() => setRoofClu(true)}>Clustered organic ×{(1.4 * -Math.log(1 - covT / 100) / (covT / 100)).toFixed(1)}</button>
+          </div>
+        ) : (
         <div className="tglRow" style={{ marginBottom: 8 }}>
           <button className={"genBtn" + (depMode === "planned" ? " on" : "")} onClick={() => setDepMode("planned")}>Planned grid ×1.0</button>
           <button className={"genBtn" + (depMode === "organic" ? " on" : "")} onClick={() => setDepMode("organic")}>Organic (Poisson) ×{(-Math.log(1 - covT / 100) / (covT / 100)).toFixed(1)}</button>
           <button className={"genBtn" + (depMode === "clustered" ? " on" : "")} onClick={() => setDepMode("clustered")}>Clustered organic ×{(1.4 * -Math.log(1 - covT / 100) / (covT / 100)).toFixed(1)}</button>
         </div>
+        )}
         <Info label="the three deployment buttons — the price of disorder">
           Same radio, same radius, same coverage target — the multiplier is purely <em>where the boxes end up</em>.
           <strong> Planned ×1.0</strong>: engineered placement, minimal overlap, the theoretical minimum (and mostly a
@@ -6659,7 +6667,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v125 · per-class deployment discipline</span>
+        <span className="buildTag">build v126 · rooftop selector owns the row</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
