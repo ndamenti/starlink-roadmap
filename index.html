@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v114", d: "The combined build\u2019s equipment dropdowns now offer only archetypes germane to their environment: Outdoor lists the rooftop and pole options, In-vehicle lists the booster and vehicle femtocell, Indoor lists WiFi over the dish. Previously every row offered all six \u2014 a sidewalk could be assigned WiFi over the dish. Each archetype carries an envs tag and the selector filters on it." },
   { v: "v113", d: "The beam view\u2019s lane-status line (\u2018Transitional \u00b7 2 of 3 lanes \u2014 13.3 of 20 MHz usable\u2019) ran into the \u2018idle subscriber\u2019 legend entry on the same row. It now breaks at the em-dash into two short rows on the left, clearing the legend column." },
   { v: "v112", d: "The Typical Cell card renders as the two-column layout it was always supposed to be: beam view on the left, stats, toggles and explainers on the right. The v102 restructure\u2019s column split had been misplaced during the v103 restore \u2014 the divider landed inside the first stat entry (between its label and its value), so the markup balanced, the build passed, and everything silently flowed down one narrow column with the right two-thirds of the card empty." },
   { v: "v111", d: "The cluster ring changes from blue to white. Nick caught it with a controlled comparison: at CBRS 15 the ring reads correctly against yellow-green interiors, but at CBRS 40 the same blue ring sits against the \u22655\u00d7 GREEN fill and the two blend into a teal that matches no legend entry \u2014 and several clusters are one or two cells wide, so nearly every cell is a boundary cell and the ring wraps most of the fill. A marker adjacent in hue to a legend colour will counterfeit a sixth colour at whichever setting produces its neighbour; the ring is now a neutral white that reads as boundary, never as data. All \u2018blue-edged\u2019 references in annotations, legends and captions updated to \u2018white-ringed\u2019." },
@@ -3249,12 +3250,12 @@ function GapLab({ rows, g, spec, setSpec, mhz, setMhz, fleet, setFleet, loss, se
    Hybrid Network tab's link-budget scrub (180 m outdoor at 2 GHz -> 110 m at 3.5).
    ============================================================ */
 const EQUIP = [
-  { k: "femto",  n: "Rooftop femtocell", dbm: 20, sub: "subscriber-bought, dish-backhauled", who: "Subscriber", indoor: true },
-  { k: "roof",   n: "Rooftop small cell", dbm: 30, sub: "SpaceX-provided, same bracket", who: "SpaceX", indoor: false },
-  { k: "pole",   n: "Pole / lamp small cell", dbm: 38, sub: "street furniture, site lease + permit", who: "SpaceX", indoor: false },
-  { k: "boost",  n: "Vehicle signal booster", dbm: 20, sub: "external antenna + amplifier, re-radiates the serving carrier — cooperative, no new cell", who: "Vehicle owner", repeater: true },
-  { k: "veh",    n: "Vehicle femtocell", dbm: 20, sub: "roaming base station — needs real backhaul, and interferes with nearby satellite users", who: "Vehicle owner", indoor: false },
-  { k: "wifi",   n: "WiFi over the dish", dbm: 20, sub: "radio already in the Starlink router", who: "Subscriber (bundled)", indoor: true, unlicensed: true },
+  { k: "femto", envs: ["out"],  n: "Rooftop femtocell", dbm: 20, sub: "subscriber-bought, dish-backhauled", who: "Subscriber", indoor: true },
+  { k: "roof", envs: ["out"],   n: "Rooftop small cell", dbm: 30, sub: "SpaceX-provided, same bracket", who: "SpaceX", indoor: false },
+  { k: "pole", envs: ["out"],   n: "Pole / lamp small cell", dbm: 38, sub: "street furniture, site lease + permit", who: "SpaceX", indoor: false },
+  { k: "boost", envs: ["veh"],  n: "Vehicle signal booster", dbm: 20, sub: "external antenna + amplifier, re-radiates the serving carrier — cooperative, no new cell", who: "Vehicle owner", repeater: true },
+  { k: "veh", envs: ["veh"],    n: "Vehicle femtocell", dbm: 20, sub: "roaming base station — needs real backhaul, and interferes with nearby satellite users", who: "Vehicle owner", indoor: false },
+  { k: "wifi", envs: ["in"],   n: "WiFi over the dish", dbm: 20, sub: "radio already in the Starlink router", who: "Subscriber (bundled)", indoor: true, unlicensed: true },
 ];
 const EQ_BANDS = [
   { k: "2ghz", n: "Band 70 · 2 GHz", f: 2.0, note: "owned; collides with the satellite layer unless partitioned by tier" },
@@ -3607,7 +3608,7 @@ function BuildSummary({ rows, g, mhz, fleet, loss, floorDb, bandk, covT, eqEff, 
                 <td style={cellS}>
                   <select value={pick[pe.env.k]} onChange={(e) => setPick({ ...pick, [pe.env.k]: e.target.value })}
                     style={{ background: "transparent", color: C.text, border: `1px solid ${C.line}`, borderRadius: 3, fontFamily: "var(--mono)", fontSize: 11, padding: "1px 3px" }}>
-                    {EQUIP.map((e) => <option key={e.k} value={e.k} style={{ background: "#0E1116" }}>{e.n}</option>)}
+                    {EQUIP.filter((e) => (e.envs || []).includes(pe.env.k)).map((e) => <option key={e.k} value={e.k} style={{ background: "#0E1116" }}>{e.n}</option>)}
                   </select>
                 </td>
                 <td style={{ ...cellS, color: C.dim }}>{pe.basis === "home" ? "per household" : covT + "% blanket"}</td>
@@ -6441,7 +6442,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v113 · beam-view label collision</span>
+        <span className="buildTag">build v114 · environment-scoped equipment options</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
