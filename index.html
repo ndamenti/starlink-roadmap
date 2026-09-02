@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v124", d: "The rooftop/pole mix slider opens to the full 0\u2013100 range \u2014 v123 had clamped it to 20\u201380, which was the binary-thinking residue in miniature: the model should let the extremes be reachable and show what they cost, not forbid them. At 0% the build is pure pole (the mono case the site started with); at 100% pure rooftop, where the composition line notes that lease-and-permit sites vanish entirely. Zero-count segments hide rather than render as \u20180k\u2019." },
   { v: "v123", d: "The 60/40 mix becomes a slider (20\u201380% rooftop, default 60) \u2014 it had shipped as a hardcoded constant, violating the site\u2019s own rule that every assumption is an adjustable input. The rooftop-share slider appears beside the class chips in mix mode and drives the blended cell area, the total box count, and the strand/rooftop/pole composition live. Also documented in place: the overlay\u2019s Ground DL spectrum input is the downlink bandwidth the metro boxes transmit on, fed from the scenario spectrum ledger (Canonical: H-block 5 + 70% of the CBRS chip)." },
   { v: "v122", d: "The ground build stops being mono-class (Nick\u2019s point: the site reasoned in binaries \u2014 all pole or all rooftop \u2014 when a mix is what a JV would actually deploy). A Mixed 60/40 roof/pole option joins the outdoor class selector and becomes the canonical scenario\u2019s default, modelled as a TERRITORY PARTITION rather than a preference blend: 60% of the residual on subscriber rooftops (30 dBm, smaller cells), the rest on poles (38 dBm). The mix RAISES the total box count (~1.6M \u2192 ~2.5M at CBRS) while collapsing the pole count \u2014 the hard lease-and-permit sites \u2014 to ~650k, the honest cost axis since siting binds harder than physics. The boxes stat shows the full composition (strand \u00b7 rooftop \u00b7 pole, pole flagged amber) and the rooftop share carries its caveat: consenting-roof density thins where apartments replace houses, so 60/40 is an assumption with its sourced bound logged open." },
   { v: "v121", d: "Label sweep: \u2018Capacity headroom per femto\u2019 \u2192 \u2018per box\u2019 (the card computes for whichever class is selected \u2014 pole cells in the default), the hybrid box\u2019s \u2018femto spectrum\u2019 \u2192 \u2018ground spectrum\u2019, and two Spectrum-tab prose references generalized to terrestrial/ground cell to match the v103 relabel. Indoor ~50 m contexts keep \u2018femtocell\u2019 \u2014 there it is the accurate word." },
@@ -6120,7 +6121,7 @@ function ServiceabilityTab() {
           {clsDbm === "mix" && (
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, marginLeft: 10 }}>
               <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>ROOFTOP SHARE: <strong style={{ color: C.text }}>{mixRoof}%</strong> · pole {100 - mixRoof}%</span>
-              <input type="range" min="20" max="80" step="5" value={mixRoof} onChange={(e) => setMixRoof(+e.target.value)} style={{ width: 110 }} />
+              <input type="range" min="0" max="100" step="5" value={mixRoof} onChange={(e) => setMixRoof(+e.target.value)} style={{ width: 130 }} />
             </span>
           )}
           <span style={{ display: "none" }}>
@@ -6263,8 +6264,8 @@ function ServiceabilityTab() {
                 <div style={{ fontFamily: "var(--mono)", fontSize: 11, marginTop: 3 }}>
                   <span style={{ color: C.dim }}>composition: </span>
                   {ovJv !== "none" && strandPct > 0 && <span style={{ color: C.green }}>strand {k(femtos * strandPct / 100)} (cable) · </span>}
-                  <span style={{ color: C.blue }}>rooftop {k(resid * roofFrac)} (subscriber consent) · </span>
-                  <span style={{ color: C.amber }}>pole {k(resid * (1 - roofFrac))} — the hard sites: lease + permit</span>
+                  {resid * roofFrac >= 500 && <span style={{ color: C.blue }}>rooftop {k(resid * roofFrac)} (subscriber consent) · </span>}
+                  {resid * (1 - roofFrac) >= 500 ? <span style={{ color: C.amber }}>pole {k(resid * (1 - roofFrac))} — the hard sites: lease + permit</span> : <span style={{ color: C.dim }}>no pole sites — a pure-rooftop build avoids lease + permit entirely</span>}
                   <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>
                     rooftop share is bounded by consenting-roof density — it thins exactly where apartments replace
                     houses, so the 60/40 partition is an assumption, not a measurement (sourced bound: open thread).
@@ -6638,7 +6639,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v123 · mix ratio is a slider</span>
+        <span className="buildTag">build v124 · mix slider full range</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
