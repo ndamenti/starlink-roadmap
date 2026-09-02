@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v118", d: "Fixed a self-contradicting state Nick reached in two clicks: partnership set to Barter (whose caption says it does not change the build count) while the strand chips discounted the build 40% \u2018under the JV.\u2019 Two controls were steering one concept and allowed to disagree. Strand share is a property of the JV, not a sibling control \u2014 the chips now appear only when Co-build JV is selected, the \u2018no JV\u2019 chip is gone (the posture control owns that), and None/Barter force the strand share to zero." },
   { v: "v117", d: "The self-carry scoreboard is rebuilt around Nick\u2019s correction: the self/partner/wholesale split is a function of WHERE the subscriber lives, and one blended bar hid exactly the distinction the rest of the site exists to draw. The card now models a rural subscriber (home broadband IS the dish, satellite carries the green-map outdoors, no cable to partner with) and a metro subscriber (little dish, boxes + cable JV or wholesale) as separate populations with their own bars, blended by a visible mix slider. The structural finding the mix exposes: every metro subscriber signed without a JV dilutes self-carry, while rural subscribers are accretive but few. The Metro overlay also gains a cable-partnership posture control (none / barter / co-build JV) driving the strand share, with pooled cable PALs flagged as an honest not-yet-modelled gap rather than silently mixed into the spectrum ledger." },
   { v: "v116", d: "The cable partnership stops being binary. The self-carry card\u2019s toggle becomes three positions \u2014 none / barter (roam onto what exists) / co-build JV (fund and share the radios) \u2014 with the JV raising partner coverage and relabelling the bucket JV ON-NET, plus a claim-anchored benchmark: Charter reports 88% of Spectrum Mobile traffic on own/partner infrastructure (Q3 2025), the existence proof and the bar. The Metro overlay gains a JV strand-share control: cable\u2019s strand-mounted CBRS cells carry the aerial-plant suburbs, discounting the SpaceX-built box count to the residual \u2014 capped below ~70% because downtown cores are cable deserts (underground conduit, no strand; attested from 20+ years inside the cable industry), so the cores stay SpaceX\u2019s to build. The CBRS zero chip now names its two flavours: Verizon buying EchoStar\u2019s PALs is foreclosure; a cable buyer could convert the same zero into JV inventory." },
   { v: "v115", d: "New Verdict card: \u2018The other scoreboard \u2014 self-carried traffic, not subscribers.\u2019 Built from Sebastian Barros\u2019s argument (Aug 2026) that the KPI for Starlink Mobile is the share of its customers\u2019 traffic carried on its own infrastructure rather than bought wholesale \u2014 satellite for geography, someone else\u2019s macro for mobility, boxes to grab traffic where customers stop moving. Interactive three-bucket split (self / partner / wholesale) with Barros\u2019s bands marked, plus this site\u2019s extension: a cable WiFi barter (their metro hotspots for Starlink\u2019s rural satellite) as the partner bucket, clearly labelled as unreported speculation. Scale check ties his 111M-customer ambition to the site\u2019s 87\u2013101M hybrid bracket. Every default labelled by type: convention, claim-anchored, or extension." },
@@ -6230,7 +6231,7 @@ function ServiceabilityTab() {
             <div className="statL">{(clsDbm === 20 ? "Femtocells" : clsDbm === 30 ? "Rooftop small cells" : "Pole small cells")} required — top {nMetros} metros, {covT}% outdoor, {depMode}</div>
             <div className="statV" style={{ color: C.blue, fontSize: 30, fontWeight: 700 }}>{femtos >= 995e3 ? (femtos / 1e6).toFixed(1) + "M" : Math.round(femtos / 1e3) + "k"}
               <span style={{ fontSize: 12, color: C.dim, fontWeight: 400 }}> boxes · ~{Math.round(lam)} per km² · {Math.round(rFem * 1000)} m cells</span></div>
-            {strandPct > 0 && (
+            {ovJv === "jv" && strandPct > 0 && (
               <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: C.green, marginTop: 2 }}>
                 of which SpaceX builds {(femtos * (1 - strandPct / 100)) >= 995e3 ? (femtos * (1 - strandPct / 100) / 1e6).toFixed(1) + "M" : Math.round(femtos * (1 - strandPct / 100) / 1e3) + "k"} — cable strand carries {strandPct}% under the JV
               </div>
@@ -6246,9 +6247,10 @@ function ServiceabilityTab() {
                   : "JV = cable’s strand-mounted radios carry their share of the blanket; pooled cable PALs (10–20 MHz/county typical) would also widen the ground spectrum — not yet added to the ledger above (flagged, honest gap)."}
               </span>
             </div>
+            {ovJv === "jv" && (
             <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", marginTop: 5 }}>
               <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>JV STRAND SHARE:</span>
-              {[[0, "0 · no JV"], [40, "40 · aerial suburbs"], [60, "60 · deep JV"]].map(([v, n]) => (
+              {[[40, "40 · aerial suburbs"], [60, "60 · deep JV"]].map(([v, n]) => (
                 <button key={v} className={"genBtn" + (strandPct === v ? " on" : "")} onClick={() => setStrandPct(v)} style={{ fontSize: 10, padding: "2px 7px" }}>{n}</button>
               ))}
               <span style={{ fontSize: 10, color: C.dim, flex: "1 1 240px" }}>
@@ -6256,6 +6258,7 @@ function ServiceabilityTab() {
                 conduit, no strand (attested: 20+ years inside the cable industry). The cores stay SpaceX’s to build.
               </span>
             </div>
+            )}
           </div>
           <div className="stat"><div className="statL">People served in overlay metros</div><div className="statV" style={{ fontSize: 22 }}>{(peopleFem / 1e6).toFixed(0)}M <span style={{ fontSize: 12, color: C.dim }}>of {(popM / 1e6).toFixed(0)}M ({(servedFrac * 100).toFixed(0)}% — {strategy === "sidewalk" ? "WiFi carries indoors" : "pure-cellular blanket: hostile stock goes unserved indoors"})</span></div></div>
           <div className="stat"><div className="statL">Capacity headroom per femto</div><div className="statV" style={{ fontSize: 22 }}>{perFemMbps.toFixed(0)} Mbps → ~{Math.round(subsPerFem)} subs <span style={{ fontSize: 12, color: femSubCap < popM * servedFrac ? C.red : C.dim }}>· network cap ~{(femSubCap / 1e6).toFixed(0)}M ({(femSubCap / Math.max(popM, 1) * 100).toFixed(0)}% of metro pop) — {femSubCap < popM * servedFrac ? "CAPACITY BINDS at this spectrum" : "coverage binds, not capacity"}</span></div></div>
@@ -6591,7 +6594,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v117 · subscriber-segmented scoreboard</span>
+        <span className="buildTag">build v118 · strand share belongs to the JV</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
