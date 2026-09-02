@@ -53,6 +53,8 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v122", d: "The ground build stops being mono-class (Nick\u2019s point: the site reasoned in binaries \u2014 all pole or all rooftop \u2014 when a mix is what a JV would actually deploy). A Mixed 60/40 roof/pole option joins the outdoor class selector and becomes the canonical scenario\u2019s default, modelled as a TERRITORY PARTITION rather than a preference blend: 60% of the residual on subscriber rooftops (30 dBm, smaller cells), the rest on poles (38 dBm). The mix RAISES the total box count (~1.6M \u2192 ~2.5M at CBRS) while collapsing the pole count \u2014 the hard lease-and-permit sites \u2014 to ~650k, the honest cost axis since siting binds harder than physics. The boxes stat shows the full composition (strand \u00b7 rooftop \u00b7 pole, pole flagged amber) and the rooftop share carries its caveat: consenting-roof density thins where apartments replace houses, so 60/40 is an assumption with its sourced bound logged open." },
+  { v: "v121", d: "Label sweep: \u2018Capacity headroom per femto\u2019 \u2192 \u2018per box\u2019 (the card computes for whichever class is selected \u2014 pole cells in the default), the hybrid box\u2019s \u2018femto spectrum\u2019 \u2192 \u2018ground spectrum\u2019, and two Spectrum-tab prose references generalized to terrestrial/ground cell to match the v103 relabel. Indoor ~50 m contexts keep \u2018femtocell\u2019 \u2014 there it is the accurate word." },
   { v: "v120", d: "Modelling correction from Nick: under a Barter the SpaceX build count stayed at the full 1.6M, which made no sense \u2014 v118 had made the panel coherent by forcing the strand share to zero there, but coherent is not correct. Barter adds no NEW radios, yet cable\u2019s existing and already-planned CBRS strand cells count toward the outdoor blanket if SpaceX subscribers can attach \u2014 Charter has thousands of radios live and a full-footprint rollout underway for its own reasons. Strand share now exists under both postures with honest brackets: Barter 10% (cable\u2019s build today) / 25% (their planned rollout, at their pace and placement), JV 40/60% (co-funded). The caption also notes cable WiFi mostly does NOT count toward an outdoor blanket \u2014 it is indoor and near-premise; the CBRS cells are what count." },
   { v: "v119", d: "The strand chips read like a secret code (\u201840 \u00b7 aerial suburbs\u2019 / \u201860 \u00b7 deep JV\u2019 \u2014 one label was geography, the other deal intensity). Relabelled to what the number actually is: the share of the metro blanket carried on cable\u2019s strand instead of SpaceX-built boxes, 40% conservative / 60% aggressive, explicitly marked as a bracketed assumption like the CBRS chips, with the ~70% cable-desert ceiling explained in place." },
   { v: "v118", d: "Fixed a self-contradicting state Nick reached in two clicks: partnership set to Barter (whose caption says it does not change the build count) while the strand chips discounted the build 40% \u2018under the JV.\u2019 Two controls were steering one concept and allowed to disagree. Strand share is a property of the JV, not a sibling control \u2014 the chips now appear only when Co-build JV is selected, the \u2018no JV\u2019 chip is gone (the posture control owns that), and None/Barter force the strand share to zero." },
@@ -816,7 +818,7 @@ function ModeSwitch() {
       <div className="eyebrow" style={{ color: C.amber }}>The switch-hitter · 2000–2020 MHz · one block, two personalities <Src k="d2capp" topic="d2c-application" /></div>
       <p className="body" style={{ marginBottom: 6 }}>
         The same 20 MHz is a <strong style={{ color: C.amber }}>satellite uplink</strong> in the n252 configuration and a{" "}
-        <strong style={{ color: C.blue }}>femtocell downlink</strong> in the n70 configuration. Both are SpaceX's — but they are
+        <strong style={{ color: C.blue }}>terrestrial downlink</strong> in the n70 configuration. Both are SpaceX's — but they are
         opposite link directions on identical frequencies, so they cannot coexist in the same place. Drag the partition to
         allocate the country between the two modes and watch the interference boundary move with it.
       </p>
@@ -891,7 +893,7 @@ function ModeSwitch() {
         <div className="mswNote" style={{ borderColor: C.blue }}>
           <strong style={{ color: C.blue }}>Why urban gets n70:</strong> downlink demand concentrates where people are, n70 is
           already in handsets (Dish's legacy), and femtocells on dish mounts put the 2000–2020 MHz to work as capacity
-          instead of coverage. 2180–2200 stays downlink here too — but transmitted by the <em>femtocell</em> (bonded on as
+          instead of coverage. 2180–2200 stays downlink here too — but transmitted by the <em>ground cell</em> (bonded on as
           n66 supplemental downlink) rather than the satellite. Satellite DL in cities is a <em>thin outdoor fallback
           overlay</em>, not a capacity layer: femtocells follow the customer map, not the demand map, so something must fill
           the gaps between them — a sliver of satellite DL (paging, emergency, text/voice-grade fill) plus, realistically,
@@ -3588,7 +3590,7 @@ const SITE_SCEN = [
     eqk: "femto", bandk: "2ghz", clsDbm: 20, ovBand: "2ghz",
     blurb: "Owned H-block only (5/5), half the take-up, and home-class radios doing outdoor work. Deliberately NOT the T-Mobile G-block: that is a revocable partner-channel lease which cannot underwrite a competing Starlink Mobile carrier, so it can never be this business's spectrum." },
   { k: "canon", n: "Canonical", tier: "canonical", takeMul: 1.0, spec: "n252", ovMhz: 5, mapDl: 20, fleet: 15000,
-    eqk: "pole", bandk: "cbrs", clsDbm: 38, ovBand: "35",
+    eqk: "pole", bandk: "cbrs", clsDbm: "mix", ovBand: "35",
     blurb: "AWS-4 as the Spectrum tab models it (20/20), canonical take-up, pole small cells on CBRS — the site's central case." },
   { k: "bull", n: "Bull", tier: "bull", takeMul: 1.5, spec: "full", ovMhz: 25, mapDl: 45, fleet: 15000,
     eqk: "pole", bandk: "2ghz", clsDbm: 38, ovBand: "35",
@@ -5272,7 +5274,7 @@ const REG_RISKS = [
     sc: "amber",
     unlocks: "Dual-purpose: clean mid-band femtocell spectrum in metros (uncoupled from anything the satellite needs) and terrestrial capacity that takes urban load off the constellation entirely.",
     fails: "Femtos are left with the 5 MHz H-block coexist case in cities, making the urban roaming bridge load-bearing for years — and pushing metro capacity onto a partner's network.",
-    moves: "The femto spectrum presets — 5 MHz coexist vs an acquired 5–20 MHz band",
+    moves: "The ground spectrum presets — 5 MHz coexist vs an acquired 5–20 MHz band",
     to: ["serviceability", "svc-top"], toLbl: "the ground-layer overlay",
   },
   {
@@ -5666,10 +5668,19 @@ function ServiceabilityTab() {
   // implicit assumption was a 20 dBm femtocell on a lamp post; a real outdoor build uses
   // 30–38 dBm small cells. Radius is uplink-capped, so the gain is ~7×, not ~11×.
   const fG = band === "2ghz" ? 2.0 : 3.5;
-  const rOut = classRadiusKm(clsDbm, fG);
+  // "mix" = territory partition of the SpaceX residual: MIX_ROOF share on subscriber
+  // rooftops (30 dBm), the rest on poles (38 dBm) — the class each patch permits, not a
+  // preference. Rooftop cells are smaller, so a mix RAISES total boxes while collapsing
+  // the pole (lease + permit) count — the hard-site number this model treats as the cost.
+  const MIX_ROOF = 0.6;
+  const rPoleK = classRadiusKm(38, fG), rRoofK = classRadiusKm(30, fG);
+  const rOut = clsDbm === "mix" ? rPoleK : classRadiusKm(clsDbm, fG);
   const rIn = band === "2ghz" ? 0.05 : 0.035; // indoor-grade is femto-class by definition
   const rFem = strategy === "blanket" ? rIn : rOut;
-  const Cf = covT / 100, cellAf = Math.PI * rFem * rFem;
+  const Cf = covT / 100;
+  const cellAf = strategy !== "blanket" && clsDbm === "mix"
+    ? 1 / (MIX_ROOF / (Math.PI * rRoofK * rRoofK) + (1 - MIX_ROOF) / (Math.PI * rPoleK * rPoleK))
+    : Math.PI * rFem * rFem;
   const lamOrg = -Math.log(1 - Cf) / cellAf;
   const lam = depMode === "planned" ? (1.05 * Cf) / cellAf : depMode === "organic" ? lamOrg : 1.4 * lamOrg;
   const metroSel = US_METROS.slice(0, nMetros);
@@ -5878,9 +5889,9 @@ function ServiceabilityTab() {
             </div>
             <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginTop: 4 }}>
               what it takes: ~{femtos >= 995e3 ? (femtos / 1e6).toFixed(1) + "M" : Math.round(femtos / 1e3) + "k"}{" "}
-              {clsDbm === 20 ? "femtocells" : clsDbm === 30 ? "rooftop small cells" : "pole small cells"} ({clsDbm} dBm,{" "}
+              {clsDbm === 20 ? "femtocells" : clsDbm === 30 ? "rooftop small cells" : clsDbm === "mix" ? "mixed rooftop/pole small cells" : "pole small cells"} ({clsDbm === "mix" ? "30/38" : clsDbm} dBm,{" "}
               {Math.round(rOut * 1000)} m) across the top-{nMetros} metros — class and count set in the Metro overlay tab
-              {servedFracCap < servedFrac - 0.005 ? " \u00b7 capacity-capped at this femto spectrum" : ""}
+              {servedFracCap < servedFrac - 0.005 ? " \u00b7 capacity-capped at this ground spectrum" : ""}
               {clsDbm === 20 ? " \u00b7 home-class boxes carry more people here only because there are ~2.7\u00d7 as many of them \u2014 the cost axis is the box count" : ""}
             </div>
             <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: servedFracCap < servedFrac - 0.005 ? "#FF8FA0" : C.dim, marginTop: 3 }}>
@@ -6098,11 +6109,11 @@ function ServiceabilityTab() {
         </p>
         <div className="tglRow" style={{ gap: 5, flexWrap: "wrap", marginBottom: 6 }}>
           <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, alignSelf: "center" }}>OUTDOOR CLASS:</span>
-          {[[20, "Femtocell 20 dBm"], [30, "Rooftop small cell 30"], [38, "Pole small cell 38"]].map(([d, nm]) => (
+          {[[20, "Femtocell 20 dBm"], [30, "Rooftop small cell 30"], [38, "Pole small cell 38"], ["mix", "Mixed 60/40 roof/pole"]].map(([d, nm]) => (
             <button key={d} className={"genBtn" + (clsDbm === d ? " on" : "")} onClick={() => setClsDbm(d)}>{nm}</button>
           ))}
           <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.amber, alignSelf: "center" }}>
-            r = {(rOut * 1000).toFixed(0)} m{clsDbm >= 38 ? " · uplink-capped" : ""}
+            r = {clsDbm === "mix" ? (rRoofK * 1000).toFixed(0) + "/" + (rPoleK * 1000).toFixed(0) : (rOut * 1000).toFixed(0)} m{clsDbm === "mix" || clsDbm >= 38 ? " · uplink-capped" : ""}
           </span>
         </div>
         <div className="tglRow" style={{ marginBottom: 6 }}>
@@ -6174,7 +6185,7 @@ function ServiceabilityTab() {
           and subscribers need non-spotty coverage — a two-sided cold start. The obvious escape — seed femtos on the
           existing dish base, so boxes precede mobile subscribers — is weaker than it looks: Starlink broadband is
           rural-skewed by its own value proposition, so the metro dish base is thin exactly where femtos are needed.
-          The realistic sequencing: <strong>near-term femto spectrum is the 5 MHz H-block coexist or acquired C-band
+          The realistic sequencing: <strong>near-term ground spectrum is the 5 MHz H-block coexist or acquired C-band
           (5–20 MHz, clean of any satellite coupling)</strong>, with metro capacity bridged by an <strong>urban roaming
           agreement</strong> while density builds. The plumbing exists — SpaceX already provides T-Mobile rural satellite
           coverage under the G-block lease, and urban roaming is that trade's natural reciprocal leg — and the precedent
@@ -6230,9 +6241,27 @@ function ServiceabilityTab() {
         </Info>
         <div className="statGrid">
           <div className="stat" style={{ borderColor: C.blue }}>
-            <div className="statL">{(clsDbm === 20 ? "Femtocells" : clsDbm === 30 ? "Rooftop small cells" : "Pole small cells")} required — top {nMetros} metros, {covT}% outdoor, {depMode}</div>
+            <div className="statL">{(clsDbm === 20 ? "Femtocells" : clsDbm === 30 ? "Rooftop small cells" : clsDbm === "mix" ? "Mixed rooftop + pole small cells" : "Pole small cells")} required — top {nMetros} metros, {covT}% outdoor, {depMode}</div>
             <div className="statV" style={{ color: C.blue, fontSize: 30, fontWeight: 700 }}>{femtos >= 995e3 ? (femtos / 1e6).toFixed(1) + "M" : Math.round(femtos / 1e3) + "k"}
               <span style={{ fontSize: 12, color: C.dim, fontWeight: 400 }}> boxes · ~{Math.round(lam)} per km² · {Math.round(rFem * 1000)} m cells</span></div>
+            {clsDbm === "mix" && (() => {
+              const wR = 0.6 / (Math.PI * rRoofK * rRoofK), wP = 0.4 / (Math.PI * rPoleK * rPoleK);
+              const roofFrac = wR / (wR + wP);
+              const resid = femtos * (1 - (ovJv !== "none" ? strandPct : 0) / 100);
+              const k = (n) => n >= 995e3 ? (n / 1e6).toFixed(2) + "M" : Math.round(n / 1e3) + "k";
+              return (
+                <div style={{ fontFamily: "var(--mono)", fontSize: 11, marginTop: 3 }}>
+                  <span style={{ color: C.dim }}>composition: </span>
+                  {ovJv !== "none" && strandPct > 0 && <span style={{ color: C.green }}>strand {k(femtos * strandPct / 100)} (cable) · </span>}
+                  <span style={{ color: C.blue }}>rooftop {k(resid * roofFrac)} (subscriber consent) · </span>
+                  <span style={{ color: C.amber }}>pole {k(resid * (1 - roofFrac))} — the hard sites: lease + permit</span>
+                  <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>
+                    rooftop share is bounded by consenting-roof density — it thins exactly where apartments replace
+                    houses, so the 60/40 partition is an assumption, not a measurement (sourced bound: open thread).
+                  </div>
+                </div>
+              );
+            })()}
             {ovJv !== "none" && strandPct > 0 && (
               <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: C.green, marginTop: 2 }}>
                 of which SpaceX builds {(femtos * (1 - strandPct / 100)) >= 995e3 ? (femtos * (1 - strandPct / 100) / 1e6).toFixed(1) + "M" : Math.round(femtos * (1 - strandPct / 100) / 1e3) + "k"} — cable strand carries {strandPct}% under the {ovJv === "jv" ? "co-build JV" : "barter"}
@@ -6266,7 +6295,7 @@ function ServiceabilityTab() {
             )}
           </div>
           <div className="stat"><div className="statL">People served in overlay metros</div><div className="statV" style={{ fontSize: 22 }}>{(peopleFem / 1e6).toFixed(0)}M <span style={{ fontSize: 12, color: C.dim }}>of {(popM / 1e6).toFixed(0)}M ({(servedFrac * 100).toFixed(0)}% — {strategy === "sidewalk" ? "WiFi carries indoors" : "pure-cellular blanket: hostile stock goes unserved indoors"})</span></div></div>
-          <div className="stat"><div className="statL">Capacity headroom per femto</div><div className="statV" style={{ fontSize: 22 }}>{perFemMbps.toFixed(0)} Mbps → ~{Math.round(subsPerFem)} subs <span style={{ fontSize: 12, color: femSubCap < popM * servedFrac ? C.red : C.dim }}>· network cap ~{(femSubCap / 1e6).toFixed(0)}M ({(femSubCap / Math.max(popM, 1) * 100).toFixed(0)}% of metro pop) — {femSubCap < popM * servedFrac ? "CAPACITY BINDS at this spectrum" : "coverage binds, not capacity"}</span></div></div>
+          <div className="stat"><div className="statL">Capacity headroom per box</div><div className="statV" style={{ fontSize: 22 }}>{perFemMbps.toFixed(0)} Mbps → ~{Math.round(subsPerFem)} subs <span style={{ fontSize: 12, color: femSubCap < popM * servedFrac ? C.red : C.dim }}>· network cap ~{(femSubCap / 1e6).toFixed(0)}M ({(femSubCap / Math.max(popM, 1) * 100).toFixed(0)}% of metro pop) — {femSubCap < popM * servedFrac ? "CAPACITY BINDS at this spectrum" : "coverage binds, not capacity"}</span></div></div>
         </div>
         <div style={{ overflowX: "auto", marginTop: 10 }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--mono)", fontSize: 11.5 }}>
@@ -6599,7 +6628,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v120 · barter counts cable’s own build</span>
+        <span className="buildTag">build v122 · mixed-class ground build</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
