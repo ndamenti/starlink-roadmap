@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v123", d: "The 60/40 mix becomes a slider (20\u201380% rooftop, default 60) \u2014 it had shipped as a hardcoded constant, violating the site\u2019s own rule that every assumption is an adjustable input. The rooftop-share slider appears beside the class chips in mix mode and drives the blended cell area, the total box count, and the strand/rooftop/pole composition live. Also documented in place: the overlay\u2019s Ground DL spectrum input is the downlink bandwidth the metro boxes transmit on, fed from the scenario spectrum ledger (Canonical: H-block 5 + 70% of the CBRS chip)." },
   { v: "v122", d: "The ground build stops being mono-class (Nick\u2019s point: the site reasoned in binaries \u2014 all pole or all rooftop \u2014 when a mix is what a JV would actually deploy). A Mixed 60/40 roof/pole option joins the outdoor class selector and becomes the canonical scenario\u2019s default, modelled as a TERRITORY PARTITION rather than a preference blend: 60% of the residual on subscriber rooftops (30 dBm, smaller cells), the rest on poles (38 dBm). The mix RAISES the total box count (~1.6M \u2192 ~2.5M at CBRS) while collapsing the pole count \u2014 the hard lease-and-permit sites \u2014 to ~650k, the honest cost axis since siting binds harder than physics. The boxes stat shows the full composition (strand \u00b7 rooftop \u00b7 pole, pole flagged amber) and the rooftop share carries its caveat: consenting-roof density thins where apartments replace houses, so 60/40 is an assumption with its sourced bound logged open." },
   { v: "v121", d: "Label sweep: \u2018Capacity headroom per femto\u2019 \u2192 \u2018per box\u2019 (the card computes for whichever class is selected \u2014 pole cells in the default), the hybrid box\u2019s \u2018femto spectrum\u2019 \u2192 \u2018ground spectrum\u2019, and two Spectrum-tab prose references generalized to terrestrial/ground cell to match the v103 relabel. Indoor ~50 m contexts keep \u2018femtocell\u2019 \u2014 there it is the accurate word." },
   { v: "v120", d: "Modelling correction from Nick: under a Barter the SpaceX build count stayed at the full 1.6M, which made no sense \u2014 v118 had made the panel coherent by forcing the strand share to zero there, but coherent is not correct. Barter adds no NEW radios, yet cable\u2019s existing and already-planned CBRS strand cells count toward the outdoor blanket if SpaceX subscribers can attach \u2014 Charter has thousands of radios live and a full-footprint rollout underway for its own reasons. Strand share now exists under both postures with honest brackets: Barter 10% (cable\u2019s build today) / 25% (their planned rollout, at their pace and placement), JV 40/60% (co-funded). The caption also notes cable WiFi mostly does NOT count toward an outdoor blanket \u2014 it is indoor and near-premise; the CBRS cells are what count." },
@@ -5573,6 +5574,7 @@ function ServiceabilityTab() {
   const [clsDbm, setClsDbm] = useState(38);   // outdoor equipment class: 20 femto · 30 rooftop SC · 38 pole SC
   const [scenario, setScenario] = useState("canon");
   const [strandPct, setStrandPct] = useState(0);   // share of metro coverage carried by cable strand cells under a JV
+  const [mixRoof, setMixRoof] = useState(60);      // rooftop share of the mixed SpaceX build (%)
   const [ovJv, setOvJv] = useState("none");        // none | barter | jv — the metro build's partnership posture
   useEffect(() => { setStrandPct(ovJv === "jv" ? 60 : ovJv === "barter" ? 10 : 0); }, [ovJv]);
   const [cbrsMhz, setCbrsMhz] = useState(15);
@@ -5672,7 +5674,7 @@ function ServiceabilityTab() {
   // rooftops (30 dBm), the rest on poles (38 dBm) — the class each patch permits, not a
   // preference. Rooftop cells are smaller, so a mix RAISES total boxes while collapsing
   // the pole (lease + permit) count — the hard-site number this model treats as the cost.
-  const MIX_ROOF = 0.6;
+  const MIX_ROOF = mixRoof / 100;
   const rPoleK = classRadiusKm(38, fG), rRoofK = classRadiusKm(30, fG);
   const rOut = clsDbm === "mix" ? rPoleK : classRadiusKm(clsDbm, fG);
   const rIn = band === "2ghz" ? 0.05 : 0.035; // indoor-grade is femto-class by definition
@@ -6109,11 +6111,19 @@ function ServiceabilityTab() {
         </p>
         <div className="tglRow" style={{ gap: 5, flexWrap: "wrap", marginBottom: 6 }}>
           <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, alignSelf: "center" }}>OUTDOOR CLASS:</span>
-          {[[20, "Femtocell 20 dBm"], [30, "Rooftop small cell 30"], [38, "Pole small cell 38"], ["mix", "Mixed 60/40 roof/pole"]].map(([d, nm]) => (
+          {[[20, "Femtocell 20 dBm"], [30, "Rooftop small cell 30"], [38, "Pole small cell 38"], ["mix", "Mixed roof/pole"]].map(([d, nm]) => (
             <button key={d} className={"genBtn" + (clsDbm === d ? " on" : "")} onClick={() => setClsDbm(d)}>{nm}</button>
           ))}
           <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.amber, alignSelf: "center" }}>
             r = {clsDbm === "mix" ? (rRoofK * 1000).toFixed(0) + "/" + (rPoleK * 1000).toFixed(0) : (rOut * 1000).toFixed(0)} m{clsDbm === "mix" || clsDbm >= 38 ? " · uplink-capped" : ""}
+          </span>
+          {clsDbm === "mix" && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, marginLeft: 10 }}>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>ROOFTOP SHARE: <strong style={{ color: C.text }}>{mixRoof}%</strong> · pole {100 - mixRoof}%</span>
+              <input type="range" min="20" max="80" step="5" value={mixRoof} onChange={(e) => setMixRoof(+e.target.value)} style={{ width: 110 }} />
+            </span>
+          )}
+          <span style={{ display: "none" }}>
           </span>
         </div>
         <div className="tglRow" style={{ marginBottom: 6 }}>
@@ -6245,7 +6255,7 @@ function ServiceabilityTab() {
             <div className="statV" style={{ color: C.blue, fontSize: 30, fontWeight: 700 }}>{femtos >= 995e3 ? (femtos / 1e6).toFixed(1) + "M" : Math.round(femtos / 1e3) + "k"}
               <span style={{ fontSize: 12, color: C.dim, fontWeight: 400 }}> boxes · ~{Math.round(lam)} per km² · {Math.round(rFem * 1000)} m cells</span></div>
             {clsDbm === "mix" && (() => {
-              const wR = 0.6 / (Math.PI * rRoofK * rRoofK), wP = 0.4 / (Math.PI * rPoleK * rPoleK);
+              const wR = (mixRoof / 100) / (Math.PI * rRoofK * rRoofK), wP = (1 - mixRoof / 100) / (Math.PI * rPoleK * rPoleK);
               const roofFrac = wR / (wR + wP);
               const resid = femtos * (1 - (ovJv !== "none" ? strandPct : 0) / 100);
               const k = (n) => n >= 995e3 ? (n / 1e6).toFixed(2) + "M" : Math.round(n / 1e3) + "k";
@@ -6628,7 +6638,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v122 · mixed-class ground build</span>
+        <span className="buildTag">build v123 · mix ratio is a slider</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
