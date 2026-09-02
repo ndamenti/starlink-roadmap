@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v120", d: "Modelling correction from Nick: under a Barter the SpaceX build count stayed at the full 1.6M, which made no sense \u2014 v118 had made the panel coherent by forcing the strand share to zero there, but coherent is not correct. Barter adds no NEW radios, yet cable\u2019s existing and already-planned CBRS strand cells count toward the outdoor blanket if SpaceX subscribers can attach \u2014 Charter has thousands of radios live and a full-footprint rollout underway for its own reasons. Strand share now exists under both postures with honest brackets: Barter 10% (cable\u2019s build today) / 25% (their planned rollout, at their pace and placement), JV 40/60% (co-funded). The caption also notes cable WiFi mostly does NOT count toward an outdoor blanket \u2014 it is indoor and near-premise; the CBRS cells are what count." },
   { v: "v119", d: "The strand chips read like a secret code (\u201840 \u00b7 aerial suburbs\u2019 / \u201860 \u00b7 deep JV\u2019 \u2014 one label was geography, the other deal intensity). Relabelled to what the number actually is: the share of the metro blanket carried on cable\u2019s strand instead of SpaceX-built boxes, 40% conservative / 60% aggressive, explicitly marked as a bracketed assumption like the CBRS chips, with the ~70% cable-desert ceiling explained in place." },
   { v: "v118", d: "Fixed a self-contradicting state Nick reached in two clicks: partnership set to Barter (whose caption says it does not change the build count) while the strand chips discounted the build 40% \u2018under the JV.\u2019 Two controls were steering one concept and allowed to disagree. Strand share is a property of the JV, not a sibling control \u2014 the chips now appear only when Co-build JV is selected, the \u2018no JV\u2019 chip is gone (the posture control owns that), and None/Barter force the strand share to zero." },
   { v: "v117", d: "The self-carry scoreboard is rebuilt around Nick\u2019s correction: the self/partner/wholesale split is a function of WHERE the subscriber lives, and one blended bar hid exactly the distinction the rest of the site exists to draw. The card now models a rural subscriber (home broadband IS the dish, satellite carries the green-map outdoors, no cable to partner with) and a metro subscriber (little dish, boxes + cable JV or wholesale) as separate populations with their own bars, blended by a visible mix slider. The structural finding the mix exposes: every metro subscriber signed without a JV dilutes self-carry, while rural subscribers are accretive but few. The Metro overlay also gains a cable-partnership posture control (none / barter / co-build JV) driving the strand share, with pooled cable PALs flagged as an honest not-yet-modelled gap rather than silently mixed into the spectrum ledger." },
@@ -5571,7 +5572,7 @@ function ServiceabilityTab() {
   const [scenario, setScenario] = useState("canon");
   const [strandPct, setStrandPct] = useState(0);   // share of metro coverage carried by cable strand cells under a JV
   const [ovJv, setOvJv] = useState("none");        // none | barter | jv — the metro build's partnership posture
-  useEffect(() => { setStrandPct(ovJv === "jv" ? 60 : 0); }, [ovJv]);
+  useEffect(() => { setStrandPct(ovJv === "jv" ? 60 : ovJv === "barter" ? 10 : 0); }, [ovJv]);
   const [cbrsMhz, setCbrsMhz] = useState(15);
   const gSpec = groundSpec(scenario, cbrsMhz);
   const satSpec = SPEC_SCEN.find((x) => x.k === (SITE_SCEN.find((z) => z.k === scenario) || SITE_SCEN[1]).spec) || SPEC_SCEN[1];
@@ -6232,9 +6233,9 @@ function ServiceabilityTab() {
             <div className="statL">{(clsDbm === 20 ? "Femtocells" : clsDbm === 30 ? "Rooftop small cells" : "Pole small cells")} required — top {nMetros} metros, {covT}% outdoor, {depMode}</div>
             <div className="statV" style={{ color: C.blue, fontSize: 30, fontWeight: 700 }}>{femtos >= 995e3 ? (femtos / 1e6).toFixed(1) + "M" : Math.round(femtos / 1e3) + "k"}
               <span style={{ fontSize: 12, color: C.dim, fontWeight: 400 }}> boxes · ~{Math.round(lam)} per km² · {Math.round(rFem * 1000)} m cells</span></div>
-            {ovJv === "jv" && strandPct > 0 && (
+            {ovJv !== "none" && strandPct > 0 && (
               <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: C.green, marginTop: 2 }}>
-                of which SpaceX builds {(femtos * (1 - strandPct / 100)) >= 995e3 ? (femtos * (1 - strandPct / 100) / 1e6).toFixed(1) + "M" : Math.round(femtos * (1 - strandPct / 100) / 1e3) + "k"} — cable strand carries {strandPct}% under the JV
+                of which SpaceX builds {(femtos * (1 - strandPct / 100)) >= 995e3 ? (femtos * (1 - strandPct / 100) / 1e6).toFixed(1) + "M" : Math.round(femtos * (1 - strandPct / 100) / 1e3) + "k"} — cable strand carries {strandPct}% under the {ovJv === "jv" ? "co-build JV" : "barter"}
               </div>
             )}
             <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", marginTop: 6 }}>
@@ -6244,14 +6245,14 @@ function ServiceabilityTab() {
               ))}
               <span style={{ fontSize: 10, color: C.dim, flex: "1 1 220px" }}>
                 {ovJv === "none" ? "SpaceX builds every box below alone."
-                  : ovJv === "barter" ? "Barter = subscribers roam onto cable WiFi/CBRS where it already exists — that moves the Verdict tab’s scoreboard, not this build count."
+                  : ovJv === "barter" ? "Barter = SpaceX rides the radios cable builds FOR ITSELF, at cable’s pace and placement. Their CBRS strand cells count toward this outdoor blanket (their WiFi mostly doesn’t — indoor, near-premise), and cable is deploying anyway — so even a barter shrinks SpaceX’s build, just modestly and not where SpaceX chooses."
                   : "JV = cable’s strand-mounted radios carry their share of the blanket; pooled cable PALs (10–20 MHz/county typical) would also widen the ground spectrum — not yet added to the ledger above (flagged, honest gap)."}
               </span>
             </div>
-            {ovJv === "jv" && (
+            {ovJv !== "none" && (
             <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", marginTop: 5 }}>
               <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>SHARE OF THE BLANKET ON CABLE’S STRAND:</span>
-              {[[40, "40% · conservative"], [60, "60% · aggressive"]].map(([v, n]) => (
+              {(ovJv === "barter" ? [[10, "10% · cable’s build today"], [25, "25% · their planned rollout, own pace"]] : [[40, "40% · conservative co-build"], [60, "60% · aggressive co-build"]]).map(([v, n]) => (
                 <button key={v} className={"genBtn" + (strandPct === v ? " on" : "")} onClick={() => setStrandPct(v)} style={{ fontSize: 10, padding: "2px 7px" }}>{n}</button>
               ))}
               <span style={{ fontSize: 10, color: C.dim, flex: "1 1 240px" }}>
@@ -6598,7 +6599,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v119 · strand chips say what they are</span>
+        <span className="buildTag">build v120 · barter counts cable’s own build</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
