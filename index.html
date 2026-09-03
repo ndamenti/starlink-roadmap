@@ -53,6 +53,8 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v129", d: "The barter\u2019s spare-capacity share becomes a slider (0\u2013100%, default 50) instead of a buried constant \u2014 it is the one knob that decides whether a barter helps or hurts the ceiling, so it belongs in the reader\u2019s hands. Shown only under Barter, since the JV pools full capacity and ignores it. At 100% a barter\u2019s ceiling approaches the no-partnership case under Bull (cable\u2019s 10.5 DL \u2248 SpaceX\u2019s starved 10.5); at 0% the strand share contributes coverage but no capacity." },
+  { v: "v128", d: "Nick asked the right question \u2014 doesn\u2019t barter give SpaceX access to cable\u2019s spectrum too? \u2014 and the answer split the model into two channels it had been conflating. Channel 1: spectrum for SpaceX-built boxes (ledger; JV pooling only \u2014 unchanged). Channel 2: capacity through cable\u2019s radios, which run CABLE\u2019s PALs \u2014 barter delivers this wherever cable deployed, at the spare half of those radios\u2019 capacity (bracketed 50%; cable\u2019s own traffic rides first), the JV at full pooled capacity. Strand boxes were also being credited with SpaceX\u2019s ledger spectrum instead of cable\u2019s \u2014 fixed \u2014 and the strand carve-out was gated on the mixed build, so mono-class scenarios like Bull showed zero barter benefit; it now applies to every outdoor class." },
   { v: "v127", d: "The pooled-spectrum gap closes, prompted by Nick\u2019s reading of the Bull case: sending all owned 2 GHz to orbit starves the metro ground layer, and the cure is the partnership\u2019s second asset \u2014 cable\u2019s CBRS PALs. Under Co-build JV the ledger now pools +15 MHz of cable PALs (10\u201320/county typical) into the ground spectrum, lifting per-box throughput and the capacity-headroom map; barter deliberately does not pool (shared radios, not shared spectrum for SpaceX boxes). The partnership posture moves into the sticky header beside the CBRS bracket \u2014 one control, visible on every sub-tab, since it now governs spectrum as well as build share \u2014 and the overlay reads the header\u2019s state instead of owning a duplicate. This also makes the CBRS zero chip\u2019s second flavour live: at CBRS 0 with a JV, the pool is cable\u2019s 15 rather than nothing \u2014 foreclosure becomes inventory when the buyer is the partner." },
   { v: "v126", d: "In the mixed build the deployment row is now explicitly the ROOFTOP selector \u2014 bold label, with \u2018poles are always a planned grid\u2019 stated inline rather than in fine print \u2014 offering only the two patterns subscriber siting can actually produce (organic / clustered organic). The redundant \u00d71.4 toggle beside the mix slider is retired so the concept has one owner. Single-class builds keep the original three-button global selector." },
   { v: "v125", d: "Deployment discipline follows WHO SITES each box (Nick\u2019s point): one global planned/organic/clustered toggle was averaging three different siting realities. In the mixed build, poles are operator-placed and get the planned grid (\u00d71.05/target), rooftops sit wherever consenting subscribers live and get organic Poisson with an adoption-clusters \u00d71.4 toggle, and cable strand is engineered along plant (planned, rooftop-class radius). The pole dividend is large: planned-grid poles need ~2.4\u00d7 fewer sites than the organic penalty was charging them, so at the canonical mix the SpaceX build drops to ~1.9M with poles at ~236k. The global deployment buttons now state that they apply only to single-class builds, and the composition line names each class\u2019s discipline." },
@@ -5586,6 +5588,7 @@ function ServiceabilityTab() {
   const [mixRoof, setMixRoof] = useState(60);      // rooftop share of the mixed SpaceX build (%)
   const [roofClu, setRoofClu] = useState(false);   // rooftop adoption clusters (organic ×1.4)
   const [ovJv, setOvJv] = useState("none");        // none | barter | jv — the metro build's partnership posture
+  const [spareCap, setSpareCap] = useState(50);    // barter: share of cable-radio capacity actually spare for SpaceX subs (%)
   useEffect(() => { setStrandPct(ovJv === "jv" ? 60 : ovJv === "barter" ? 10 : 0); }, [ovJv]);
   const [cbrsMhz, setCbrsMhz] = useState(15);
   const gSpec = groundSpec(scenario, cbrsMhz, ovJv === "jv");
@@ -5710,11 +5713,21 @@ function ServiceabilityTab() {
   const areaResid = areaM * (1 - strandShare);
   const mixRoofBoxes = mixMode ? areaResid * MIX_ROOF * lamRoofO : 0;
   const mixPoleBoxes = mixMode ? areaResid * (1 - MIX_ROOF) * lamPoleP : 0;
-  const strandBoxes = mixMode ? areaM * strandShare * lamStr : 0;
-  const femtos = mixMode ? mixRoofBoxes + mixPoleBoxes + strandBoxes : areaM * lam;
+  // The strand carve applies to EVERY outdoor class — cable's radios cover their share of
+  // the blanket whether SpaceX's residual is mixed or mono (Nick's catch: Bull, pole-only,
+  // showed zero barter benefit because the carve was gated on the mixed build).
+  const strandBoxes = strategy !== "blanket" ? areaM * strandShare * lamStr : 0;
+  const spxBoxes = mixMode ? mixRoofBoxes + mixPoleBoxes : areaResid * lam;
+  const femtos = spxBoxes + strandBoxes;
   const perFemMbps = femMhz * femEff;
   const subsPerFem = (perFemMbps / minMbps) / (activePct / 100);
-  const femSubCap = femtos * subsPerFem;
+  // Two spectrum channels (Nick's question): SpaceX boxes run the ledger's ground spectrum;
+  // cable's strand radios run CABLE's PALs (~15 TDD → 10.5 DL). Under barter only the SPARE
+  // capacity of those radios is available (cable's own traffic rides first — 50%, bracketed);
+  // under the JV the pooled network shares everything.
+  const strandPerMbps = 0.7 * 15 * femEff;
+  const subsPerStrand = ovJv === "jv" ? subsPerFem : ((strandPerMbps / minMbps) / (activePct / 100)) * (spareCap / 100);
+  const femSubCap = spxBoxes * subsPerFem + strandBoxes * subsPerStrand;
   const servedFrac = strategy === "blanket"
     ? Cf * (1 - 0.8 * (hostile / 100)) // pure-cellular: indoor usage (80%) served only in penetrable stock — no WiFi crutch; that's this strategy's premise
     : 0.9 * 0.8 + Cf * 0.2; // WiFi indoors (90% home-internet × 80% indoor share) + sidewalk femto × 20% outdoor share
@@ -6314,17 +6327,24 @@ function ServiceabilityTab() {
             })()}
             {ovJv !== "none" && strandPct > 0 && (
               <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: C.green, marginTop: 2 }}>
-                of which SpaceX builds {(femtos - strandBoxes) >= 995e3 ? ((femtos - strandBoxes) / 1e6).toFixed(1) + "M" : Math.round((femtos - strandBoxes) / 1e3) + "k"} — cable strand carries {strandBoxes >= 500 ? Math.round(strandBoxes / femtos * 100) : strandPct}% under the {ovJv === "jv" ? "co-build JV" : "barter"}
+                of which SpaceX builds {spxBoxes >= 995e3 ? (spxBoxes / 1e6).toFixed(1) + "M" : Math.round(spxBoxes / 1e3) + "k"} — cable strand carries {strandBoxes >= 500 ? Math.round(strandBoxes / femtos * 100) : strandPct}% under the {ovJv === "jv" ? "co-build JV" : "barter"}
               </div>
             )}
             <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", marginTop: 6 }}>
               <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>CABLE PARTNERSHIP: <strong style={{ color: C.text }}>{ovJv === "none" ? "None" : ovJv === "barter" ? "Barter" : "Co-build JV"}</strong> — set in the header above</span>
               <span style={{ fontSize: 10, color: C.dim, flex: "1 1 220px" }}>
                 {ovJv === "none" ? "SpaceX builds every box below alone."
-                  : ovJv === "barter" ? "Barter = SpaceX rides the radios cable builds FOR ITSELF, at cable’s pace and placement. Their CBRS strand cells count toward this outdoor blanket (their WiFi mostly doesn’t — indoor, near-premise), and cable is deploying anyway — so even a barter shrinks SpaceX’s build, just modestly and not where SpaceX chooses."
+                  : ovJv === "barter" ? "Barter = SpaceX rides the radios cable builds FOR ITSELF, at cable’s pace and placement. Their CBRS strand cells count toward this outdoor blanket (their WiFi mostly doesn’t — indoor, near-premise), and cable is deploying anyway — so even a barter shrinks SpaceX’s build, just modestly and not where SpaceX chooses. Their radios run THEIR spectrum — under barter SpaceX gets the spare half of that capacity (bracketed); the full pool needs the JV."
                   : "JV = cable’s strand-mounted radios carry their share of the blanket; pooled cable PALs (+15 MHz, 10–20/county typical) now enter the spectrum ledger above under the JV — watch GROUND and the capacity headroom respond."}
               </span>
             </div>
+            {ovJv === "barter" && (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 5 }}>
+                <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>SPARE CAPACITY OF CABLE’S RADIOS: <strong style={{ color: C.text }}>{spareCap}%</strong></span>
+                <input type="range" min="0" max="100" step="5" value={spareCap} onChange={(e) => setSpareCap(+e.target.value)} style={{ width: 130 }} />
+                <span style={{ fontSize: 10, color: C.dim, flex: "1 1 200px" }}>bracketed assumption — cable’s own traffic rides first; the JV pools everything and ignores this knob</span>
+              </div>
+            )}
             {ovJv !== "none" && (
             <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", marginTop: 5 }}>
               <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>SHARE OF THE BLANKET ON CABLE’S STRAND:</span>
@@ -6675,7 +6695,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v127 · pooled cable PALs in the ledger</span>
+        <span className="buildTag">build v129 · spare capacity is a slider</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
