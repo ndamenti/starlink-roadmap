@@ -53,6 +53,8 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v136", d: "The Spectrum tab\u2019s AWS-3 note and the Physics tab\u2019s path-loss card now show one consistent story: free-space path is ~149\u2013152 dB (330 km shell, slant to 43\u00b0), and ~170 dB is the total link budget once margins, fading and losses are added \u2014 the two quantities are named, distinguished, and cross-referenced instead of looking like a contradiction." },
+  { v: "v135", d: "Physics tab scrubbed end to end after Nick caught the ~550 km distance \u2014 that is the broadband fleet\u2019s altitude, not the D2C shells\u2019. The path-loss card now reasons from the authorized constellation: ~330 km up, ~480 km on the slant at a typical 43\u00b0 elevation, free-space loss ~149\u2013152 dB \u2014 which also forced honesty on the headline arithmetic: the old \u201850\u201360 dB problem\u2019 vs terrestrial was built on a 160\u2013170 dB figure that free space does not support even at 550 km; the card, its info label and the explainer now say ~30\u201350 dB (1,000\u2013100,000\u00d7 weaker), and the \u2018fixes\u2019 list credits flying low as ~4\u20135 dB vs the broadband fleet instead of describing a shell drop that already happened. Femtocell-era language swept from the tab: the indoor sim is labelled the 2 GHz indoor femtocell it models (with a pointer that the metro outdoor layer runs CBRS, sized on Serviceability), the capacity-density chart contrasts a 50\u2013300 m small cell, the strategy line names the rooftop/pole/strand mix, and two Verdict-tab echoes (\u2018femtocells indoors\u2019, \u2018femtocell economics\u2019) updated to match." },
   { v: "v134", d: "The Story tab catches up with the model. Phase 2 rewritten: small cells on CBRS (mixed rooftop/pole, 213\u2013295 m, H-block riding along) replace n70 femtocells; the Moffett gate \u2014 dish density lowest where traffic is highest \u2014 now carries its deal-shaped answer, the MSO barter/JV, with a new timeline event on Charter\u2019s strand build and 88% self-carry benchmark; the coordination gate distinguishes the internal 2 GHz dovetail from the SAS-refereed CBRS commons. The hero orientation and masthead deck follow: towers are satellites plus small cells \u2014 rooftop, pole, and possibly cable-strand." },
   { v: "v133", d: "The whole Hybrid Network tab now tells the current model\u2019s story. The layer explorer grows from four layers to five \u2014 one of them optional: cable\u2019s plant, present only under a barter or JV, described as three assets in one (strand sites, poolable PALs, satellite-free backhaul) with the cable-desert limit and Charter\u2019s 88% benchmark. The ground layer becomes the small-cell mix (CBRS n48 + H-block riding along, 213\u2013295 m uplink-capped cells, territory partition by class); the broadband layer stops claiming every box as a Ku customer; the satellite layer names the dovetail price; the device layer adds n48 handset support; and the intro, section title and EchoStar aside follow." },
   { v: "v132", d: "Hybrid Network panel 3 updated from the femtocell era. The backhaul card now prices each class: rooftop cells contend with the host dish (Rhodes\u2019 critique, V3 the out), pole cells carry their own Ku terminal per site, and cable strand cells ride the partner\u2019s plant \u2014 backhaul as the JV\u2019s third asset after sites and spectrum. The interference card drops \u2018a fight SpaceX has only with itself\u2019: the 2 GHz dovetail is the private fight, but canonical ground spectrum is CBRS \u2014 an SAS-refereed commons shared with incumbents, GAA, and under the partnership cable\u2019s own traffic. PCS OOBE and NOAA edges retained." },
@@ -216,7 +218,7 @@ const BANDS = [
     lo: 1695, hi: 1710,
     pair: null,
     own: "Owned — $2.6B (Nov 2025)",
-    note: "15 MHz of uplink-only spectrum — the missing ingredient that completed Band 70. Uplink is the starved direction in satellite D2C (a <0.25 W phone must close a ~170 dB link), so dedicated UL is worth more to SpaceX than it ever was to Dish. Terrestrial from close day; a satellite supplemental-uplink (SUL) future awaits NTN standardization and FCC Earth-to-space treatment. Shared with NOAA weather-satellite downlinks: coordination zones apply.",
+    note: "15 MHz of uplink-only spectrum — the missing ingredient that completed Band 70. Uplink is the starved direction in satellite D2C — a <0.25 W phone must close a link whose free-space path alone is ~149–152 dB (330 km shell, slant to 43°; see Physics), and ~170 dB as a total budget once margins, fading and losses are added, so dedicated UL is worth more to SpaceX than it ever was to Dish. Terrestrial from close day; a satellite supplemental-uplink (SUL) future awaits NTN standardization and FCC Earth-to-space treatment. Shared with NOAA weather-satellite downlinks: coordination zones apply.",
     color: C.amber, status: "owned",
   },
   {
@@ -1204,11 +1206,11 @@ function PhysicsTab({ cfg, setCfg }) {
 
       <div className="split">
         <div className="card">
-          <div className="eyebrow">Why this is hard: the 50–60 dB problem</div>
-          <p className="body">A cell tower is a few hundred meters away pushing 20–40 W. A Starlink satellite is ~550 km away listening to a &lt;0.25 W phone with a fingernail-sized antenna.</p>
+          <div className="eyebrow">Why this is hard: the ~30–50 dB problem</div>
+          <p className="body">A cell tower is a few hundred meters away pushing 20–40 W. A Starlink D2C satellite is ~330 km up — ~480 km on the slant at a typical 43° elevation — listening to a &lt;0.25 W phone with a fingernail-sized antenna.</p>
           {[
             { l: "Terrestrial path loss", v: 45, t: "~100–120 dB", c: C.blue },
-            { l: "LEO path loss (550 km)", v: 100, t: "~160–170 dB", c: C.amber },
+            { l: "LEO path loss (330 km shell, slant to 43°)", v: 100, t: "~149–152 dB free-space", c: C.amber },
             { l: `+ building penetration (${e.label})`, v: env === "rural" ? 12 : env === "suburban" ? 22 : 32, t: env === "rural" ? "mostly avoidable" : "~20–30 dB more — satellite can't follow", c: C.red },
           ].map((r, i) => (
             <div key={i} style={{ marginTop: 14 }}>
@@ -1219,13 +1221,13 @@ function PhysicsTab({ cfg, setCfg }) {
           <p className="body" style={{ marginTop: 16 }}>
             The fixes: ~25 m² phased arrays today (5× larger next-gen; AST's BlueBirds go to ~223 m²), satellite-side Doppler
             pre-compensation at 7.5 km/s, 3GPP NTN timing (Rel-17 → Rel-19), laser ISLs to hand off between ~3-minute passes,
-            and dropping shells to 340–360 km for ~2.5 dB back. Physics you can't fix: steel and concrete — measured median
-            RSRP −121 dBm vs −97 dBm terrestrial, and indoors the satellite simply isn't there. That's the femtocell's job.
+            and flying low — the D2C shells (326–360 km) sit ~4–5 dB closer than the 550 km broadband fleet. Physics you can't fix: steel and concrete — measured median
+            RSRP −121 dBm vs −97 dBm terrestrial, and indoors the satellite simply isn't there. That's the job of WiFi over the dish — and, outdoors in the metros, the small-cell layer.
           </p>
-          <Info label="what's a dB, and how bad is 50–60 dB really?">
+          <Info label="what's a dB, and how bad is 30–50 dB really?">
             Decibels are how radio engineers write enormous ratios without drowning in zeros — it's a logarithmic scale where
-            every +10 dB means <em>10× more</em>. So 20 dB is 100×, 30 dB is 1,000×, and the 50–60 dB gap between a cell
-            tower's signal and a satellite's means the satellite's signal arrives <strong>100,000 to 1,000,000 times
+            every +10 dB means <em>10× more</em>. So 20 dB is 100×, 30 dB is 1,000×, and the ~30–50 dB gap between a cell
+            tower's path loss and the satellite's means the satellite's signal arrives <strong>1,000 to 100,000 times
             weaker</strong>. That's the honest size of the problem. How is the link possible at all? Every fix claws back
             dB: a 25 m² antenna instead of a tower panel (~+20–25 dB of focusing gain), sensitive receivers, slower data
             rates (accepting fewer bits per second is itself worth many dB), and flying lower (each halving of distance buys
@@ -1259,7 +1261,7 @@ function PhysicsTab({ cfg, setCfg }) {
           <div className="indoorNote" style={{ borderColor: femtoLive && e.femto ? C.blue : C.red }}>
             {indoorUsers > 0
               ? femtoLive && e.femto
-                ? <><strong style={{ color: C.blue }}>{indoorUsers} indoor user{indoorUsers > 1 ? "s" : ""}</strong> are invisible to the satellite — served only where an n70 femtocell happens to be, at up to <strong style={{ color: C.blue }}>{z.terrDLMbps.toFixed(0)} Mbps ↓ / {z.terrULMbps.toFixed(0)} ↑ per cell</strong> ({z.terrDLMHz}+{z.terrULMHz} MHz), shared within ~50 m islands.</>
+                ? <><strong style={{ color: C.blue }}>{indoorUsers} indoor user{indoorUsers > 1 ? "s" : ""}</strong> are invisible to the satellite — served only where a 2 GHz indoor femtocell happens to be, at up to <strong style={{ color: C.blue }}>{z.terrDLMbps.toFixed(0)} Mbps ↓ / {z.terrULMbps.toFixed(0)} ↑ per cell</strong> ({z.terrDLMHz}+{z.terrULMHz} MHz), shared within ~50 m islands.</>
                 : e.femto
                   ? <><strong style={{ color: C.red }}>{indoorUsers} indoor user{indoorUsers > 1 ? "s" : ""}</strong> have no terrestrial layer in this configuration — assign blocks to TERR in the lab above to serve them.</>
                   : <><strong style={{ color: C.red }}>{indoorUsers} indoor user{indoorUsers > 1 ? "s" : ""}</strong> are unreachable: no ground layer here, and the satellite can't penetrate. In rural terrain this mostly means "step outside."</>
@@ -1272,7 +1274,7 @@ function PhysicsTab({ cfg, setCfg }) {
         <div className="eyebrow">Capacity density — why neither layer can do the other's job (log scale, illustrative)</div>
         {[
           { l: `Configured satellite beam spread over ~2,000 km²`, v: satDensity, c: C.amber, t: `${satDensity < 0.01 ? satDensity.toFixed(4) : satDensity.toFixed(2)} Mbps/km²` },
-          { l: femtoLive ? `Configured n70 femtocell (${z.terrDLMbps.toFixed(0)} Mbps over ~50 m radius)` : "Ground layer — no blocks assigned TERR", v: femtoDensity, c: C.blue, t: femtoLive ? `~${Math.round(femtoDensity).toLocaleString()} Mbps/km²` : "—" },
+          { l: femtoLive ? `Configured 2 GHz femtocell (${z.terrDLMbps.toFixed(0)} Mbps over ~50 m radius)` : "Ground layer — no blocks assigned TERR", v: femtoDensity, c: C.blue, t: femtoLive ? `~${Math.round(femtoDensity).toLocaleString()} Mbps/km²` : "—" },
         ].map((r, i) => (
           <div key={i} style={{ marginTop: 12 }}>
             <div className="barHead"><span>{r.l}</span><span style={{ color: r.c, fontFamily: "var(--mono)" }}>{r.t}</span></div>
@@ -1283,8 +1285,9 @@ function PhysicsTab({ cfg, setCfg }) {
           Six-plus orders of magnitude apart in the hybrid configurations — and that's the whole strategy in one chart. The
           satellite layer buys ubiquity (every km² gets <em>something</em>); the ground layer buys intensity (huge Mbps/km²,
           in dots tens of meters wide). Incumbents solve the pairing with ~250k macro towers and &gt;1M small cells; SpaceX's
-          bet is satellites + dish-mounted femtocells approximate it without the tower capex. The V2 150 Mbps headline is a
-          peak, single-user, best-case claim.
+          bet is satellites + a small-cell layer — dish-mounted, pole, and possibly cable-strand — approximate it without the
+          tower capex. The metro outdoor build runs CBRS and is sized on the Serviceability tab; this lab exercises the owned
+          2 GHz split. The V2 150 Mbps headline is a peak, single-user, best-case claim.
         </p>
         <Info label="why everyone under a beam shares one pipe — and what Mbps/km² means">
           A satellite beam is one radio channel painted over a patch of ground — like one Wi-Fi router asked to serve an
@@ -1292,8 +1295,8 @@ function PhysicsTab({ cfg, setCfg }) {
           twenty get a twentieth. That's why raw per-beam speed matters less than <strong>capacity density</strong> —
           Mbps per square kilometer — which asks the question that actually decides whether a network works: how much
           traffic can this patch of map carry at once? The chart above shows why the hybrid exists: a satellite beam
-          spreads its Mbps over ~2,000 km² (a big number divided by a huge area = a tiny density), while a femtocell pours
-          its Mbps into a ~50-meter circle (a modest number over a tiny area = enormous density). Cities need density;
+          spreads its Mbps over ~2,000 km² (a big number divided by a huge area = a tiny density), while a small cell pours
+          its Mbps into a 50–300-meter circle (a modest number over a tiny area = enormous density). Cities need density;
           wilderness needs presence. No single technology delivers both — which is the one-sentence justification for the
           entire two-layer architecture, and the reason "150 Mbps from space" and "satellite can't serve cities" are both
           true at the same time.
@@ -1733,7 +1736,7 @@ function VerdictTab() {
           3 Mbps/km² is entirely adequate, and there the satellite has an advantage no carrier can match: it covers
           ground where building a tower will never pay back. The conclusion isn't "the satellite loses"; it's that the
           two networks are optimised for opposite ends of the density curve — which is precisely why the plan on this
-          site pairs orbit for coverage with a terrestrial small-cell layer for cities (WiFi and femtocells indoors), and why the honest framing is a
+          site pairs orbit for coverage with a terrestrial small-cell layer for cities (WiFi over the dish indoors), and why the honest framing is a
           <em> coverage product with an urban ground layer</em> rather than a symmetric fourth competitor.
           <br /><br />
           <em>Caveat on the arithmetic:</em> the terrestrial figure is a rough order-of-magnitude sketch — real
@@ -1767,7 +1770,7 @@ function VerdictTab() {
         <p className="body" style={{ marginTop: 16, color: C.dim }}>
           Base case: SpaceX owns coverage gaps and machine connectivity outright, becomes a genuine fourth option for rural
           and price-sensitive users by ~2028–2029, and pressures the Big Three into an MVNO — while the urban, in-building
-          revenue core stays terrestrial. Upside case requires Starship cadence <em>and</em> n252 handsets <em>and</em> femtocell
+          revenue core stays terrestrial. Upside case requires Starship cadence <em>and</em> n252 handsets <em>and</em> small-cell
           economics all landing. Numbers marked as claims are company figures, not verified.
         </p>
       </div>
@@ -6709,7 +6712,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v134 · story tab updated</span>
+        <span className="buildTag">build v136 · link-budget numbers harmonized</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
