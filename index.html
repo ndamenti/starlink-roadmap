@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v127", d: "The pooled-spectrum gap closes, prompted by Nick\u2019s reading of the Bull case: sending all owned 2 GHz to orbit starves the metro ground layer, and the cure is the partnership\u2019s second asset \u2014 cable\u2019s CBRS PALs. Under Co-build JV the ledger now pools +15 MHz of cable PALs (10\u201320/county typical) into the ground spectrum, lifting per-box throughput and the capacity-headroom map; barter deliberately does not pool (shared radios, not shared spectrum for SpaceX boxes). The partnership posture moves into the sticky header beside the CBRS bracket \u2014 one control, visible on every sub-tab, since it now governs spectrum as well as build share \u2014 and the overlay reads the header\u2019s state instead of owning a duplicate. This also makes the CBRS zero chip\u2019s second flavour live: at CBRS 0 with a JV, the pool is cable\u2019s 15 rather than nothing \u2014 foreclosure becomes inventory when the buyer is the partner." },
   { v: "v126", d: "In the mixed build the deployment row is now explicitly the ROOFTOP selector \u2014 bold label, with \u2018poles are always a planned grid\u2019 stated inline rather than in fine print \u2014 offering only the two patterns subscriber siting can actually produce (organic / clustered organic). The redundant \u00d71.4 toggle beside the mix slider is retired so the concept has one owner. Single-class builds keep the original three-button global selector." },
   { v: "v125", d: "Deployment discipline follows WHO SITES each box (Nick\u2019s point): one global planned/organic/clustered toggle was averaging three different siting realities. In the mixed build, poles are operator-placed and get the planned grid (\u00d71.05/target), rooftops sit wherever consenting subscribers live and get organic Poisson with an adoption-clusters \u00d71.4 toggle, and cable strand is engineered along plant (planned, rooftop-class radius). The pole dividend is large: planned-grid poles need ~2.4\u00d7 fewer sites than the organic penalty was charging them, so at the canonical mix the SpaceX build drops to ~1.9M with poles at ~236k. The global deployment buttons now state that they apply only to single-class builds, and the composition line names each class\u2019s discipline." },
   { v: "v124", d: "The rooftop/pole mix slider opens to the full 0\u2013100 range \u2014 v123 had clamped it to 20\u201380, which was the binary-thinking residue in miniature: the model should let the extremes be reachable and show what they cost, not forbid them. At 0% the build is pure pole (the mono case the site started with); at 100% pure rooftop, where the composition line notes that lease-and-permit sites vanish entirely. Zero-count segments hide rather than render as \u20180k\u2019." },
@@ -3636,10 +3637,15 @@ const CBRS_BRACKET = [
   { v: 15, n: "15 · center", d: "PALs plus partial leases" },
   { v: 40, n: "40 · max", d: "aggressive acquisition to the per-entity cap" },
 ];
-function groundSpec(scenKey, cbrs) {
-  const c = cbrs || 0, cDl = 0.7 * c, cUl = 0.3 * c;
+function groundSpec(scenKey, cbrs, jv) {
+  // Under a co-build JV the shared radios pool spectrum: SpaceX's CBRS position plus the
+  // cable partner's PALs (10–20 MHz/county typical → +15 center). Barter shares radios,
+  // not spectrum for SpaceX-built boxes. This is what cures Bull's metro starvation — and
+  // it makes CBRS=0 survivable: if CABLE bought the PALs, the JV converts zero into inventory.
+  const pool = (cbrs || 0) + (jv ? 15 : 0);
+  const c = pool, cDl = 0.7 * c, cUl = 0.3 * c;
   if (scenKey === "bear") return { dl: 40, ul: 15, src: "AWS-4 DL + AWS-3 UL at 2 GHz — everything the satellite left behind, terrestrially licensed today" };
-  if (scenKey === "bull") return { dl: cDl, ul: cUl, src: c > 0 ? "CBRS " + c + " MHz TDD only — the 2 GHz cupboard is bare" : "NOTHING — 2 GHz all sent to orbit, and a competitor bought the CBRS PALs" };
+  if (scenKey === "bull") return { dl: cDl, ul: cUl, src: c > 0 ? "CBRS " + c + " MHz TDD" + (jv ? " (incl. +15 pooled cable PALs — JV)" : " only") + " — the 2 GHz cupboard is bare" : "NOTHING — 2 GHz all sent to orbit, and a competitor bought the CBRS PALs" };
   return { dl: 5 + cDl, ul: 5 + cUl, src: "H-block 5/5 (owned, idle from orbit until NTN) " + (c > 0 ? "+ CBRS " + c + " MHz TDD" : "— no CBRS: a competitor bought the PALs") };
 }
 
@@ -5582,9 +5588,9 @@ function ServiceabilityTab() {
   const [ovJv, setOvJv] = useState("none");        // none | barter | jv — the metro build's partnership posture
   useEffect(() => { setStrandPct(ovJv === "jv" ? 60 : ovJv === "barter" ? 10 : 0); }, [ovJv]);
   const [cbrsMhz, setCbrsMhz] = useState(15);
-  const gSpec = groundSpec(scenario, cbrsMhz);
+  const gSpec = groundSpec(scenario, cbrsMhz, ovJv === "jv");
   const satSpec = SPEC_SCEN.find((x) => x.k === (SITE_SCEN.find((z) => z.k === scenario) || SITE_SCEN[1]).spec) || SPEC_SCEN[1];
-  useEffect(() => { setFemMhz(Math.max(1, Math.round(groundSpec(scenario, cbrsMhz).dl))); }, [scenario, cbrsMhz]);
+  useEffect(() => { setFemMhz(Math.max(1, Math.round(groundSpec(scenario, cbrsMhz, ovJv === "jv").dl))); }, [scenario, cbrsMhz, ovJv]);
   const [sub, setSub] = useState("map");
   useEffect(() => {
     const sc = SITE_SCEN.find((x) => x.k === scenario);
@@ -5777,6 +5783,11 @@ function ServiceabilityTab() {
           {CBRS_BRACKET.map((cb) => (
             <button key={cb.v} className={"genBtn" + (cbrsMhz === cb.v ? " on" : "")} title={cb.d}
               onClick={() => setCbrsMhz(cb.v)} style={{ fontSize: 10, padding: "2px 7px" }}>{cb.n}</button>
+          ))}
+          <span style={{ color: C.dim, letterSpacing: "0.08em", fontSize: 10, marginLeft: 6 }}>CABLE PARTNERSHIP:</span>
+          {[["none", "None"], ["barter", "Barter"], ["jv", "Co-build JV"]].map(([k, n]) => (
+            <button key={k} className={"genBtn" + (ovJv === k ? " on" : "")} onClick={() => setOvJv(k)}
+              style={{ fontSize: 10, padding: "2px 7px" }} title={k === "jv" ? "shared radios pool spectrum: +15 MHz cable PALs enter the ledger" : k === "barter" ? "ride the radios cable builds for itself — no spectrum pooling for SpaceX boxes" : "SpaceX alone"}>{n}</button>
           ))}
         </div>
         <p style={{ fontSize: 11, color: C.dim, margin: "3px 0 0", lineHeight: 1.5 }}>
@@ -6307,14 +6318,11 @@ function ServiceabilityTab() {
               </div>
             )}
             <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", marginTop: 6 }}>
-              <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>CABLE PARTNERSHIP:</span>
-              {[["none", "None"], ["barter", "Barter"], ["jv", "Co-build JV"]].map(([k, n]) => (
-                <button key={k} className={"genBtn" + (ovJv === k ? " on" : "")} onClick={() => setOvJv(k)} style={{ fontSize: 10, padding: "2px 8px" }}>{n}</button>
-              ))}
+              <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>CABLE PARTNERSHIP: <strong style={{ color: C.text }}>{ovJv === "none" ? "None" : ovJv === "barter" ? "Barter" : "Co-build JV"}</strong> — set in the header above</span>
               <span style={{ fontSize: 10, color: C.dim, flex: "1 1 220px" }}>
                 {ovJv === "none" ? "SpaceX builds every box below alone."
                   : ovJv === "barter" ? "Barter = SpaceX rides the radios cable builds FOR ITSELF, at cable’s pace and placement. Their CBRS strand cells count toward this outdoor blanket (their WiFi mostly doesn’t — indoor, near-premise), and cable is deploying anyway — so even a barter shrinks SpaceX’s build, just modestly and not where SpaceX chooses."
-                  : "JV = cable’s strand-mounted radios carry their share of the blanket; pooled cable PALs (10–20 MHz/county typical) would also widen the ground spectrum — not yet added to the ledger above (flagged, honest gap)."}
+                  : "JV = cable’s strand-mounted radios carry their share of the blanket; pooled cable PALs (+15 MHz, 10–20/county typical) now enter the spectrum ledger above under the JV — watch GROUND and the capacity headroom respond."}
               </span>
             </div>
             {ovJv !== "none" && (
@@ -6667,7 +6675,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v126 · rooftop selector owns the row</span>
+        <span className="buildTag">build v127 · pooled cable PALs in the ledger</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
