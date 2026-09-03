@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v130", d: "The spare-capacity slider moves from the Metro overlay into the sticky header, directly beside the partnership chips it modifies \u2014 Nick switched to Barter on the Map sub-tab and the headroom repainted with no visible control explaining why. Rule applied: a control must be in the same line of sight as the numbers it changes, and the posture chips are header-level, so their one parameter is too. The overlay copy is removed (one owner, one location), and the header caption explains the knob when Barter is active." },
   { v: "v129", d: "The barter\u2019s spare-capacity share becomes a slider (0\u2013100%, default 50) instead of a buried constant \u2014 it is the one knob that decides whether a barter helps or hurts the ceiling, so it belongs in the reader\u2019s hands. Shown only under Barter, since the JV pools full capacity and ignores it. At 100% a barter\u2019s ceiling approaches the no-partnership case under Bull (cable\u2019s 10.5 DL \u2248 SpaceX\u2019s starved 10.5); at 0% the strand share contributes coverage but no capacity." },
   { v: "v128", d: "Nick asked the right question \u2014 doesn\u2019t barter give SpaceX access to cable\u2019s spectrum too? \u2014 and the answer split the model into two channels it had been conflating. Channel 1: spectrum for SpaceX-built boxes (ledger; JV pooling only \u2014 unchanged). Channel 2: capacity through cable\u2019s radios, which run CABLE\u2019s PALs \u2014 barter delivers this wherever cable deployed, at the spare half of those radios\u2019 capacity (bracketed 50%; cable\u2019s own traffic rides first), the JV at full pooled capacity. Strand boxes were also being credited with SpaceX\u2019s ledger spectrum instead of cable\u2019s \u2014 fixed \u2014 and the strand carve-out was gated on the mixed build, so mono-class scenarios like Bull showed zero barter benefit; it now applies to every outdoor class." },
   { v: "v127", d: "The pooled-spectrum gap closes, prompted by Nick\u2019s reading of the Bull case: sending all owned 2 GHz to orbit starves the metro ground layer, and the cure is the partnership\u2019s second asset \u2014 cable\u2019s CBRS PALs. Under Co-build JV the ledger now pools +15 MHz of cable PALs (10\u201320/county typical) into the ground spectrum, lifting per-box throughput and the capacity-headroom map; barter deliberately does not pool (shared radios, not shared spectrum for SpaceX boxes). The partnership posture moves into the sticky header beside the CBRS bracket \u2014 one control, visible on every sub-tab, since it now governs spectrum as well as build share \u2014 and the overlay reads the header\u2019s state instead of owning a duplicate. This also makes the CBRS zero chip\u2019s second flavour live: at CBRS 0 with a JV, the pool is cable\u2019s 15 rather than nothing \u2014 foreclosure becomes inventory when the buyer is the partner." },
@@ -5802,10 +5803,17 @@ function ServiceabilityTab() {
             <button key={k} className={"genBtn" + (ovJv === k ? " on" : "")} onClick={() => setOvJv(k)}
               style={{ fontSize: 10, padding: "2px 7px" }} title={k === "jv" ? "shared radios pool spectrum: +15 MHz cable PALs enter the ledger" : k === "barter" ? "ride the radios cable builds for itself — no spectrum pooling for SpaceX boxes" : "SpaceX alone"}>{n}</button>
           ))}
+          {ovJv === "barter" && (
+            <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+              <span style={{ color: C.dim, fontSize: 10 }}>SPARE CAPACITY OF CABLE’S RADIOS: <strong style={{ color: C.text }}>{spareCap}%</strong></span>
+              <input type="range" min="0" max="100" step="5" value={spareCap} onChange={(e) => setSpareCap(+e.target.value)} style={{ width: 110, verticalAlign: "middle" }} />
+            </span>
+          )}
         </div>
         <p style={{ fontSize: 11, color: C.dim, margin: "3px 0 0", lineHeight: 1.5 }}>
           Ground = {gSpec.src}. CBRS is not SpaceX’s and was not in the EchoStar deal — the bracket includes zero
           because the PALs are reportedly being shopped to Verizon. CBRS is TDD, shown as its ~70/30 down/up time split.
+          {ovJv === "barter" && " Under the barter, cable’s strand radios carry SpaceX subscribers on CABLE’s spectrum — the spare-capacity slider sets how much of those radios’ capacity is left over after cable’s own traffic (bracketed assumption; the JV pools everything instead)."}
         </p>
         <p style={{ fontSize: 11.5, color: C.dim, margin: "6px 0 0", lineHeight: 1.5 }}>
           <strong style={{ color: C.text }}>{SVC_SUBS.find((t) => t.k === sub).n}.</strong>{" "}
@@ -6338,13 +6346,6 @@ function ServiceabilityTab() {
                   : "JV = cable’s strand-mounted radios carry their share of the blanket; pooled cable PALs (+15 MHz, 10–20/county typical) now enter the spectrum ledger above under the JV — watch GROUND and the capacity headroom respond."}
               </span>
             </div>
-            {ovJv === "barter" && (
-              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 5 }}>
-                <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>SPARE CAPACITY OF CABLE’S RADIOS: <strong style={{ color: C.text }}>{spareCap}%</strong></span>
-                <input type="range" min="0" max="100" step="5" value={spareCap} onChange={(e) => setSpareCap(+e.target.value)} style={{ width: 130 }} />
-                <span style={{ fontSize: 10, color: C.dim, flex: "1 1 200px" }}>bracketed assumption — cable’s own traffic rides first; the JV pools everything and ignores this knob</span>
-              </div>
-            )}
             {ovJv !== "none" && (
             <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", marginTop: 5 }}>
               <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>SHARE OF THE BLANKET ON CABLE’S STRAND:</span>
@@ -6695,7 +6696,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v129 · spare capacity is a slider</span>
+        <span className="buildTag">build v130 · spare slider in the header</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
