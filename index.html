@@ -53,6 +53,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v134", d: "The Story tab catches up with the model. Phase 2 rewritten: small cells on CBRS (mixed rooftop/pole, 213\u2013295 m, H-block riding along) replace n70 femtocells; the Moffett gate \u2014 dish density lowest where traffic is highest \u2014 now carries its deal-shaped answer, the MSO barter/JV, with a new timeline event on Charter\u2019s strand build and 88% self-carry benchmark; the coordination gate distinguishes the internal 2 GHz dovetail from the SAS-refereed CBRS commons. The hero orientation and masthead deck follow: towers are satellites plus small cells \u2014 rooftop, pole, and possibly cable-strand." },
   { v: "v133", d: "The whole Hybrid Network tab now tells the current model\u2019s story. The layer explorer grows from four layers to five \u2014 one of them optional: cable\u2019s plant, present only under a barter or JV, described as three assets in one (strand sites, poolable PALs, satellite-free backhaul) with the cable-desert limit and Charter\u2019s 88% benchmark. The ground layer becomes the small-cell mix (CBRS n48 + H-block riding along, 213\u2013295 m uplink-capped cells, territory partition by class); the broadband layer stops claiming every box as a Ku customer; the satellite layer names the dovetail price; the device layer adds n48 handset support; and the intro, section title and EchoStar aside follow." },
   { v: "v132", d: "Hybrid Network panel 3 updated from the femtocell era. The backhaul card now prices each class: rooftop cells contend with the host dish (Rhodes\u2019 critique, V3 the out), pole cells carry their own Ku terminal per site, and cable strand cells ride the partner\u2019s plant \u2014 backhaul as the JV\u2019s third asset after sites and spectrum. The interference card drops \u2018a fight SpaceX has only with itself\u2019: the 2 GHz dovetail is the private fight, but canonical ground spectrum is CBRS \u2014 an SAS-refereed commons shared with incumbents, GAA, and under the partnership cable\u2019s own traffic. PCS OOBE and NOAA edges retained." },
   { v: "v131", d: "The Hybrid Network packet-follow panel\u2019s urban route was a femtocell-era fossil \u2014 rooftop n70 home radio, one archetype, dish-only backhaul. It now walks the canonical build: small cell on CBRS n48 (SAS-coordinated TDD) with the H-block riding along, and \u2014 the part the old panel could not tell \u2014 backhaul that depends on who owns the box: rooftop cells ride the host dish, pole cells get their own Ku terminal, and cable strand cells under the barter/JV ride cable\u2019s own plant and never touch a satellite. Toggle relabelled \u2018small cells + backhaul\u2019." },
@@ -156,25 +157,26 @@ const PHASES = [
     id: 2,
     era: "PHASE 2 · TOUCH THE GROUND",
     window: "2027 → 2028",
-    title: "The hybrid network: femtocells + satellites",
+    title: "The hybrid network: small cells + satellites — and maybe cable",
     tier: "Carrier-grade outdoors, patchy indoors",
     tierPct: 62,
     beamCap: "~15–18 Mbps / beam + terrestrial offload",
-    spectrum: "65 MHz used both from orbit and on the ground",
+    spectrum: "2 GHz from orbit · CBRS on the ground (H-block rides along)",
     sats: "Continuous global D2D coverage target: end-2028",
     orbit: 0.6,
     summary:
-      "The EchoStar licenses carry terrestrial rights — so SpaceX builds down, not just up. Small n70 femtocells mount on the same rooftop brackets as ~millions of Starlink dishes, each backhauled by the broadband constellation. Satellites erase dead zones running n252; femtocells add capacity exactly where subscribers already are, running the same 2000–2020 MHz flipped to downlink. Teslas become roaming nodes: Cybercab ships with Starlink standard.",
+      "The EchoStar licenses carry terrestrial rights — so SpaceX builds down, not just up. But outdoor coverage is small-cell work on CBRS, not femtocell work at 2 GHz: a mix of rooftop cells (subscriber consent, organic placement) and pole cells (planned grid — the hard lease-and-permit sites), 213–295 m each, with the 5 MHz H-block riding along. The metro problem — dish density is lowest exactly where mobile traffic is highest — has a deal-shaped answer: a barter or co-build JV with Comcast/Charter, whose strand-mounted CBRS radios, poolable PALs and plant backhaul cover the aerial suburbs while the downtown cores (cable deserts — underground conduit, no strand) stay SpaceX’s to build. Satellites erase dead zones running n252; Teslas become roaming nodes: Cybercab ships with Starlink standard.",
     events: [
-      { d: "2027–2028", t: "Femtocell deployment “as you need it” on rooftop dish mounts (Shotwell); Musk claims small stations could beat cellular bandwidth.", side: "ground" },
+      { d: "2027–2028", t: "Small-cell deployment “as you need it” — rooftop units on dish mounts plus pole units where consent can’t reach (Shotwell); Musk claims small stations could beat cellular bandwidth.", side: "ground" },
+      { d: "2027+", t: "The MSO option matures: Charter’s strand-mounted CBRS build is in full-deployment phase (23-market target) and already carries — with WiFi — 88% of Spectrum Mobile traffic on own/partner infrastructure. A barter rides those radios; a JV funds and shares them, pooling PALs.", side: "biz" },
       { d: "Early 2028", t: "Deutsche Telekom launches V2-based satellite service across Europe — the partner model scales in parallel.", side: "biz" },
       { d: "End-2028", t: "Continuous global D2D coverage target (no more waiting for a pass).", side: "space" },
-      { d: "2028+", t: "n252/n70 handsets reach volume as chipset support (Qualcomm, MediaTek) propagates through device refresh cycles.", side: "ground" },
+      { d: "2028+", t: "n252/n70 handsets reach volume as chipset support (Qualcomm, MediaTek) propagates; n48 (CBRS) support is already near-universal.", side: "ground" },
     ],
     gates: [
-      "Femtocell physics: tens of meters of range; steel and concrete still win indoors",
-      "Moffett: the femtocell plan “works best where it matters least competitively” — dish density is lowest in urban cores",
-      "Self-interference: n252 satellite uplink and n70 terrestrial downlink share 2000–2020 MHz — SpaceX must partition its own network geographically",
+      "Small-cell physics: 213–295 m uplink-capped cells; steel and concrete still win indoors — the indoor answer stays WiFi over the dish",
+      "Moffett: the plan “works best where it matters least competitively” — the gap a cable barter/JV is shaped to fill, though the cores stay SpaceX’s either way",
+      "Coordination: the owned 2 GHz dovetails internally (orbit vs ground), but CBRS is an SAS-refereed commons — incumbents, GAA, and under a partnership, cable’s own traffic in the same pool",
     ],
   },
   {
@@ -739,8 +741,8 @@ function StoryTab({ phase, setPhase }) {
         <div className="eyebrow" style={{ color: C.green }}>Start here — the 60-second orientation</div>
         <p className="body">
           The premise: SpaceX wants to be America's fourth mobile carrier — without building cell towers. Instead, the
-          "towers" are ~15,000 satellites overhead plus millions of coffee-cup-sized radios bolted to customers' existing
-          rooftop Starlink dishes. To pull that off it bought its own radio spectrum (the $19.6B EchoStar deal — think of
+          "towers" are ~15,000 satellites overhead plus millions of coffee-cup-sized small cells — on customers' rooftop
+          dish mounts, on street poles, and possibly on cable's aerial strand under a barter or JV with the cable companies. To pull that off it bought its own radio spectrum (the $19.6B EchoStar deal — think of
           spectrum as owning exclusive lanes of an invisible highway), and it's building satellites that impersonate cell
           towers so convincingly that an ordinary, unmodified phone can't tell the difference. This site walks that plan:
           <strong> The Story</strong> (this tab) gives the phases; <strong>Spectrum</strong> shows the lanes it bought and the
@@ -6702,12 +6704,12 @@ function StarlinkMobileRoadmap() {
         <div className="kicker">Interactive Roadmap · Data as of Aug 2026</div>
         <p className="deck">From texts in a field to a fourth carrier.</p>
         <p className="sub">
-          How SpaceX plans to turn 65 MHz of EchoStar spectrum, a 5G constellation, and millions of rooftop dishes
-          into a phone service — phase by phase, with the physics, the mode-switch, the configuration lab, and the
+          How SpaceX plans to turn 65 MHz of EchoStar spectrum, a 5G constellation, and millions of small cells
+          — rooftop, pole, and possibly cable-strand — into a phone service — phase by phase, with the physics, the mode-switch, the configuration lab, and the
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v133 · hybrid tab reworked</span>
+        <span className="buildTag">build v134 · story tab updated</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
