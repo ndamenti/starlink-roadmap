@@ -12,7 +12,6 @@
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
 const { useState, useEffect } = React;
-
 /* ============================================================
    STARLINK MOBILE: FROM TEXTS IN A FIELD TO A FOURTH CARRIER
    Interactive roadmap console — data current to Aug 2026.
@@ -53,6 +52,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v137", d: "CBRS findings from the slide-deck session flow back to the site. The bracket chips now carry sourced attributions: 10 = EchoStar\u2019s urban reality (single PALs in some big-metro counties), 15 = their actual Auction 105 average (5,492 PALs / 3,128 counties \u2248 18 MHz/county, $913M \u2014 buying the book buys coverage breadth, not metro capacity), 40 = requires stacking beyond EchoStar via cable\u2019s PALs or auction, since the metro depth sits with Verizon ($1.89B for 557 PALs in 157 counties) and cable. The sticky header states the reliability truth: PALs are priority, not exclusivity \u2014 an SAS can shuffle channels around naval radar \u2014 so CBRS is the ground layer\u2019s capacity workhorse, never its coverage anchor; the owned H-block and the satellite anchor coverage. Also fixed a silent v122 no-op the recovery surfaced: the canonical scenario blurb still said \u2018pole small cells\u2019 \u2014 it now says the mixed rooftop/pole build it actually runs." },
   { v: "v136", d: "The Spectrum tab\u2019s AWS-3 note and the Physics tab\u2019s path-loss card now show one consistent story: free-space path is ~149\u2013152 dB (330 km shell, slant to 43\u00b0), and ~170 dB is the total link budget once margins, fading and losses are added \u2014 the two quantities are named, distinguished, and cross-referenced instead of looking like a contradiction." },
   { v: "v135", d: "Physics tab scrubbed end to end after Nick caught the ~550 km distance \u2014 that is the broadband fleet\u2019s altitude, not the D2C shells\u2019. The path-loss card now reasons from the authorized constellation: ~330 km up, ~480 km on the slant at a typical 43\u00b0 elevation, free-space loss ~149\u2013152 dB \u2014 which also forced honesty on the headline arithmetic: the old \u201850\u201360 dB problem\u2019 vs terrestrial was built on a 160\u2013170 dB figure that free space does not support even at 550 km; the card, its info label and the explainer now say ~30\u201350 dB (1,000\u2013100,000\u00d7 weaker), and the \u2018fixes\u2019 list credits flying low as ~4\u20135 dB vs the broadband fleet instead of describing a shell drop that already happened. Femtocell-era language swept from the tab: the indoor sim is labelled the 2 GHz indoor femtocell it models (with a pointer that the metro outdoor layer runs CBRS, sized on Serviceability), the capacity-density chart contrasts a 50\u2013300 m small cell, the strategy line names the rooftop/pole/strand mix, and two Verdict-tab echoes (\u2018femtocells indoors\u2019, \u2018femtocell economics\u2019) updated to match." },
   { v: "v134", d: "The Story tab catches up with the model. Phase 2 rewritten: small cells on CBRS (mixed rooftop/pole, 213\u2013295 m, H-block riding along) replace n70 femtocells; the Moffett gate \u2014 dish density lowest where traffic is highest \u2014 now carries its deal-shaped answer, the MSO barter/JV, with a new timeline event on Charter\u2019s strand build and 88% self-carry benchmark; the coordination gate distinguishes the internal 2 GHz dovetail from the SAS-refereed CBRS commons. The hero orientation and masthead deck follow: towers are satellites plus small cells \u2014 rooftop, pole, and possibly cable-strand." },
@@ -3615,7 +3615,7 @@ const SITE_SCEN = [
     blurb: "Owned H-block only (5/5), half the take-up, and home-class radios doing outdoor work. Deliberately NOT the T-Mobile G-block: that is a revocable partner-channel lease which cannot underwrite a competing Starlink Mobile carrier, so it can never be this business's spectrum." },
   { k: "canon", n: "Canonical", tier: "canonical", takeMul: 1.0, spec: "n252", ovMhz: 5, mapDl: 20, fleet: 15000,
     eqk: "pole", bandk: "cbrs", clsDbm: "mix", ovBand: "35",
-    blurb: "AWS-4 as the Spectrum tab models it (20/20), canonical take-up, pole small cells on CBRS — the site's central case." },
+    blurb: "AWS-4 as the Spectrum tab models it (20/20), canonical take-up, a mixed rooftop/pole ground build on CBRS — the site's central case." },
   { k: "bull", n: "Bull", tier: "bull", takeMul: 1.5, spec: "full", ovMhz: 25, mapDl: 45, fleet: 15000,
     eqk: "pole", bandk: "2ghz", clsDbm: 38, ovBand: "35",
     blurb: "Every owned block pointed at the network, 1.5× take-up, pole small cells with the ground layer on CBRS (2 GHz goes to orbit, per the dovetail rule) — the most favourable reading the licences support." },
@@ -3652,9 +3652,9 @@ const SVC_SUBS = [
    being shopped to Verizon — so the bracket includes zero. */
 const CBRS_BRACKET = [
   { v: 0,  n: "0 · none", d: "a competitor buys EchoStar’s PALs first — Verizon buying is foreclosure; a CABLE buyer could convert the same zero into co-build JV inventory" },
-  { v: 10, n: "10 · floor", d: "EchoStar-typical PAL depth in metro counties" },
-  { v: 15, n: "15 · center", d: "PALs plus partial leases" },
-  { v: 40, n: "40 · max", d: "aggressive acquisition to the per-entity cap" },
+  { v: 10, n: "10 · floor", d: "EchoStar’s urban reality — a single PAL in some big-metro counties (Auction 105: breadth, not depth)" },
+  { v: 15, n: "15 · center", d: "EchoStar’s actual average — 5,492 PALs across 3,128 counties ≈ 18 MHz/county ($913M, 2020). Buying their book buys coverage breadth, not metro capacity" },
+  { v: 40, n: "40 · max", d: "requires stacking BEYOND EchoStar — cable’s PALs (pool/JV) or auction wins; the metro depth sits with Verizon ($1.89B for 557 PALs in 157 counties) and cable" },
 ];
 function groundSpec(scenKey, cbrs, jv) {
   // Under a co-build JV the shared radios pool spectrum: SpaceX's CBRS position plus the
@@ -5828,7 +5828,9 @@ function ServiceabilityTab() {
         </div>
         <p style={{ fontSize: 11, color: C.dim, margin: "3px 0 0", lineHeight: 1.5 }}>
           Ground = {gSpec.src}. CBRS is not SpaceX’s and was not in the EchoStar deal — the bracket includes zero
-          because the PALs are reportedly being shopped to Verizon. CBRS is TDD, shown as its ~70/30 down/up time split.
+          because the PALs are reportedly being shopped to Verizon. CBRS is TDD, shown as its ~70/30 down/up time split. PALs are priority, not exclusivity — an SAS can shuffle
+          channels around naval radar — so CBRS is the ground layer’s CAPACITY workhorse, never its coverage anchor: the
+          owned H-block (and the satellite above) anchor coverage; CBRS pours capacity on top.
           {ovJv === "barter" && " Under the barter, cable’s strand radios carry SpaceX subscribers on CABLE’s spectrum — the spare-capacity slider sets how much of those radios’ capacity is left over after cable’s own traffic (bracketed assumption; the JV pools everything instead)."}
         </p>
         <p style={{ fontSize: 11.5, color: C.dim, margin: "6px 0 0", lineHeight: 1.5 }}>
@@ -6712,7 +6714,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v136 · link-budget numbers harmonized</span>
+        <span className="buildTag">build v137 · CBRS priority + EchoStar depth</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
