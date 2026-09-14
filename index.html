@@ -52,6 +52,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v138", d: "Panel 1B\u2019s edge-on view learns honesty about its own scale. The static \u2018\u00d726\u2019 note \u2014 wrong at nadir, and the reason the drawing froze below ~83\u00b0 \u2014 is replaced by a scale toggle: auto-fit computes the exaggeration per frame (capped at \u00d726 for visibility, labeled live, dropping toward \u00d71 and into \u2018compressed\u2019 territory as the spot slides toward the horizon) and true scale shrinks both axes uniformly so the cone appears as the 1.3%-wide needle it really is. The intercept clamp is gone \u2014 the full 90\u00b0\u219225\u00b0 elevation sweep now draws in both modes \u2014 and the edge-on ground bar now shows the along-look extent (the quantity a side view actually depicts; at nadir it equals across, so nothing changes there). The spot caption clamps inside the box, ending its collision with the scale note, which moved out of the drawing\u2019s corner." },
   { v: "v137", d: "CBRS findings from the slide-deck session flow back to the site. The bracket chips now carry sourced attributions: 10 = EchoStar\u2019s urban reality (single PALs in some big-metro counties), 15 = their actual Auction 105 average (5,492 PALs / 3,128 counties \u2248 18 MHz/county, $913M \u2014 buying the book buys coverage breadth, not metro capacity), 40 = requires stacking beyond EchoStar via cable\u2019s PALs or auction, since the metro depth sits with Verizon ($1.89B for 557 PALs in 157 counties) and cable. The sticky header states the reliability truth: PALs are priority, not exclusivity \u2014 an SAS can shuffle channels around naval radar \u2014 so CBRS is the ground layer\u2019s capacity workhorse, never its coverage anchor; the owned H-block and the satellite anchor coverage. Also fixed a silent v122 no-op the recovery surfaced: the canonical scenario blurb still said \u2018pole small cells\u2019 \u2014 it now says the mixed rooftop/pole build it actually runs." },
   { v: "v136", d: "The Spectrum tab\u2019s AWS-3 note and the Physics tab\u2019s path-loss card now show one consistent story: free-space path is ~149\u2013152 dB (330 km shell, slant to 43\u00b0), and ~170 dB is the total link budget once margins, fading and losses are added \u2014 the two quantities are named, distinguished, and cross-referenced instead of looking like a contradiction." },
   { v: "v135", d: "Physics tab scrubbed end to end after Nick caught the ~550 km distance \u2014 that is the broadband fleet\u2019s altitude, not the D2C shells\u2019. The path-loss card now reasons from the authorized constellation: ~330 km up, ~480 km on the slant at a typical 43\u00b0 elevation, free-space loss ~149\u2013152 dB \u2014 which also forced honesty on the headline arithmetic: the old \u201850\u201360 dB problem\u2019 vs terrestrial was built on a 160\u2013170 dB figure that free space does not support even at 550 km; the card, its info label and the explainer now say ~30\u201350 dB (1,000\u2013100,000\u00d7 weaker), and the \u2018fixes\u2019 list credits flying low as ~4\u20135 dB vs the broadband fleet instead of describing a shell drop that already happened. Femtocell-era language swept from the tab: the indoor sim is labelled the 2 GHz indoor femtocell it models (with a pointer that the metro outdoor layer runs CBRS, sized on Serviceability), the capacity-density chart contrasts a 50\u2013300 m small cell, the strategy line names the rooftop/pole/strand mix, and two Verdict-tab echoes (\u2018femtocells indoors\u2019, \u2018femtocell economics\u2019) updated to match." },
@@ -2220,6 +2221,7 @@ function BeamSizeLab() {
   const [f, setF] = useState(2.0);    // GHz
   const [h, setH] = useState(330);    // km
   const [be, setBe] = useState(90);   // beam elevation at the ground spot, deg
+  const [edgeScale, setEdgeScale] = useState("fit"); // "fit" (auto exaggeration) | "true" (uniform)
   const lam = 0.2998 / f;             // wavelength, m
   const th = lam / D;                 // beamwidth, rad (λ/D convention)
   const s = Math.sin((be * Math.PI) / 180);
@@ -2227,6 +2229,22 @@ function BeamSizeLab() {
   const slant = h / s;
   const across = th * slant;          // km, cross-track
   const along = across / s;           // km, along look direction
+  const eVW = 880, eVH = 250, eGndY = 214;
+  const eXoffKm = be < 90 ? h / Math.tan((be * Math.PI) / 180) : 0;
+  const eExtentKm = eXoffKm + along / 2 + 2;
+  const eVFull = (214 - 34) / h, eMaxHpx = eVW - 40 - eVW * 0.30;
+  let eVScale, eHScale, eScaleNote;
+  if (edgeScale === "fit") {
+    eVScale = eVFull;
+    eHScale = Math.min(eVFull * 26, eMaxHpx / eExtentKm);
+    const fct = eHScale / eVScale;
+    eScaleNote = fct >= 1.05 ? `horizontal exaggerated ×${fct.toFixed(fct >= 10 ? 0 : 1)}`
+      : fct <= 0.95 ? `horizontal compressed ×${(1 / fct).toFixed(1)}` : "horizontal ≈ true ratio";
+  } else {
+    const s0 = Math.min(eVFull, eMaxHpx / eExtentKm);
+    eVScale = s0; eHScale = s0;
+    eScaleNote = `true scale — this cone really is ${(nadirKm / h * 100).toFixed(2)}% as wide as it is tall`;
+  }
   const area = Math.PI * (across / 2) * (along / 2);
   const Dsub = lam * h;               // aperture side for 1-km nadir cells at this f & h
   const PRESETS = [
@@ -2301,17 +2319,25 @@ function BeamSizeLab() {
       {/* ---- edge-on view: the same four knobs, seen from the side ---- */}
       <div style={{ marginTop: 12 }}>
         <div className="statL" style={{ marginBottom: 5 }}>Edge-on — the same beam, seen from the side</div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+          {[["fit", "auto-fit · exaggerated for visibility"], ["true", "true scale"]].map(([k, lab]) => (
+            <button key={k} onClick={() => setEdgeScale(k)} style={{
+              fontFamily: "var(--mono)", fontSize: 10.5, padding: "4px 10px", borderRadius: 6, cursor: "pointer",
+              background: edgeScale === k ? "rgba(230,179,87,0.14)" : C.panel,
+              border: `1px solid ${edgeScale === k ? C.amber : C.line}`,
+              color: edgeScale === k ? C.amber : C.dim }}>{lab}</button>
+          ))}
+          <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, alignSelf: "center" }}>
+            {eScaleNote} · sweep the elevation slider 90°→25°
+          </span>
+        </div>
         {(() => {
-          const VW = 880, VH = 250;
-          const satY = 34, gndY = 214;                     // altitude maps to this vertical run
-          const EXAG = 26;                                 // horizontal exaggeration (angle is ~0.8°, invisible true-scale)
-          const pxPerKmH = ((gndY - satY) / h) * EXAG;     // horizontal km → px, exaggerated
-          const halfSpot = Math.max(1.5, (nadirKm / 2) * pxPerKmH);
+          const VW = eVW, VH = eVH, gndY = eGndY;
+          const satY = gndY - h * eVScale;
           const cx = VW * 0.30;
-          const apHalf = Math.max(7, (D / 1000) * pxPerKmH * 40); // aperture, further exaggerated to be visible
-          const slantX = be < 90 ? (gndY - satY) / Math.tan((be * Math.PI) / 180) * (pxPerKmH / (((gndY - satY) / h))) / h * h : 0;
-          const gx = cx + Math.min(slantX, VW * 0.55);
-          const halfAcross = Math.max(1.5, (across / 2) * pxPerKmH);
+          const apHalf = Math.max(edgeScale === "fit" ? 7 : 2, (D / 1000) * eHScale * 40);
+          const gx = cx + eXoffKm * eHScale;
+          const halfAcross = Math.max(1.5, (along / 2) * eHScale);
           return (
             <svg viewBox={`0 0 ${VW} ${VH}`} style={{ width: "100%", height: "auto", display: "block", background: C.panel2, borderRadius: 8 }}>
               {/* ground */}
@@ -2339,7 +2365,7 @@ function BeamSizeLab() {
               </text>
               {/* spot on the ground */}
               <line x1={gx - halfAcross} y1={gndY} x2={gx + halfAcross} y2={gndY} stroke="#C79BFF" strokeWidth="4" />
-              <text x={gx} y={gndY + 30} textAnchor="middle" fill="#C79BFF" fontSize="11" fontFamily="var(--mono)">
+              <text x={Math.min(Math.max(gx, 120), VW - 160)} y={gndY + 30} textAnchor="middle" fill="#C79BFF" fontSize="11" fontFamily="var(--mono)">
                 {be >= 89.5 ? nadirKm.toFixed(2) + " km spot" : across.toFixed(1) + " km across · " + along.toFixed(1) + " km along"}
               </text>
               {/* wavelength inset — what λ/D actually means */}
@@ -2357,9 +2383,7 @@ function BeamSizeLab() {
                   {(D / lam).toFixed(0)} wavelengths across → beam {(th * 1000).toFixed(1)} mrad wide
                 </text>
               </g>
-              <text x={VW - 24} y={VH - 8} textAnchor="end" fill={C.dim} fontSize="9" fontFamily="var(--mono)">
-                horizontal scale exaggerated ×{EXAG} — at true scale this cone is {(nadirKm / h * 100).toFixed(2)}% as wide as it is tall
-              </text>
+              
             </svg>
           );
         })()}
@@ -6714,7 +6738,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v137 · CBRS priority + EchoStar depth</span>
+        <span className="buildTag">build v138 · beam-lab scale toggle + full sweep</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
