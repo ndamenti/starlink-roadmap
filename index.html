@@ -52,6 +52,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v139", d: "The CBRS doctrine from the slide-deck sessions, applied everywhere it touches. Three commandments: CBRS is the capacity layer and never the coverage anchor (an SAS can shuffle its channels, so it cannot be promised); the city small-cell layer therefore requires at least the owned 5 MHz H-block as its licensed floor \u2014 stated in the Serviceability header, the Story\u2019s Phase 2, the Hybrid Network ground layer (anchor now listed first, roles named), the packet route (phones attach on the anchor, aggregate CBRS on top), the Physics strategy line, and the spectrum-ledger source strings themselves; and EchoStar\u2019s ~5,500 PALs are thin coverage breadth, not metro capacity \u2014 now in the Equipment band note and a new Verdict watch item (\u2018who buys the doormat\u2019). The bull scenario pays for its maximalism honestly: its blurb and ledger line flag that pointing the H-block at orbit leaves the city layer with no owned floor \u2014 best-effort capacity, not carrier-grade coverage." },
   { v: "v138", d: "Panel 1B\u2019s edge-on view learns honesty about its own scale. The static \u2018\u00d726\u2019 note \u2014 wrong at nadir, and the reason the drawing froze below ~83\u00b0 \u2014 is replaced by a scale toggle: auto-fit computes the exaggeration per frame (capped at \u00d726 for visibility, labeled live, dropping toward \u00d71 and into \u2018compressed\u2019 territory as the spot slides toward the horizon) and true scale shrinks both axes uniformly so the cone appears as the 1.3%-wide needle it really is. The intercept clamp is gone \u2014 the full 90\u00b0\u219225\u00b0 elevation sweep now draws in both modes \u2014 and the edge-on ground bar now shows the along-look extent (the quantity a side view actually depicts; at nadir it equals across, so nothing changes there). The spot caption clamps inside the box, ending its collision with the scale note, which moved out of the drawing\u2019s corner." },
   { v: "v137", d: "CBRS findings from the slide-deck session flow back to the site. The bracket chips now carry sourced attributions: 10 = EchoStar\u2019s urban reality (single PALs in some big-metro counties), 15 = their actual Auction 105 average (5,492 PALs / 3,128 counties \u2248 18 MHz/county, $913M \u2014 buying the book buys coverage breadth, not metro capacity), 40 = requires stacking beyond EchoStar via cable\u2019s PALs or auction, since the metro depth sits with Verizon ($1.89B for 557 PALs in 157 counties) and cable. The sticky header states the reliability truth: PALs are priority, not exclusivity \u2014 an SAS can shuffle channels around naval radar \u2014 so CBRS is the ground layer\u2019s capacity workhorse, never its coverage anchor; the owned H-block and the satellite anchor coverage. Also fixed a silent v122 no-op the recovery surfaced: the canonical scenario blurb still said \u2018pole small cells\u2019 \u2014 it now says the mixed rooftop/pole build it actually runs." },
   { v: "v136", d: "The Spectrum tab\u2019s AWS-3 note and the Physics tab\u2019s path-loss card now show one consistent story: free-space path is ~149\u2013152 dB (330 km shell, slant to 43\u00b0), and ~170 dB is the total link budget once margins, fading and losses are added \u2014 the two quantities are named, distinguished, and cross-referenced instead of looking like a contradiction." },
@@ -164,11 +165,11 @@ const PHASES = [
     tier: "Carrier-grade outdoors, patchy indoors",
     tierPct: 62,
     beamCap: "~15–18 Mbps / beam + terrestrial offload",
-    spectrum: "2 GHz from orbit · CBRS on the ground (H-block rides along)",
+    spectrum: "2 GHz from orbit · ground: H-block anchor + CBRS capacity",
     sats: "Continuous global D2D coverage target: end-2028",
     orbit: 0.6,
     summary:
-      "The EchoStar licenses carry terrestrial rights — so SpaceX builds down, not just up. But outdoor coverage is small-cell work on CBRS, not femtocell work at 2 GHz: a mix of rooftop cells (subscriber consent, organic placement) and pole cells (planned grid — the hard lease-and-permit sites), 213–295 m each, with the 5 MHz H-block riding along. The metro problem — dish density is lowest exactly where mobile traffic is highest — has a deal-shaped answer: a barter or co-build JV with Comcast/Charter, whose strand-mounted CBRS radios, poolable PALs and plant backhaul cover the aerial suburbs while the downtown cores (cable deserts — underground conduit, no strand) stay SpaceX’s to build. Satellites erase dead zones running n252; Teslas become roaming nodes: Cybercab ships with Starlink standard.",
+      "The EchoStar licenses carry terrestrial rights — so SpaceX builds down, not just up. But outdoor coverage is small-cell work on CBRS, not femtocell work at 2 GHz: a mix of rooftop cells (subscriber consent, organic placement) and pole cells (planned grid — the hard lease-and-permit sites), 213–295 m each — anchored on the owned 5 MHz H-block, because CBRS (shared, and shuffle-able by the SAS) can only ever be the capacity layer, never the coverage promise. The metro problem — dish density is lowest exactly where mobile traffic is highest — has a deal-shaped answer: a barter or co-build JV with Comcast/Charter, whose strand-mounted CBRS radios, poolable PALs and plant backhaul cover the aerial suburbs while the downtown cores (cable deserts — underground conduit, no strand) stay SpaceX’s to build. Satellites erase dead zones running n252; Teslas become roaming nodes: Cybercab ships with Starlink standard.",
     events: [
       { d: "2027–2028", t: "Small-cell deployment “as you need it” — rooftop units on dish mounts plus pole units where consent can’t reach (Shotwell); Musk claims small stations could beat cellular bandwidth.", side: "ground" },
       { d: "2027+", t: "The MSO option matures: Charter’s strand-mounted CBRS build is in full-deployment phase (23-market target) and already carries — with WiFi — 88% of Spectrum Mobile traffic on own/partner infrastructure. A barter rides those radios; a JV funds and shares them, pooling PALs.", side: "biz" },
@@ -639,6 +640,7 @@ const BENCHMARKS = [
   { t: "Size of SpaceX's Upper C-band bid (Jul 2027)", why: "A big bid = serious urban terrestrial carrier. A token bid = coverage-layer + machine-connectivity strategy." },
   { t: "EchoStar closing (≤ Nov 30, 2027) & the $2.4B escrow", why: "Early close signals confidence; escrow litigation could snarl the timeline." },
   { t: "First FCC milestone (~late 2029)", why: "5 dB SINR @ 70% over 90% of each BEA. Missing all first-interim metrics accelerates the license-termination clock." },
+  { t: "EchoStar’s ~5,500 CBRS PALs — who buys the doormat", why: "Breadth, not depth: ~18 MHz/county nationwide, single PALs in some big metros — a thin coverage layer, not metro capacity. A cable buyer converts it into JV pool inventory; a Verizon buy forecloses less than it appears, because metro depth was never in this book." },
 ];
 
 const ENVS = {
@@ -1287,7 +1289,7 @@ function PhysicsTab({ cfg, setCfg }) {
           satellite layer buys ubiquity (every km² gets <em>something</em>); the ground layer buys intensity (huge Mbps/km²,
           in dots tens of meters wide). Incumbents solve the pairing with ~250k macro towers and &gt;1M small cells; SpaceX's
           bet is satellites + a small-cell layer — dish-mounted, pole, and possibly cable-strand — approximate it without the
-          tower capex. The metro outdoor build runs CBRS and is sized on the Serviceability tab; this lab exercises the owned
+          tower capex. The metro outdoor build pours CBRS capacity over an owned H-block coverage floor and is sized on the Serviceability tab; this lab exercises the owned
           2 GHz split. The V2 150 Mbps headline is a peak, single-user, best-case claim.
         </p>
         <Info label="why everyone under a beam shares one pipe — and what Mbps/km² means">
@@ -1327,14 +1329,14 @@ const LAYERS = [
   {
     id: "femto", tone: "ground", name: "Ground layer — the small-cell mix",
     head: "Rooftops, poles, and a territory partition",
-    freq: ["CBRS n48: 3550–3700 TDD (SAS, ~70/30)", "H-block: 1915 ↑ / 1995 ↓ (5/5, rides along)", "Backhaul: host dish · own Ku · cable plant"],
-    body: "Outdoor coverage is small-cell work on CBRS, not femtocell work at 2 GHz — uplink-capped cells of ~213 m (rooftop, 30 dBm) to ~295 m (pole, 38 dBm), partitioned by what each patch of territory permits: subscriber rooftops where consenting roofs are dense (organic placement, the disorder tax), street poles where they are not (planned grid, lease + permit — the hard sites), and under a partnership, cable strand for the aerial-plant share. Counts are coverage-driven: the class mix, not spectrum, sets the box count.",
+    freq: ["H-block: 1915 ↑ / 1995 ↓ (5/5 owned — the coverage anchor)", "CBRS n48: 3550–3700 TDD (SAS — the capacity layer, never the anchor)", "Backhaul: host dish · own Ku · cable plant"],
+    body: "The city layer stands on two kinds of spectrum with two jobs: the owned H-block is the licensed floor every cell can promise service on, and CBRS — priority-shared, channel-shuffled around naval radar by the SAS — pours capacity on top but can never be counted on as coverage. The cells themselves are uplink-capped cells of ~213 m (rooftop, 30 dBm) to ~295 m (pole, 38 dBm), partitioned by what each patch of territory permits: subscriber rooftops where consenting roofs are dense (organic placement, the disorder tax), street poles where they are not (planned grid, lease + permit — the hard sites), and under a partnership, cable strand for the aerial-plant share. Counts are coverage-driven: the class mix, not spectrum, sets the box count.",
   },
   {
     id: "cable", tone: "ground", name: "Partner layer — cable’s plant (optional)",
     head: "Sites, spectrum, and backhaul — someone else’s",
     freq: ["CBRS PALs: 10–20 MHz/county (pooled under JV)", "WiFi: Passpoint/OpenRoaming offload indoors", "Backhaul: HFC/fibre — no satellite hop"],
-    body: "This layer exists only under a barter or JV, and it is three assets in one: strand-mounted radios zip-tied to aerial plant (siting, power and backhaul the model cannot otherwise price), PAL spectrum that pools with SpaceX’s under the JV, and plant backhaul that never touches a satellite. Its limit is geography — downtown cores are cable deserts (underground conduit, no strand), so the cores stay SpaceX’s to build. The benchmark: Charter already carries 88% of Spectrum Mobile traffic on infrastructure like this.",
+    body: "This layer exists only under a barter or JV, and it is three assets in one: strand-mounted radios zip-tied to aerial plant (siting, power and backhaul the model cannot otherwise price), PAL spectrum that pools with SpaceX’s under the JV (thickening the capacity layer — the coverage anchor stays SpaceX’s H-block), and plant backhaul that never touches a satellite. Its limit is geography — downtown cores are cable deserts (underground conduit, no strand), so the cores stay SpaceX’s to build. The benchmark: Charter already carries 88% of Spectrum Mobile traffic on infrastructure like this.",
   },
   {
     id: "dev", tone: "ground", name: "Device layer — phones, Teslas, robots",
@@ -1352,7 +1354,7 @@ const PATHS = {
     "Return traffic arrives on 2180–2200 MHz (n252 DL). Handoff every ~3 minutes as satellites pass — invisible to the user",
   ],
   urban: [
-    "Phone attaches to a small cell — subscriber rooftop or street pole — on CBRS n48 (3550–3700 MHz TDD, SAS-coordinated, ~70/30 down/up), with the 5 MHz 2 GHz H-block riding along where the satellite layer leaves it idle",
+    "Phone attaches to a small cell — subscriber rooftop or street pole — on the owned H-block (the licensed anchor carrier the cell can always promise), with CBRS n48 (3550–3700 MHz TDD, SAS-coordinated, ~70/30) aggregated on top for capacity",
     "Backhaul depends on who owns the box: a rooftop cell rides its host Starlink dish (Ku-band up to the broadband constellation); a pole cell gets its own Ku terminal; a cable strand cell — under the barter or JV — rides cable’s own fibre/HFC plant and never touches a satellite at all",
     "Satellite-backhauled packets route via laser ISLs to an E-band gateway and into the core; strand-cell packets exit through cable’s core and peering directly — two plumbing stories, one network",
     "Step outside small-cell range with an n252 phone and the satellite layer catches you — one network, two radios, seamless (in theory)",
@@ -3432,7 +3434,7 @@ const EQUIP = [
 ];
 const EQ_BANDS = [
   { k: "2ghz", n: "Band 70 · 2 GHz", f: 2.0, note: "owned; collides with the satellite layer unless partitioned by tier" },
-  { k: "cbrs", n: "CBRS · 3.5 GHz", f: 3.5, note: "EchoStar PALs, SAS-coordinated — cheap and available now" },
+  { k: "cbrs", n: "CBRS · 3.5 GHz", f: 3.5, note: "SAS-coordinated shared band — capacity layer only, never the coverage anchor. EchoStar’s PALs are thin coverage breadth (10–20 MHz/county), not metro capacity" },
   { k: "cband", n: "Upper C · 4 GHz", f: 4.0, note: "auction July 2027 — exclusive but expensive" },
 ];
 const R_BASE_KM = 0.18;   // outdoor femtocell-class radius at 2 GHz, 20 dBm (Hybrid Network calibration)
@@ -3642,7 +3644,7 @@ const SITE_SCEN = [
     blurb: "AWS-4 as the Spectrum tab models it (20/20), canonical take-up, a mixed rooftop/pole ground build on CBRS — the site's central case." },
   { k: "bull", n: "Bull", tier: "bull", takeMul: 1.5, spec: "full", ovMhz: 25, mapDl: 45, fleet: 15000,
     eqk: "pole", bandk: "2ghz", clsDbm: 38, ovBand: "35",
-    blurb: "Every owned block pointed at the network, 1.5× take-up, pole small cells with the ground layer on CBRS (2 GHz goes to orbit, per the dovetail rule) — the most favourable reading the licences support." },
+    blurb: "Every owned block pointed at the network, 1.5× take-up, pole small cells with the ground layer on CBRS (2 GHz goes to orbit, per the dovetail rule) — the most favourable reading the licences support. Caveat the doctrine flags: with the H-block aimed at orbit the city layer is CBRS-only — no owned coverage floor — so bull’s metros are best-effort capacity, not carrier-grade coverage." },
 ];
 
 // In-vehicle defaults to the BOOSTER, not the femtocell. A repeater re-radiates the
@@ -3688,8 +3690,8 @@ function groundSpec(scenKey, cbrs, jv) {
   const pool = (cbrs || 0) + (jv ? 15 : 0);
   const c = pool, cDl = 0.7 * c, cUl = 0.3 * c;
   if (scenKey === "bear") return { dl: 40, ul: 15, src: "AWS-4 DL + AWS-3 UL at 2 GHz — everything the satellite left behind, terrestrially licensed today" };
-  if (scenKey === "bull") return { dl: cDl, ul: cUl, src: c > 0 ? "CBRS " + c + " MHz TDD" + (jv ? " (incl. +15 pooled cable PALs — JV)" : " only") + " — the 2 GHz cupboard is bare" : "NOTHING — 2 GHz all sent to orbit, and a competitor bought the CBRS PALs" };
-  return { dl: 5 + cDl, ul: 5 + cUl, src: "H-block 5/5 (owned, idle from orbit until NTN) " + (c > 0 ? "+ CBRS " + c + " MHz TDD" : "— no CBRS: a competitor bought the PALs") };
+  if (scenKey === "bull") return { dl: cDl, ul: cUl, src: c > 0 ? "CBRS " + c + " MHz TDD" + (jv ? " (incl. +15 pooled cable PALs — JV)" : " only") + " — NO owned anchor: capacity-only ground" : "NOTHING — 2 GHz all sent to orbit, and a competitor bought the CBRS PALs" };
+  return { dl: 5 + cDl, ul: 5 + cUl, src: "H-block 5/5 (owned coverage anchor) " + (c > 0 ? "+ CBRS " + c + " MHz capacity TDD" : "— no CBRS: a competitor bought the PALs") };
 }
 
 const BUILD_DEFAULT = { out: "pole", veh: "boost", in: "wifi" };
@@ -5854,7 +5856,7 @@ function ServiceabilityTab() {
           Ground = {gSpec.src}. CBRS is not SpaceX’s and was not in the EchoStar deal — the bracket includes zero
           because the PALs are reportedly being shopped to Verizon. CBRS is TDD, shown as its ~70/30 down/up time split. PALs are priority, not exclusivity — an SAS can shuffle
           channels around naval radar — so CBRS is the ground layer’s CAPACITY workhorse, never its coverage anchor: the
-          owned H-block (and the satellite above) anchor coverage; CBRS pours capacity on top.
+          owned H-block (and the satellite above) anchor coverage; CBRS pours capacity on top. City coverage therefore requires at least the owned 5 MHz under it — a small-cell layer with no licensed floor can promise speed on a good day, not service.
           {ovJv === "barter" && " Under the barter, cable’s strand radios carry SpaceX subscribers on CABLE’s spectrum — the spare-capacity slider sets how much of those radios’ capacity is left over after cable’s own traffic (bracketed assumption; the JV pools everything instead)."}
         </p>
         <p style={{ fontSize: 11.5, color: C.dim, margin: "6px 0 0", lineHeight: 1.5 }}>
@@ -6738,7 +6740,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v138 · beam-lab scale toggle + full sweep</span>
+        <span className="buildTag">build v139 · CBRS doctrine site-wide</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
