@@ -52,6 +52,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v140", d: "Panel 1B\u2019s stat grid gains a persistent one-line caption: the site canonical for all capacity math is 8.9 km \u2300 at nadir (the panel-scaled center preset), while the lab\u2019s readout follows whatever preset and sliders are active \u2014 added after the full-aperture floor preset (4.4 km) briefly masqueraded as \u2018the\u2019 number during a deck review. The lab stays a lab; the canonical stays labeled." },
   { v: "v139", d: "The CBRS doctrine from the slide-deck sessions, applied everywhere it touches. Three commandments: CBRS is the capacity layer and never the coverage anchor (an SAS can shuffle its channels, so it cannot be promised); the city small-cell layer therefore requires at least the owned 5 MHz H-block as its licensed floor \u2014 stated in the Serviceability header, the Story\u2019s Phase 2, the Hybrid Network ground layer (anchor now listed first, roles named), the packet route (phones attach on the anchor, aggregate CBRS on top), the Physics strategy line, and the spectrum-ledger source strings themselves; and EchoStar\u2019s ~5,500 PALs are thin coverage breadth, not metro capacity \u2014 now in the Equipment band note and a new Verdict watch item (\u2018who buys the doormat\u2019). The bull scenario pays for its maximalism honestly: its blurb and ledger line flag that pointing the H-block at orbit leaves the city layer with no owned floor \u2014 best-effort capacity, not carrier-grade coverage." },
   { v: "v138", d: "Panel 1B\u2019s edge-on view learns honesty about its own scale. The static \u2018\u00d726\u2019 note \u2014 wrong at nadir, and the reason the drawing froze below ~83\u00b0 \u2014 is replaced by a scale toggle: auto-fit computes the exaggeration per frame (capped at \u00d726 for visibility, labeled live, dropping toward \u00d71 and into \u2018compressed\u2019 territory as the spot slides toward the horizon) and true scale shrinks both axes uniformly so the cone appears as the 1.3%-wide needle it really is. The intercept clamp is gone \u2014 the full 90\u00b0\u219225\u00b0 elevation sweep now draws in both modes \u2014 and the edge-on ground bar now shows the along-look extent (the quantity a side view actually depicts; at nadir it equals across, so nothing changes there). The spot caption clamps inside the box, ending its collision with the scale note, which moved out of the drawing\u2019s corner." },
   { v: "v137", d: "CBRS findings from the slide-deck session flow back to the site. The bracket chips now carry sourced attributions: 10 = EchoStar\u2019s urban reality (single PALs in some big-metro counties), 15 = their actual Auction 105 average (5,492 PALs / 3,128 counties \u2248 18 MHz/county, $913M \u2014 buying the book buys coverage breadth, not metro capacity), 40 = requires stacking beyond EchoStar via cable\u2019s PALs or auction, since the metro depth sits with Verizon ($1.89B for 557 PALs in 157 counties) and cable. The sticky header states the reliability truth: PALs are priority, not exclusivity \u2014 an SAS can shuffle channels around naval radar \u2014 so CBRS is the ground layer\u2019s capacity workhorse, never its coverage anchor; the owned H-block and the satellite anchor coverage. Also fixed a silent v122 no-op the recovery surfaced: the canonical scenario blurb still said \u2018pole small cells\u2019 \u2014 it now says the mixed rooftop/pole build it actually runs." },
@@ -2292,6 +2293,10 @@ function BeamSizeLab() {
             <div className="stat"><div className="statL">Spot at {be}°</div><div className="statV" style={{ color: C.amber }}>~{across.toFixed(1)} × {along.toFixed(1)} km · ~{area.toFixed(0)} km²</div></div>
             <div className="stat"><div className="statL">Panel needed for 1-km cells here</div>
               <div className="statV" style={{ color: "#C79BFF" }}>~{Dsub.toFixed(0)} m side (~{(Dsub * Dsub / 1000).toFixed(1)}k m²)</div></div>
+          </div>
+          <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginTop: 6 }}>
+            site canonical for all capacity math: <strong style={{ color: C.text }}>8.9 km ⌀ at nadir</strong> (the
+            panel-scaled center preset) — this lab’s readout follows whatever preset and sliders are active
           </div>
         </div>
         <svg viewBox="0 0 440 300" style={{ width: "100%", display: "block" }} role="img" aria-label="To-scale ground spot ellipse with kilometre dimensions">
@@ -6740,7 +6745,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v139 · CBRS doctrine site-wide</span>
+        <span className="buildTag">build v140 · beam-lab canonical caption</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
