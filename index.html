@@ -52,6 +52,7 @@ const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const CHANGELOG = [
+  { v: "v141", d: "Coverage Panel 4 now shows the consequence, not just the mechanism. Under the residual-frequency chart sits a second chart on the same beam axis: spectral efficiency (bps/Hz) across the beam for both handsets, driven by the same phone slider, with a live readout at the marker translated into Mbps on a 20 MHz beam, plus a side-by-side \u2018at this spot\u2019 line. Standard phone: strong at center, falling off a cliff past the frequency tolerance. NTN phone: higher everywhere, with a gentle edge roll-off that is the antenna pattern \u2014 NTN fixes frequency error, not geometry. Curve shapes are illustrative, but their area-weighted beam averages are calibrated to the site\u2019s 0.62 and 2.48 bps/Hz, so the familiar headline numbers become visibly the averages of these curves \u2014 and the 4\u00d7 gap reads as two parts: protocol efficiency (vertical gap) and edge usability (shape)." },
   { v: "v140", d: "Panel 1B\u2019s stat grid gains a persistent one-line caption: the site canonical for all capacity math is 8.9 km \u2300 at nadir (the panel-scaled center preset), while the lab\u2019s readout follows whatever preset and sliders are active \u2014 added after the full-aperture floor preset (4.4 km) briefly masqueraded as \u2018the\u2019 number during a deck review. The lab stays a lab; the canonical stays labeled." },
   { v: "v139", d: "The CBRS doctrine from the slide-deck sessions, applied everywhere it touches. Three commandments: CBRS is the capacity layer and never the coverage anchor (an SAS can shuffle its channels, so it cannot be promised); the city small-cell layer therefore requires at least the owned 5 MHz H-block as its licensed floor \u2014 stated in the Serviceability header, the Story\u2019s Phase 2, the Hybrid Network ground layer (anchor now listed first, roles named), the packet route (phones attach on the anchor, aggregate CBRS on top), the Physics strategy line, and the spectrum-ledger source strings themselves; and EchoStar\u2019s ~5,500 PALs are thin coverage breadth, not metro capacity \u2014 now in the Equipment band note and a new Verdict watch item (\u2018who buys the doormat\u2019). The bull scenario pays for its maximalism honestly: its blurb and ledger line flag that pointing the H-block at orbit leaves the city layer with no owned floor \u2014 best-effort capacity, not carrier-grade coverage." },
   { v: "v138", d: "Panel 1B\u2019s edge-on view learns honesty about its own scale. The static \u2018\u00d726\u2019 note \u2014 wrong at nadir, and the reason the drawing froze below ~83\u00b0 \u2014 is replaced by a scale toggle: auto-fit computes the exaggeration per frame (capped at \u00d726 for visibility, labeled live, dropping toward \u00d71 and into \u2018compressed\u2019 territory as the spot slides toward the horizon) and true scale shrinks both axes uniformly so the cone appears as the 1.3%-wide needle it really is. The intercept clamp is gone \u2014 the full 90\u00b0\u219225\u00b0 elevation sweep now draws in both modes \u2014 and the edge-on ground bar now shows the along-look extent (the quantity a side view actually depicts; at nadir it equals across, so nothing changes there). The spot caption clamps inside the box, ending its collision with the scale note, which moved out of the drawing\u2019s corner." },
@@ -4184,6 +4185,17 @@ function NtnPanel() {
   const usableHalf = ntn ? 1 : tol / maxRes;
   const X = (p) => 450 + (p / 100) * 380; // -100..100 → 70..830
   const Y = (k) => 130 - (k / 3.2) * 92;  // kHz → px
+  // efficiency across the beam — shapes illustrative; beam averages calibrated to the site's 0.62 / 2.48
+  const gain = (u) => 1 - 0.35 * u * u;                       // antenna-pattern roll-off, both phones
+  const dStd = (u) => { const r = u * maxRes; return r <= tol ? 1 : Math.max(0, 1 - (r - tol) / tol); };
+  const areaAvg = (f) => { let a = 0; const n = 400; for (let i = 0; i < n; i++) { const u = (i + 0.5) / n; a += f(u) * 2 * u / n; } return a; };
+  const kN = 2.48 / areaAvg(gain), kS = 0.62 / areaAvg((u) => gain(u) * dStd(u));
+  const effN = (p) => kN * gain(Math.abs(p) / 100);
+  const effS = (p) => kS * gain(Math.abs(p) / 100) * dStd(Math.abs(p) / 100);
+  const YE = (e) => 175 - (e / 3.4) * 140;                  // bps/Hz → px
+  const curve = (f) => { let d = ""; for (let q = -100; q <= 100; q += 2) d += (q === -100 ? "M" : "L") + X(q).toFixed(1) + "," + YE(f(q)).toFixed(1); return d; };
+  const effHere = ntn ? effN(pos) : effS(pos);
+  const mkX = Math.min(Math.max(X(pos), 190), 700);
   return (
     <div className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
       <div className="eyebrow" style={{ color: C.blue }}>Panel 4 · What Rel-17 / Rel-19 NTN phones change <Src k="standards" topic="standards" /></div>
@@ -4221,6 +4233,42 @@ function NtnPanel() {
           {res.toFixed(2)} kHz {ok ? "· in spec" : "· degraded/dropped"}
         </text>
       </svg>
+      <div className="statL" style={{ marginTop: 10, marginBottom: 2 }}>What that costs in speed — efficiency across the same beam (bps/Hz)</div>
+      <svg viewBox="0 0 900 200" style={{ width: "100%", display: "block" }} role="img" aria-label="Spectral efficiency across the beam for legacy versus NTN handsets">
+        <line x1="70" y1="175" x2="830" y2="175" stroke={C.line} />
+        {/* beam-average reference lines */}
+        <line x1="70" y1={YE(0.62)} x2="830" y2={YE(0.62)} stroke={C.amber} strokeWidth="0.8" strokeDasharray="4 4" opacity="0.7" />
+        <line x1="70" y1={YE(2.48)} x2="830" y2={YE(2.48)} stroke={C.blue} strokeWidth="0.8" strokeDasharray="4 4" opacity="0.7" />
+        <text x="836" y={YE(0.62) + 3} fill={C.amber} fontSize="9" fontFamily="var(--mono)">avg 0.62</text>
+        <text x="836" y={YE(2.48) + 3} fill={C.blue} fontSize="9" fontFamily="var(--mono)">avg 2.48</text>
+        {/* curves: active bold, inactive faint */}
+        <path d={curve(effS)} fill="none" stroke={C.amber} strokeWidth={ntn ? 1.2 : 2.4} opacity={ntn ? 0.35 : 1} style={{ transition: "all 400ms" }} />
+        <path d={curve(effN)} fill="none" stroke={C.blue} strokeWidth={ntn ? 2.4 : 1.2} opacity={ntn ? 1 : 0.35} style={{ transition: "all 400ms" }} />
+        {/* legend */}
+        <text x="76" y="18" fill={C.amber} fontSize="9.5" fontFamily="var(--mono)">— standard phone: strong at center, falls off a cliff past the frequency tolerance</text>
+        <text x="76" y="31" fill={C.blue} fontSize="9.5" fontFamily="var(--mono)">— NTN phone: higher everywhere; gentle edge roll-off is the antenna pattern, not frequency error</text>
+        {/* marker */}
+        <line x1={X(pos)} y1="40" x2={X(pos)} y2="175" stroke={C.dim} strokeWidth="0.6" strokeDasharray="2 3" />
+        <circle cx={X(pos)} cy={YE(effHere)} r="7" fill={ntn ? C.blue : (effHere > 0.05 ? C.amber : C.red)} />
+        <text x={mkX} y={Math.max(YE(effHere) - 12, 52)} textAnchor="middle" fill={ntn ? C.blue : (effHere > 0.05 ? C.amber : C.red)} fontSize="10" fontFamily="var(--mono)" stroke={C.panel} strokeWidth="4" paintOrder="stroke">
+          {effHere.toFixed(2)} bps/Hz ≈ {(effHere * 20).toFixed(0)} Mbps on a 20 MHz beam
+        </text>
+        <text x="70" y="192" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">beam edge</text>
+        <text x="450" y="192" textAnchor="middle" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">beam center</text>
+        <text x="830" y="192" textAnchor="end" fill={C.dim} fontSize="9.5" fontFamily="var(--mono)">beam edge</text>
+      </svg>
+      <p className="body" style={{ fontSize: 13, marginTop: 4, marginBottom: 6 }}>
+        At this spot: standard phone <strong style={{ color: C.amber }}>≈ {(effS(pos) * 20).toFixed(0)} Mbps</strong> · NTN
+        phone <strong style={{ color: C.blue }}>≈ {(effN(pos) * 20).toFixed(0)} Mbps</strong> (20 MHz beam, if you had it to
+        yourself). <strong>Today, where you stand in the beam decides your speed; with NTN it matters far less.</strong>
+      </p>
+      <p className="body" style={{ fontSize: 12, color: C.dim, marginBottom: 8 }}>
+        Dashed lines mark each phone’s beam average. Shapes illustrative; the averages are calibrated to the site's numbers — 0.62 bps/Hz (measured, adapted LTE) and
+        2.48 (claim-anchored, NR-NTN) — averaged over the beam's <em>area</em>, and most of a circular beam's area lies near
+        its edge (half of it beyond ~71% of the radius). That is why the standard phone's decent center speed averages down to
+        0.62: the edges are where most of the ground is. The 4× gap has two parts — the vertical gap between the curves
+        (a more efficient protocol everywhere) and their shape (edges that stay usable).
+      </p>
       <label className="sliderL" style={{ marginTop: 6 }}>Phone position across the beam: <strong>{pos}%</strong> of half-width
         <input type="range" min="-100" max="100" value={pos} onChange={(e) => setPos(+e.target.value)} />
       </label>
@@ -6745,7 +6793,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v140 · beam-lab canonical caption</span>
+        <span className="buildTag">build v141 · NTN panel shows speed, not just kHz</span>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
