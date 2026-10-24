@@ -47,11 +47,17 @@ const C = {
 //   floor  4.4 km  (full 125 m² coherent — ideal; no flying system forms beams this way)
 //   center 8.9 km  (Gen1 panelization scaled 5× → ~31 m²/beam)  ← site-wide canonical
 //   upper 19.9 km  (Gen1's 6.25 m² panels reused unchanged)
-const BEAM_KM = 8.9;
+const BEAM_KM = 8.9; // canonical nadir beam at 2.0 GHz (bracket 4.4 / 8.9 / 19.9)
+const beamKm = (fGHz) => (BEAM_KM * 2.0) / fGHz; // λ/D scaling off the 2.0 GHz canonical aperture (D ≈ 5.56 m)
+// 800 MHz ESMR (Grain — pending FCC): 817–824 UL / 862–869 DL, 2×7 MHz. Same aperture ⇒ ×2.31 wider beam.
+const ESMR = { dlGHz: 0.8655, ulGHz: 0.8205, lic: 7, usable: 5, usable7: 7, beams: 700 /* undisclosed; assumed = 2 GHz count */ };
+const BEAM_KM_800 = beamKm(ESMR.dlGHz); // ≈ 20.57 km nadir (bracket 10.2 / 20.6 / 45.7)
 const BEAM_FLOOR_KM = 4.4;
 const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
+const BEAM_AREA_800 = Math.PI * (BEAM_KM_800 / 2) * (BEAM_KM_800 / 2); // ~332 km² nadir cell at 865.5 MHz
 const CHANGELOG = [
+  { v: "v144", d: "The 800 MHz Grain/ESMR base case, integrated site-wide as a separate low-band layer. Base-case banner (acquisition pending: consent + SCS eligibility + payload). Model layer parameterized by band — beamKm(f), BEAM_KM_800 ≈ 20.6 km (×2.31 the 2 GHz beam, 5.3× the area), patchStats/patchZones take a beam argument with band-keyed caches; 2 GHz outputs bit-identical. Spectrum: hatched-pending ESMR block on a broken 800/1650–2250 axis, two ledger rows, readiness row, 65 → 79 tally; the Config Lab deliberately excludes the block (wrong lattice) and says so. Story: Aug–Oct window, the Oct 6/8/22 events incl. the reported ≥80k-site tower talks. Labs: Grain-DL and Gen1@800 beam presets, the P.2109 finding that the indoor verdict does NOT flip at 800 (14.2 vs 15 dB — still 1.6 dB under the floor), 865 MHz Doppler/ppm. Serviceability: an Off/5/7 toggle whose layer sums through the whole chain (+3.1 Gbps at 5 MHz, +8.9% at 5k sats — 249 beams on ~410 km² cells), the three-tier ground doctrine (800 macro anchor · 2 GHz small-cell capacity · satellite elsewhere), and the county-level truth: full 7 MHz for 92.7% of POPs, ~80.7% clean of leases today, no 5 MHz US-primary carrier anywhere on the Canadian border, none at all near Mexico. Verdict: low-band yardstick cell, 0.035 Mbps/km² density line, two new watch items (eight now). Reg: the transfer risk card (seven now), register and standards-pipe rows. Seams panel gains the plain-English fences-not-gaps opener. New sources: grain800 (8 primary) and towers (reported). Fixes: 'entirely adequate' density sentence, satmax scenario MHz." },
   { v: "v141", d: "Coverage Panel 4 now shows the consequence, not just the mechanism. Under the residual-frequency chart sits a second chart on the same beam axis: spectral efficiency (bps/Hz) across the beam for both handsets, driven by the same phone slider, with a live readout at the marker translated into Mbps on a 20 MHz beam, plus a side-by-side \u2018at this spot\u2019 line. Standard phone: strong at center, falling off a cliff past the frequency tolerance. NTN phone: higher everywhere, with a gentle edge roll-off that is the antenna pattern \u2014 NTN fixes frequency error, not geometry. Curve shapes are illustrative, but their area-weighted beam averages are calibrated to the site\u2019s 0.62 and 2.48 bps/Hz, so the familiar headline numbers become visibly the averages of these curves \u2014 and the 4\u00d7 gap reads as two parts: protocol efficiency (vertical gap) and edge usability (shape)." },
   { v: "v140", d: "Panel 1B\u2019s stat grid gains a persistent one-line caption: the site canonical for all capacity math is 8.9 km \u2300 at nadir (the panel-scaled center preset), while the lab\u2019s readout follows whatever preset and sliders are active \u2014 added after the full-aperture floor preset (4.4 km) briefly masqueraded as \u2018the\u2019 number during a deck review. The lab stays a lab; the canonical stays labeled." },
   { v: "v139", d: "The CBRS doctrine from the slide-deck sessions, applied everywhere it touches. Three commandments: CBRS is the capacity layer and never the coverage anchor (an SAS can shuffle its channels, so it cannot be promised); the city small-cell layer therefore requires at least the owned 5 MHz H-block as its licensed floor \u2014 stated in the Serviceability header, the Story\u2019s Phase 2, the Hybrid Network ground layer (anchor now listed first, roles named), the packet route (phones attach on the anchor, aggregate CBRS on top), the Physics strategy line, and the spectrum-ledger source strings themselves; and EchoStar\u2019s ~5,500 PALs are thin coverage breadth, not metro capacity \u2014 now in the Equipment band note and a new Verdict watch item (\u2018who buys the doormat\u2019). The bull scenario pays for its maximalism honestly: its blurb and ledger line flag that pointing the H-block at orbit leaves the city layer with no owned floor \u2014 best-effort capacity, not carrier-grade coverage." },
@@ -110,12 +116,12 @@ const PHASES = [
   {
     id: 0,
     era: "PHASE 0 · TODAY",
-    window: "Aug 2026",
+    window: "Aug–Oct 2026",
     title: "A texting service with a spectrum war chest",
     tier: "SMS + basic data (≈2G)",
     tierPct: 12,
     beamCap: "~3.1 Mbps / beam",
-    spectrum: "10 MHz leased (T-Mobile G-block)",
+    spectrum: "10 MHz leased (G-block) + 2×7 MHz 800 MHz agreed (pending FCC)",
     sats: "Gen1 D2C on LTE eNodeB payloads",
     orbit: 0.06,
     summary:
@@ -126,10 +132,13 @@ const PHASES = [
       { d: "Jun 2026", t: "SpaceX IPO. S-1 names rural, suburban and urban mobile as the target; Starlink Mobile revenue $632M.", side: "biz" },
       { d: "Aug 4, 2026", t: "First post-IPO earnings call: Shotwell confirms terrestrial buildout intent — femtocells on rooftop dish mounts, service “end of next year.”", side: "biz" },
       { d: "Summer 2026", t: "T-Mobile US exclusivity (~$100M multi-year) expires; US Mobile becomes first MVNO with Starlink Mobile.", side: "biz" },
+      { d: "Oct 6, 2026", t: "FCC grants the next-generation Starlink Mobile system — 15,000 D2C satellites (DA 26-1078, GN 25-340).", side: "reg" },
+      { d: "Oct 8, 2026", t: "SpaceX agrees to buy 100% of Grain's 800 MHz (817–824 / 862–869, up to 2×7 MHz, ~$8B reported) — FCC consent pending. Same day: the draft D2D NPRM proposing SCS eligibility for the band circulates for the Oct 29 vote.", side: "reg" },
+      { d: "Oct 22, 2026", t: "Bloomberg: SpaceX in talks with tower owners incl. Crown Castle for ≥80,000 US cell sites — about half the national tower base; the physical shape of a terrestrial fourth carrier (reported, no deal signed).", side: "biz" },
     ],
     gates: [
       "Capacity ceiling: 2×5 MHz leased spectrum caps every beam at single-digit Mbps",
-      "No owned spectrum in handsets yet — G-block belongs to T-Mobile",
+      "No owned spectrum in handsets yet — G-block belongs to T-Mobile; the pending Grain 800 MHz would be the first, and every B26 phone already speaks it",
       "In-building coverage: effectively zero (outdoor, line-of-sight technology)",
     ],
   },
@@ -255,10 +264,22 @@ const BANDS = [
     note: "The crown jewel, with a built-in mode switch. Original config (n252): 2000–2020 as satellite UPLINK paired with 2180–2200 downlink — standardized for NTN, in no phones yet. Dish's converted config (n70): 2000–2020 flipped to terrestrial DOWNLINK paired with the AWS-3 uplink — in phones today. SpaceX owns both personalities. See the mode-switch panel and configuration lab below.",
     color: C.amber, status: "owned",
   },
+  {
+    id: "esmr",
+    name: "800 MHz ESMR (Grain — pending)",
+    n: "B26 / n26",
+    lo: 817, hi: 824,
+    pair: [862, 869],
+    own: "Agreed — ~$8B reported (Oct 8, 2026); FCC consent pending",
+    note: "The low-band piece: 2×7 MHz at 817–824 ↑ / 862–869 ↓, the former Nextel ESMR block, bought from Grain Management. Three gates remain: FCC consent to the transfer, SCS eligibility for the band (the draft NPRM for the Oct 29 vote proposes adding it; today it is NOT an SCS band), and an 800 MHz-capable payload (aperture undisclosed). Handsets are already done — LTE B26 / NR n26 contain the block, and every current US iPhone lists both. Physics prices the reach: on the same aperture an 800 MHz beam is ×2.31 wider than 2 GHz (~21 km vs ~9 km), so ~5.3× the area per beam — owned coverage in both directions, not capacity. Neighbors are the regulatory fight: public-safety receivers sit 1 MHz below the downlink (guard 861–862), and strict-liability rules (§§90.672–90.675) apply.",
+    color: C.amber, status: "pending",
+  },
 ];
 
 /* Ledger: role of each range under each configuration */
 const LEDGER = [
+  { f: "817–824 (ESMR)", sat: { t: "PENDING — satellite uplink once SCS-eligible + payload flies: the first owned uplink legacy phones already transmit (B26)", s: "off" }, ter: { t: "PENDING — B26/n26 uplink on the macro grid after FCC consent", s: "off" }, hot: true },
+  { f: "862–869 (ESMR)", sat: { t: "PENDING — satellite downlink, G-block-class on ~21 km beams; NPRM proposes SCS eligibility (vote Oct 29)", s: "off" }, ter: { t: "PENDING — low-band coverage anchor on macro towers (1 kW ERP class)", s: "off" }, hot: true },
   { f: "1695–1710", sat: { t: "future supplemental UL from orbit (SUL — pending NTN + FCC)", s: "off" }, ter: { t: "n70 uplink — phone → femtocell", s: "up" }, hot: false },
   { f: "1915–1920 (H)", sat: { t: "stranded: no phone transmits it — FCC: needs standards + equipment (or relief)", s: "off" }, ter: { t: "PCS-adjacent uplink — no handset band covers it (B25 ends at 1915)", s: "off" }, hot: true },
   { f: "1995–2000 (H)", sat: { t: "future satellite DL (pending NTN standardization)", s: "off" }, ter: { t: "n70 downlink (bottom 5 MHz)", s: "down" }, hot: false },
@@ -318,6 +339,13 @@ const READINESS = {
       o: ["ok", "ok", "ok", "ok"],
       t: ["pend", "pend", "ok", "ok"],
       note: "n66 downlink range is universal in phones. Serves as n252's satellite DL from orbit, or supplemental terrestrial DL — the one block useful in both modes without a fight.",
+    },
+    {
+      band: "800 MHz ESMR (B26/n26) — pending",
+      h: ["ok", "ok", "ok", "ok"],
+      o: ["no", "pend", "pend", "pend"],
+      t: ["pend", "pend*", "ok*", "ok*"],
+      note: "Handsets already done — B26/n26 in every current US iPhone. Orbit gated on three things: FCC consent to the Grain transfer, SCS eligibility for 817–824/862–869 (draft NPRM, vote Oct 29, 2026; D2D filing due Dec 4), and an 800 MHz-capable payload (undisclosed). Terrestrial unlocks at FCC consent (timing TBD; projection) — the natural macro-grid coverage anchor.",
     },
   ],
 };
@@ -444,7 +472,7 @@ const SCENARIOS = [
   },
   {
     id: "satmax", name: "Satellite-max (standards complete*)",
-    d: "Every owned MHz to orbit — 30 MHz down, 45 up per beam. The deep-rural, maritime, and disaster picture, only reachable once H-block and n70 clear NTN standardization.",
+    d: "Every owned MHz to orbit — 25 MHz down, 40 up per beam. The deep-rural, maritime, and disaster picture, only reachable once H-block and n70 clear NTN standardization.",
     cfg: { aws3: "sat", g: "off", h: "sat", a4main: "sat", a4dl: "sat", gen: "v2" },
   },
   {
@@ -480,6 +508,10 @@ function ConfigLab({ cfg, setCfg, compact }) {
     <div className="card" style={{ borderTop: `2px solid ${C.green}` }}>
       <div className="eyebrow" style={{ color: C.green }}>
         Configuration lab · assign every block, read the throughput{compact ? " · configured here or in the Spectrum tab" : ""}
+      </div>
+      <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, margin: "2px 0 10px" }}>
+        The pending 800 MHz is deliberately <em>not</em> a row here: its ~21 km beams don't share this lab's 2 GHz cell
+        lattice, so it's modeled as its own layer in Coverage and Serviceability instead of being summed into these pools.
       </div>
       {!compact && (
         <p className="body" style={{ marginBottom: 12 }}>
@@ -636,6 +668,8 @@ const QUOTES_BEAR = [
 ];
 
 const BENCHMARKS = [
+  { t: "FCC consent to the Grain 800 MHz transfer + SCS eligibility for 817–824/862–869", why: "The low-band base case. NPRM vote Oct 29, 2026; complete D2D filing due Dec 4 to qualify for the satellite build-out path. Until then, owned low band is a term sheet." },
+  { t: "Tower leases actually signing (≥80k sites reported in talks — Crown Castle et al.)", why: "The tell that the terrestrial build is real. Spectrum can sit in escrow; a signed anchor-tenant MLA at T-Mobile-grid scale cannot. DISH's 2020 Crown Castle deal (20k towers) is the quarter-scale precedent." },
   { t: "A Big-Three MVNO or Charter offload deal", why: "Instant urban coverage while the hybrid network matures — the single biggest accelerant." },
   { t: "Starship cadence reaching ~4 launches/month", why: "Gates V3, global D2D, and every headline capacity number. If cadence lags, discount all claims." },
   { t: "n252 silicon shipping in mainstream phones", why: "Until AWS-4's satellite config is in handsets, the best 40 MHz can't reach a consumer device from orbit." },
@@ -930,7 +964,7 @@ function ModeSwitch() {
         </div>
       </div>
 
-      <div className="eyebrow" style={{ marginTop: 18 }}>The same 65 MHz, read in both modes</div>
+      <div className="eyebrow" style={{ marginTop: 18 }}>The same 65 MHz (79 with the pending 800), read in both modes</div>
       <div className="ledger">
         <div className="ledgerRow head">
           <div>Frequency (MHz)</div>
@@ -1030,6 +1064,17 @@ function SeamsPanel() {
   return (
     <div className="card" id="spec-seams" style={{ borderTop: `2px solid ${C.red}` }}>
       <div className="eyebrow" style={{ color: C.red }}>The seams — what protects the neighbors, and by how much <Src k="seams" topic="seams" /></div>
+      <Info label="the 60-second version — fences, not gaps (start here)">
+        Everyone expects the answer in MHz of empty guard band. The real answer is <strong>essentially zero, on
+        purpose</strong> — vacant spectrum is wasted money, so the FCC separates neighbors with rules about how sharply a
+        signal must <em>stop</em> at the license edge. The analogy: <strong>property fences and a noise ordinance</strong>.
+        Adjacent yards, no buffer strip; be as loud as you like inside, but measured at the fence your noise must fall
+        below a ceiling — that's an <em>emission mask</em>. Delicate neighbors (frequencies where phones are
+        <em> listening</em>) get a 500× stricter fence. And a satellite — which can no more honor a fence than a floodlight
+        on a helicopter — gets a different rule entirely: a cap on stray power <em>arriving on the ground</em>, totaled
+        across the whole fleet. Two units, then the rows below read themselves: <strong>dBm/MHz</strong> = the fence rule
+        for ground transmitters; <strong>dBW/m²/MHz</strong> = allowed power density landing at phone height from orbit.
+      </Info>
       <p className="body" style={{ marginBottom: 10 }}>
         A fair question about any new transmitter: <em>how much guard band keeps it off the neighbors?</em> The answer in
         this band plan is a surprise — <strong>almost none, on purpose</strong>. The FCC protects these seams with
@@ -1143,19 +1188,36 @@ function SeamsPanel() {
 function SpectrumTab({ cfg, setCfg }) {
   const [sel, setSel] = useState("aws4");
   const LO = 1650, HI = 2250, W = 900;
-  const x = (f) => ((f - LO) / (HI - LO)) * W;
+  const BRK = 0.16, GAP = 0.045; // left 16%: the 800 MHz segment · then an axis break
+  const x = (f) => f < 1000
+    ? ((f - 800) / (880 - 800)) * (W * BRK)
+    : W * (BRK + GAP) + ((f - LO) / (HI - LO)) * (W * (1 - BRK - GAP));
   const band = BANDS.find((b) => b.id === sel);
   return (
     <div>
       <div className="card">
-        <div className="eyebrow">The D2C mid-band stack · 1650–2250 MHz, drawn to scale <Src k="echostar" topic="echostar" /></div>
+        <div className="eyebrow">The D2C stack · 800 MHz low band + 1650–2250 mid-band · to scale, broken axis <Src k="echostar" topic="echostar" /> <Src k="grain800" topic="grain800" /></div>
         <p className="body" style={{ marginBottom: 18 }}>
           Every block below is spectrum a standard phone can (or will) talk on. Amber = owned outright after the EchoStar
-          deals; blue = leased. Click a block. Then see how the pieces snap together in the mode-switch panel and the
+          deals; blue = leased. Hatched amber = agreed but pending FCC (the Grain 800 MHz block, far left past the axis break). Click a block. Then see how the pieces snap together in the mode-switch panel and the
           configuration lab underneath.
         </p>
         <svg viewBox={`0 0 ${W} 150`} style={{ width: "100%", display: "block" }}>
-          <line x1="0" y1="118" x2={W} y2="118" stroke={C.line} />
+          <defs>
+            <pattern id="pendHatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="6" height="6" fill="rgba(255,180,84,0.10)" />
+              <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(255,180,84,0.6)" strokeWidth="2" />
+            </pattern>
+          </defs>
+          <line x1="0" y1="118" x2={W * BRK + 4} y2="118" stroke={C.line} />
+          <line x1={W * (BRK + GAP) - 4} y1="118" x2={W} y2="118" stroke={C.line} />
+          <path d={`M ${W * BRK + 10} 124 l 7 -12 M ${W * BRK + 19} 124 l 7 -12`} stroke={C.dim} strokeWidth="1.3" fill="none" />
+          {[820, 865].map((f) => (
+            <g key={f}>
+              <line x1={x(f)} y1="114" x2={x(f)} y2="122" stroke={C.dim} strokeWidth="1" />
+              <text x={x(f)} y="138" textAnchor="middle" fill={C.dim} fontSize="10" fontFamily="var(--mono)">{f}</text>
+            </g>
+          ))}
           {[1700, 1800, 1900, 2000, 2100, 2200].map((f) => (
             <g key={f}>
               <line x1={x(f)} y1="114" x2={x(f)} y2="122" stroke={C.dim} strokeWidth="1" />
@@ -1168,7 +1230,8 @@ function SpectrumTab({ cfg, setCfg }) {
             return segs.map(([lo, hi, dir], i) => (
               <g key={b.id + i} onClick={() => setSel(b.id)} style={{ cursor: "pointer" }}>
                 <rect x={x(lo)} y="52" width={Math.max(x(hi) - x(lo), 3)} height="56"
-                  fill={sel === b.id ? b.color : (b.status === "owned" ? "rgba(255,180,84,0.28)" : "rgba(91,168,255,0.28)")}
+                  fill={sel === b.id ? b.color : (b.status === "pending" ? "url(#pendHatch)" : b.status === "owned" ? "rgba(255,180,84,0.28)" : "rgba(91,168,255,0.28)")}
+                  strokeDasharray={b.status === "pending" ? "4 3" : "none"}
                   stroke={b.color} strokeWidth={sel === b.id ? 1.5 : 0.75} rx="2"
                   style={{ transition: "fill 200ms" }} />
                 <text x={x((lo + hi) / 2)} y="46" textAnchor="middle"
@@ -1176,6 +1239,7 @@ function SpectrumTab({ cfg, setCfg }) {
               </g>
             ));
           })}
+          <text x={x(843)} y="30" textAnchor="middle" fill={C.amber} fontSize="10" fontFamily="var(--mono)">800 ESMR · pending</text>
           <text x={x(1702.5)} y="30" textAnchor="middle" fill={C.dim} fontSize="10" fontFamily="var(--mono)">AWS-3</text>
           <text x={x(1915)} y="30" textAnchor="middle" fill={C.dim} fontSize="10" fontFamily="var(--mono)">G|H</text>
           <text x={x(2010)} y="30" textAnchor="middle" fill={C.dim} fontSize="10" fontFamily="var(--mono)">AWS-4</text>
@@ -1201,7 +1265,7 @@ function SpectrumTab({ cfg, setCfg }) {
           the total width SpaceX now owns; the Big Three each control hundreds. The bet is that reuse — thousands of beams
           and femtocells re-using the same lanes over and over geographically — substitutes for width.
         </Info>
-        <Info label="is it 65 MHz or 75 MHz? owned vs borrowed">
+        <Info label="is it 65, 75, or 79 MHz? owned vs borrowed vs pending">
           You'll see both numbers, and the difference matters. SpaceX <strong>owns 65 MHz</strong> — the EchoStar
           purchase (AWS-4's 40, the H-block's 10, AWS-3's unpaired 15), where SpaceX becomes the FCC licensee outright
           once the deal formally closes. It also <strong>operates across ~10 MHz more</strong> — the PCS G-block — but
@@ -1226,6 +1290,7 @@ function SpectrumTab({ cfg, setCfg }) {
           <div className="eyebrow">The tally</div>
           <div className="tallyRow"><span>Owned mid-band (EchoStar)</span><strong style={{ color: C.amber }}>65 MHz</strong></div>
           <div className="tallyRow"><span>Leased (T-Mobile G-block)</span><strong style={{ color: C.blue }}>10 MHz</strong></div>
+          <div className="tallyRow"><span>Pending — Grain 800 MHz (low band, FCC consent)</span><strong style={{ color: C.amber, opacity: 0.85 }}>+14 MHz</strong></div>
           <div className="tallyRow"><span>Each Big-Three carrier</span><strong style={{ color: C.red }}>~hundreds of MHz</strong></div>
           <p className="body" style={{ marginTop: 12 }}>
             Barden's point in one line: incumbents assembled ~1,000 MHz over three decades. SpaceX's answer isn't more MHz —
@@ -1417,6 +1482,12 @@ function PhysicsTab({ cfg, setCfg }) {
           2 GHz split. The V2 150 Mbps headline is a peak, single-user, best-case claim.
         </p>
         <Info label="why everyone under a beam shares one pipe — and what Mbps/km² means">
+          <p className="body" style={{ fontSize: 12.5 }}>
+            The pending 800 MHz layer makes the density hierarchy vivid: 5 MHz × 2.48 × sin 72° ≈ 11.8 Mbps spread over a
+            ~332 km² nadir cell is <strong>~0.035 Mbps/km²</strong> — 1/20th of the 2 GHz end-state layer, three orders of
+            magnitude under an urban macro sector. Low band from orbit is a coverage layer, arithmetically incapable of
+            being anything else.
+          </p>
           A satellite beam is one radio channel painted over a patch of ground — like one Wi-Fi router asked to serve an
           entire county. Its Mbps figure is the <em>total</em> for everyone inside: two active users each get roughly half,
           twenty get a twentieth. That's why raw per-beam speed matters less than <strong>capacity density</strong> —
@@ -1453,14 +1524,14 @@ const LAYERS = [
   {
     id: "femto", tone: "ground", name: "Ground layer — the small-cell mix",
     head: "Rooftops, poles, and a territory partition",
-    freq: ["H-block: 1915 ↑ / 1995 ↓ (5/5 owned — the coverage anchor)", "CBRS n48: 3550–3700 TDD (SAS — the capacity layer, never the anchor)", "Backhaul: host dish · own Ku · cable plant"],
-    body: "The city layer stands on two kinds of spectrum with two jobs: the owned H-block is the licensed floor every cell can promise service on, and CBRS — priority-shared, channel-shuffled around naval radar by the SAS — pours capacity on top but can never be counted on as coverage. The cells themselves are uplink-capped cells of ~213 m (rooftop, 30 dBm) to ~295 m (pole, 38 dBm), partitioned by what each patch of territory permits: subscriber rooftops where consenting roofs are dense (organic placement, the disorder tax), street poles where they are not (planned grid, lease + permit — the hard sites), and under a partnership, cable strand for the aerial-plant share. Counts are coverage-driven: the class mix, not spectrum, sets the box count.",
+    freq: ["800 MHz ESMR: 817 ↑ / 862 ↓ (Grain — pending; the macro-grid anchor-to-be)", "H-block: 1915 ↑ / 1995 ↓ (5/5 owned — the coverage anchor today)", "CBRS n48: 3550–3700 TDD (SAS — the capacity layer, never the anchor)", "Backhaul: host dish · own Ku · cable plant"],
+    body: "Pending the Grain close, the city anchor widens dramatically: 2×7 MHz at 800 MHz on macro towers — Bloomberg reports talks for ≥80,000 sites incl. Crown Castle, about half the US tower base and T-Mobile-grid scale — becomes the licensed floor citywide, the classic low-band layer every incumbent carrier runs. Until then the city layer stands on two kinds of spectrum with two jobs: the owned H-block is the licensed floor every cell can promise service on, and CBRS — priority-shared, channel-shuffled around naval radar by the SAS — pours capacity on top but can never be counted on as coverage. The cells themselves are uplink-capped cells of ~213 m (rooftop, 30 dBm) to ~295 m (pole, 38 dBm), partitioned by what each patch of territory permits: subscriber rooftops where consenting roofs are dense (organic placement, the disorder tax), street poles where they are not (planned grid, lease + permit — the hard sites), and under a partnership, cable strand for the aerial-plant share. Counts are coverage-driven: the class mix, not spectrum, sets the box count.",
   },
   {
     id: "cable", tone: "ground", name: "Partner layer — cable’s plant (optional)",
     head: "Sites, spectrum, and backhaul — someone else’s",
     freq: ["CBRS PALs: 10–20 MHz/county (pooled under JV)", "WiFi: Passpoint/OpenRoaming offload indoors", "Backhaul: HFC/fibre — no satellite hop"],
-    body: "This layer exists only under a barter or JV, and it is three assets in one: strand-mounted radios zip-tied to aerial plant (siting, power and backhaul the model cannot otherwise price), PAL spectrum that pools with SpaceX’s under the JV (thickening the capacity layer — the coverage anchor stays SpaceX’s H-block), and plant backhaul that never touches a satellite. Its limit is geography — downtown cores are cable deserts (underground conduit, no strand), so the cores stay SpaceX’s to build. The benchmark: Charter already carries 88% of Spectrum Mobile traffic on infrastructure like this.",
+    body: "This layer exists only under a barter or JV, and it is three assets in one: strand-mounted radios zip-tied to aerial plant (siting, power and backhaul the model cannot otherwise price), PAL spectrum that pools with SpaceX’s under the JV (thickening the capacity layer — the coverage anchor stays SpaceX’s owned floor: the H-block today, the 800 MHz macro layer once Grain closes), and plant backhaul that never touches a satellite. Its limit is geography — downtown cores are cable deserts (underground conduit, no strand), so the cores stay SpaceX’s to build. The benchmark: Charter already carries 88% of Spectrum Mobile traffic on infrastructure like this.",
   },
   {
     id: "dev", tone: "ground", name: "Device layer — phones, Teslas, robots",
@@ -1517,6 +1588,19 @@ function NetworkTab() {
           the fights that decide the business — backhaul contention and self-interference — happen at the seams between
           them, which the last section quantifies. One layer is optional equipment: cable’s plant exists only under a barter or JV — and sites, spectrum and backhaul all change when it does.
         </p>
+        <Info label="what the 800 MHz licenses actually contain — county by county (FCC ULS, Oct 2026)">
+          Licensed depth is not uniform. <strong>92.7% of POPs get the full 2×7 MHz;</strong> the Southeast runs 6.6 MHz
+          (Southern Linc holds 862.0–862.4 across GA/AL/MS and parts of five more states); Puerto Rico/USVI only 2.425 MHz —
+          which is exactly the FCC's "4.85–14 MHz paired" range. Overlaid on that: <strong>active leases</strong> —
+          Southern Linc (256 SE counties, ~20.7M POPs, to Apr/Jun 2027), ComEd (16 Chicago-area counties, 9.4M, to May
+          2027), Dominion (10 Virginia counties, 1.3M, to Sep/Nov 2026) — and <strong>border channel plans</strong>: within
+          ~100 km of Canada no region fits a 5 MHz carrier on US-primary channels alone (max contiguous 2.25–4.0 MHz;
+          ~19.7M POPs), and within 110 km of Mexico there are no US-primary ESMR channels at all (~8.1M POPs, co-primary
+          only, power-capped at the line). Net: <strong>the clean full-7 MHz base case covers ~80.7% of the US population
+          today</strong>, rising through 2027 as the utility leases roll off; the border strips need narrower carriers or
+          bilateral coordination — for the satellite layer too, since a beam near Detroit or San Diego lands on the same
+          channel plan. Site-based incumbents are negligible (~21 small licenses).
+        </Info>
       </div>
 
       <div id="net-layers">
@@ -1610,7 +1694,7 @@ const VER_SECTIONS = [
   { id: "ver-cases", label: "Bull v Bear" },
   { id: "ver-yardstick", label: "The competitive yardstick" },
   { id: "ver-selfcarry", label: "The other scoreboard" },
-  { id: "ver-watch", label: "Six things to watch" },
+  { id: "ver-watch", label: "Eight things to watch" },
 ];
 
 
@@ -1802,9 +1886,9 @@ function VerdictTab() {
               </tr>
               <tr style={{ background: `${C.amber}12` }}>
                 <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}`, color: C.amber }}>Starlink Mobile</td>
-                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>—</td>
-                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>65 MHz owned · <strong>20 → 45 MHz</strong> satellite DL</td>
-                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}`, color: C.amber }}>65 MHz</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>14 MHz <span style={{ color: C.dim }}>(2×7 @ 800 — pending)</span></td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>65 MHz owned · <strong>20 → 45 MHz</strong> satellite DL + 5–7 @ 800 on ~21 km beams</td>
+                <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}`, color: C.amber }}>65 → 79 MHz <span style={{ color: C.dim }}>(pending)</span></td>
                 <td style={{ padding: "7px 10px", borderBottom: `1px solid ${C.line}` }}>~4 Mbps today → <strong>~47 Mbps per cell</strong> end-state</td>
               </tr>
             </tbody>
@@ -1860,7 +1944,7 @@ function VerdictTab() {
           <br /><br />
           <strong>Why this doesn't make the satellite layer useless — it makes it different.</strong> Capacity density
           only matters where people are dense. Across most of the country's land area, demand per km² is so low that
-          3 Mbps/km² is entirely adequate, and there the satellite has an advantage no carrier can match: it covers
+          sub-1 Mbps/km² is entirely adequate, and there the satellite has an advantage no carrier can match: it covers
           ground where building a tower will never pay back. The conclusion isn't "the satellite loses"; it's that the
           two networks are optimised for opposite ends of the density curve — which is precisely why the plan on this
           site pairs orbit for coverage with a terrestrial small-cell layer for cities (WiFi over the dish indoors), and why the honest framing is a
@@ -1885,7 +1969,7 @@ function VerdictTab() {
 
       <SelfCarryCard />
       <div className="card" id="ver-watch">
-        <div className="eyebrow">Six things that decide it — watch these</div>
+        <div className="eyebrow">Eight things that decide it — watch these</div>
         <div className="benchGrid">
           {BENCHMARKS.map((b, i) => (
             <div key={i} className="bench">
@@ -2018,6 +2102,21 @@ function mulberry(seed) {
 /* Central source registry: card-level citation chips draw from here.
    k: primary = FCC/company documents; claim = company statements; derived = computed in this site. */
 const SRC = {
+  grain800: [
+    { t: "Grain press release — definitive agreement to sell 800 MHz portfolio to SpaceX (Oct 8, 2026)", u: "https://www.prnewswire.com/news-releases/grain-management-announces-definitive-agreement-to-sell-nationwide-800-mhz-spectrum-portfolio-to-spacex-302902974.html", k: "primary" },
+    { t: "SpaceX/Grain FCC narrative — transfer of control, SCS modification filing (Oct 8, 2026)", u: "https://sxcontent9668.azureedge.us/cms-assets/assets/FCC_Narrative_10_8_26_f63e78e026.pdf", k: "primary" },
+    { t: "FCC DA 26-653 (Jul 1, 2026) — T-Mobile/Grain order: partner deadlines, build-out, SCS waivers deferred", u: "https://docs.fcc.gov/public/attachments/DA-26-653A1.pdf", k: "primary" },
+    { t: "FCC draft D2D NPRM — proposes SCS at 817–824/862–869 (vote Oct 29, 2026)", u: "https://docs.fcc.gov/public/attachments/DOC-425711A1.pdf", k: "primary" },
+    { t: "FCC 04-168 (2004) — 800 MHz rebanding; the ESMR block", u: "https://docs.fcc.gov/public/attachments/FCC-04-168A1.pdf", k: "primary" },
+    { t: "47 CFR 2.106 NG33A — SCS-eligible bands (ESMR absent today)", u: "https://www.ecfr.gov/current/title-47/section-2.106", k: "primary" },
+    { t: "Apple — iPhone cellular bands: LTE 26 / NR n26 on all current US models", u: "https://www.apple.com/iphone/cellular/", k: "primary" },
+    { t: "Fierce Network (Oct 9, 2026) — ~$8B reported (WSJ), ~$1.73/MHz-POP (New Street)", u: "https://www.fierce-network.com/wireless/spacexs-800-mhz-spectrum-grab-threatens-big-3-mobile-carriers", k: "claim" },
+  ],
+  towers: [
+    { t: "Bloomberg via Inside Towers (Oct 22, 2026) — SpaceX seeking ≥80,000 US sites; talks incl. Crown Castle (reported)", u: "https://insidetowers.com/spacex-in-talks-with-tower-companies-for-80000-sites/", k: "claim" },
+    { t: "Crown Castle 3Q26 earnings call — Hillabrant: \u201ctalking to all parties\u201d; low-band buy a \u201chuge milestone\”", u: "https://www.crowncastle.com/investors", k: "claim" },
+    { t: "DISH–Crown Castle anchor-tenant agreement, up to 20,000 towers (Nov 2020, 8-K) — the fourth-carrier precedent", u: "https://www.sec.gov/Archives/edgar/data/1001082/000110465920124516/tm2036322d1_8k.htm", k: "primary" },
+  ],
   seams: [
     { t: "47 CFR \u00a725.202(k)(1) — SCS aggregate OOBE rule, \u2212120 dBW/m\u00b2/MHz (SCS R&O, Mar 2024)", u: "https://www.federalregister.gov/documents/2024/04/30/2024-06669/single-network-future-supplemental-coverage-from-space-space-innovation", k: "primary" },
     { t: "FCC Order DA 25-197 (Feb 2025) — \u2212110.6 waiver, limited to 1985\u20131990 & 1995\u20132000", u: "https://docs.fcc.gov/public/attachments/DA-25-197A1.pdf", k: "primary" },
@@ -2327,7 +2426,10 @@ function FootprintPanel() {
         lit beams. The satellite-count ladder on this panel is derived from reach — Earth's area ÷ one footprint (× a
         constellation overlap factor) — which is why the fleet number is an <em>output</em> of this circle, never an
         input to it. One more independence worth stating: reach — and therefore the satellite count for coverage — is
-        <em>frequency-independent</em>: it's pure visibility geometry (altitude + mask). Moving from the leased G-block
+        <em>frequency-independent</em>: it's pure visibility geometry (altitude + mask). At 865 MHz the absolute
+        numbers shrink — max Doppler ~19 kHz against ~49 kHz at 2.2 GHz, oscillator ±0.1 ppm = ±87 Hz against
+        ±200 Hz — but the residual-across-a-beam picture is set by beam width (∝ v/D), so it carries over.
+        Moving from the leased G-block
         (1.99 GHz) to owned n252 (2.19 GHz) shrinks the <em>beams</em> ~10% (a capacity effect, Panel 1b) and costs
         ~1.2 dB of extra path loss (a link-margin nibble), but the footprint — and the ~650 — doesn't move.
       </Info>
@@ -2388,6 +2490,8 @@ function BeamSizeLab() {
     { n: "V2-Mini · 2-panel class (38 dBi)", D: 3.5, f: 2.0, h: 530 },
     { n: "2027 · panel-scaled center", D: 5.6, f: 2.0, h: 330 },
     { n: "2027 · full-aperture floor", D: 11.2, f: 2.0, h: 330 },
+    { n: "2027 · 800 MHz Grain DL (pending)", D: 5.6, f: 0.8655, h: 330 },
+    { n: "Gen1 panel @ 800 MHz", D: 2.5, f: 0.8655, h: 530 },
     { n: "AST BB2 · 850 MHz low-band", D: 14.9, f: 0.85, h: 520 },
     { n: "AST BB2 · same panel @ 2 GHz", D: 14.9, f: 2.0, h: 520 },
   ];
@@ -2415,7 +2519,7 @@ function BeamSizeLab() {
           <label className="sliderL">Antenna panel side: <strong>{D.toFixed(1)} m</strong> (~{(D * D).toFixed(0)} m² aperture)
             <input type="range" min="1" max="60" step="0.1" value={D} onChange={(e) => setD(+e.target.value)} /></label>
           <label className="sliderL">Frequency: <strong>{f.toFixed(2)} GHz</strong> (λ = {(lam * 100).toFixed(1)} cm)
-            <input type="range" min="0.7" max="3.5" step="0.05" value={f} onChange={(e) => setF(+e.target.value)} /></label>
+            <input type="range" min="0.7" max="3.5" step="0.005" value={f} onChange={(e) => setF(+e.target.value)} /></label>
           <label className="sliderL">Orbital altitude: <strong>{h} km</strong>
             <input type="range" min="300" max="700" step="5" value={h} onChange={(e) => setH(+e.target.value)} /></label>
           <label className="sliderL">Beam elevation at the spot: <strong>{be}°</strong> {be >= 88 ? "(nadir)" : ""}
@@ -3401,6 +3505,11 @@ function GapLab({ rows, g, spec, setSpec, mhz, setMhz, fleet, setFleet, loss, se
         under it. Environments do not change demand; they change supply, because 10–15 dB of penetration lands on a link
         that only just closes outdoors. Derating is Shannon on a power-limited link, calibrated so outdoor returns the
         site's 2.48 bps/Hz (SNR {SNR0_DB.toFixed(1)} dB); below the decode floor the link does not close at all.
+        The pending 800 MHz layer changes these numbers less than intuition says: ITU-R P.2109 building-entry loss at
+        865 MHz is 14.2 dB against the 15 dB used here at 2 GHz — indoor SNR moves from −8.4 to −7.6 dB, still 1.6 dB
+        below the −6 dB floor (0.9–1.1 dB below using the 43°-elevation deltas). <strong>The "no indoor link from
+        orbit" verdict stands at 800 MHz.</strong> It would flip only if a beam's full 2 GHz-class power were
+        concentrated into the narrow 5 MHz carrier (+6 dB PSD) — an architecture assumption, not a default.
         Inputs come live from the Tier Lab above — edit a take rate there and every box here moves.
       </p>
 
@@ -4557,26 +4666,27 @@ const COV_SECTIONS = [
 
 /* ---------- shared patch geometry: one place, used everywhere duty is quoted ---------- */
 const PG_RE = 6371, PG_H = 330, PG_TB = BEAM_KM / 330;
-function pgCell(d) {
+function pgCell(d, tb = PG_TB) {
   const lam = d / PG_RE;
   const S = Math.sqrt(PG_RE * PG_RE + (PG_RE + PG_H) * (PG_RE + PG_H) - 2 * PG_RE * (PG_RE + PG_H) * Math.cos(lam));
   const eps = Math.atan2(Math.cos(lam) - PG_RE / (PG_RE + PG_H), Math.sin(lam));
-  const across = PG_TB * S;
+  const across = tb * S;
   const along = across / Math.max(Math.sin(eps), 1e-6);
   return { epsDeg: (eps * 180) / Math.PI, across, along, area: (Math.PI / 4) * along * across };
 }
 const PG_CACHE = {};
-function patchStats(fleet) {
-  const key = Math.round(fleet);
+function patchStats(fleet, bKm = BEAM_KM, beams = 700) {
+  const key = Math.round(fleet) + "|" + bKm.toFixed(2) + "|" + beams;
   if (PG_CACHE[key]) return PG_CACHE[key];
+  const tb = bKm / PG_H;
   const A = 510e6 / fleet, R = Math.sqrt(A / Math.PI);
   let N = 0; const steps = 400;
   for (let i = 0; i < steps; i++) {
     const d = (R * (i + 0.5)) / steps;
-    N += ((2 * Math.PI * d) * (R / steps)) / pgCell(d).area;
+    N += ((2 * Math.PI * d) * (R / steps)) / pgCell(d, tb).area;
   }
-  const edge = pgCell(R), nadir = pgCell(0.001);
-  const out = { A, R, N, avgCell: A / N, duty: Math.min(1, 700 / N), edge, nadir, naiveN: A / BEAM_AREA };
+  const edge = pgCell(R, tb), nadir = pgCell(0.001, tb);
+  const out = { A, R, N, avgCell: A / N, duty: Math.min(1, beams / N), edge, nadir, naiveN: A / (Math.PI * (bKm / 2) * (bKm / 2)) };
   PG_CACHE[key] = out;
   return out;
 }
@@ -4610,12 +4720,13 @@ function pgLattice(R, mStep) {
   return out;
 }
 
-function patchZones(fleet, mhz, eff) {
+function patchZones(fleet, mhz, eff, bKm = BEAM_KM) {
+  const tb = bKm / PG_H;
   const A = 510e6 / fleet, R = Math.sqrt(A / Math.PI), steps = 600;
   const Z = { r1: [0, 0, 0], tr: [0, 0, 0], r3: [0, 0, 0] }; // cells, Σ(cells×Mbps), maxMbps
   for (let i = 0; i < steps; i++) {
     const d = (R * (i + 0.5)) / steps, dr = R / steps;
-    const c = pgCell(d);
+    const c = pgCell(d, tb);
     const n = ((2 * Math.PI * d) * dr) / c.area;
     const uf = c.epsDeg >= 60 ? 1 : c.epsDeg >= 42 ? 2 / 3 : 1 / 3;
     const T = uf * mhz * eff * Math.sin((c.epsDeg * Math.PI) / 180);
@@ -5279,7 +5390,7 @@ const GENS = [
       ["Radio", "Adapted LTE eNodeB, pre-standard NTN"],
       ["Phased array", "~25 m²"],
       ["Beams", "Few, wide — footprints tens of km"],
-      ["Beam bandwidth", "5 MHz DL (leased G-block)"],
+      ["Beam bandwidth", "5 MHz DL (leased G-block) · pending: 5 MHz at 800 (owned)"],
       ["Beam footprint", "~20–50 km across (derived)"],
       ["Per-beam DL", "~3.1 Mbps (measured)"],
       ["Launch", "Falcon 9, ~20+ per flight"],
@@ -5488,11 +5599,20 @@ function TechTab() {
 
 const REG_RISKS = [
   {
+    t: "Grain 800 MHz: FCC transfer consent + SCS eligibility",
+    when: "Agreement Oct 8, 2026 · NPRM vote Oct 29 · D2D filing due Dec 4, 2026",
+    sev: "the low-band base case",
+    sc: "amber",
+    unlocks: "Owned spectrum in both directions that every B26 phone already speaks — the first owned legacy-phone uplink — plus the macro-grid terrestrial anchor (build-out: 33% POPs by Jul 2029 / 66% by Jul 2034, or the satellite metrics path if filed by Dec 4).",
+    fails: "The legacy-phone path stays on T-Mobile's revocable G-block lease; the ground anchor stays the 5 MHz H-block; the ~$8B (reported) buys a terrestrial-only asset with a 2029 build-out clock.",
+    moves: "The 800 MHz layer toggle (Serviceability), the pending band on the Spectrum stack, and the 65 → 79 MHz yardstick",
+  },
+  {
     t: "n252 in handset silicon",
     when: "First devices ~2027 · volume ~2029",
     sev: "existential to the timeline",
     sc: "red",
-    unlocks: "Every capacity number that isn't the leased 5 MHz G-block. Owned spectrum is worthless from orbit until phones can hear it.",
+    unlocks: "Every capacity number that isn't the leased 5 MHz G-block. Owned spectrum is worthless from orbit until phones can hear it — except the pending 800 MHz, which B26 phones already hear (texting / thin-data class).",
     fails: "Service stays stuck at today's ~4 Mbps texting-class link on borrowed spectrum, and the 'fourth carrier' claim slips a full handset refresh cycle.",
     moves: "The speed ladder — this is what migrates 0.62 toward 2.48 bps/Hz",
     to: ["physics", "phy-ladder"], toLbl: "the speed ladder",
@@ -5558,6 +5678,7 @@ const REG_SECURED = [
 ];
 
 const REG_PENDING = [
+  "Grain 800 MHz transfer (817–824 / 862–869, up to 2×7 MHz) — definitive agreement Oct 8, 2026; FCC consent pending; SCS waivers deferred until the D2D application (DA 26-653 ¶49); draft NPRM proposing SCS eligibility on the Oct 29 agenda",
   { t: "GN Docket 25-340 — the deferred waivers", d: "§2.106 (MSS allocation supporting 2000–2020 downlink flexibility) and §25.115 (treating AWS-4 handsets as licensed earth stations). Until granted, full satellite flexibility on AWS-4 isn't buttoned up.", s: "part" },
   { t: "Satellite treatment for H-block & AWS-3", d: "Both are terrestrial licenses today; orbital use needs FCC Earth-to-space treatment — the same playbook already running for the 2 GHz block, not yet started here.", s: "part" },
   { t: "Consummation by Nov 30, 2027 + $2.4B escrow", d: "Step-two closing deadline; escrow funds within 30 days of close. EchoStar calls it an 'unprecedented involuntary escrow' — litigation is a live risk to the timeline.", s: "part" },
@@ -5565,6 +5686,7 @@ const REG_PENDING = [
 ];
 
 const REG_KEEP = [
+  "800 MHz public-safety & cellular adjacency — downlink sits 1 MHz above public-safety receive (guard 861–862, relocatable into); §§90.672–90.675 strict liability incl. 24 h response and shutdown on a sworn declaration; AST's Cellular SCS grant imports §§22.970–973 as the precedent; Canada/Mexico border channel plans (§90.619) bind satellite beams too",
   { t: "Appendix C buildout milestones", d: "SINR/availability, uplink throughput and spectral-efficiency metrics at 2/4/9 years over 90% of each BEA's geography. Miss all first-interim metrics → final deadline accelerates a year; miss the final metrics → automatic license termination." },
   { t: "OOBE / PFD limits at the PCS boundary", d: "Aggregate emission caps protecting AT&T and Verizon neighbors, with cease-transmission obligations on substantiated interference — the regulatory ceiling on satellite power per beam." },
   { t: "NOAA coordination at 1695–1710 MHz", d: "Protection zones around federal weather-satellite earth stations constrain where n70 uplink runs at full power — inherited from Dish, now SpaceX's to manage." },
@@ -5572,6 +5694,7 @@ const REG_KEEP = [
 ];
 
 const STD_PIPE = [
+  "800 MHz ESMR (B26 / n26) — in handsets NOW, every current US iPhone; no 3GPP NTN band below 1 GHz, so satellite use runs the same adapted-LTE SCS path as the G-block; n26's optional 7 MHz channel exactly fits the block",
   { t: "Rel-17 NTN baseline", d: "Ephemeris broadcast, HARQ and random-access adaptations, relaxed timing — the foundation that makes unmodified-phone D2C standards-based at all.", s: "ok" },
   { t: "Rel-18/19 NTN evolution", d: "Refinements through Release 19; Qualcomm's X105 is the first modem with native Starlink Mobile 5G support.", s: "ok" },
   { t: "n252 into handset silicon", d: "Standardized for NTN from day one but in zero shipping phones; first X105-class devices ~2027, volume through refresh cycles ~2029.", s: "part" },
@@ -5645,7 +5768,7 @@ function VideoTab() {
 
 const REG_SECTIONS = [
   { id: "reg-gates", label: "Two gates" },
-  { id: "reg-risks", label: "The six that decide it" },
+  { id: "reg-risks", label: "The seven that decide it" },
   { id: "reg-secured", label: "Secured / Pending" },
   { id: "reg-standing", label: "Standing / Standards" },
   { id: "reg-verdict", label: "→ The verdict" },
@@ -5710,7 +5833,7 @@ function RegTab() {
       </div>
 
       <div id="reg-risks">
-        <SectionHead n="02" color={C.red} title="The six that decide it"
+        <SectionHead n="02" color={C.red} title="The seven that decide it"
           deck="Ranked by what they would cost. Red = existential or use-it-or-lose-it; amber = bounds the size of the prize. Each card links to the panel that quantifies it." />
         {REG_RISKS.map((r, i) => <RiskCard key={i} r={r} />)}
       </div>
@@ -5842,14 +5965,21 @@ function ServiceabilityTab() {
   const cellElev = (Math.atan2(Math.cos(lamCell) - RE_KM / (RE_KM + H_KM), Math.sin(lamCell)) * 180) / Math.PI;
   const sinE = Math.sin((Math.max(cellElev, 8) * Math.PI) / 180);
   const usableMHz = cellElev >= 60 ? mhz : cellElev >= 42 ? (mhz * 2) / 3 : mhz / 3; // Panel 3's reuse thirds
+  const [lowBand, setLowBand] = useState(5);            // 800 MHz layer (pending): 0 off · 5 B26 base · 7 n26
   const perBeamNadir = eff * mhz;                       // ceiling: beam straight overhead, full pool
   const perBeamElev = usableMHz * eff * sinE;           // Panel 3's model at this fleet's elevation
   const perBeam = beamMode === "elev" ? perBeamElev : perBeamNadir;
   const beamsUsable = Math.min(700, areaPer / BEAM_AREA); // beyond ~11.7k satellites a patch can’t hold 700 beams of this size (v92)
   const satCapMbps = beamsUsable * perBeam;
+  // ---- the pending 800 MHz layer: its own ~21 km beams, area-weighted cells (Panel 3b convention) ----
+  const stats800 = patchStats(fleet, BEAM_KM_800, ESMR.beams);
+  const beams800 = lowBand ? Math.min(ESMR.beams, stats800.N) : 0;
+  const perBeam800 = lowBand ? (beamMode === "elev" ? lowBand * eff * sinE : lowBand * eff) : 0;
+  const satCap800 = beams800 * perBeam800;
+  const satCapTotal = satCapMbps + satCap800;
   const satsUS = fleet * (8.1 / 510) * 1.3;
-  const servDens = satCapMbps / areaPer / minMbps / (activePct / 100); // servable subscribers per km²
-  const feederFlag = satCapMbps > 100000;
+  const servDens = satCapTotal / areaPer / minMbps / (activePct / 100); // servable subscribers per km²
+  const feederFlag = satCapTotal > 100000;
   // ---- the typical cell ----
   const beamAlong = BEAM_KM / (sinE * sinE);      // stretch along the look direction
   const beamAcross = BEAM_KM / sinE;              // slant widening
@@ -6041,7 +6171,7 @@ function ServiceabilityTab() {
           Ground = {gSpec.src}. CBRS is not SpaceX’s and was not in the EchoStar deal — the bracket includes zero
           because the PALs are reportedly being shopped to Verizon. CBRS is TDD, shown as its ~70/30 down/up time split. PALs are priority, not exclusivity — an SAS can shuffle
           channels around naval radar — so CBRS is the ground layer’s CAPACITY workhorse, never its coverage anchor: the
-          owned H-block (and the satellite above) anchor coverage; CBRS pours capacity on top. City coverage therefore requires at least the owned 5 MHz under it — a small-cell layer with no licensed floor can promise speed on a good day, not service.
+          owned low band anchors coverage — the pending Grain 800 MHz on the macro grid (talks reported for ≥80,000 tower sites incl. Crown Castle <Src k="towers" topic="towers" />), with the H-block beside it and the satellite above; CBRS pours capacity on top. Three tiers, three jobs: 800 macro = the licensed floor citywide, 2 GHz small cells = capacity, satellite = everywhere the grid isn't. A layer with no licensed floor can promise speed on a good day, not service.
           {ovJv === "barter" && " Under the barter, cable’s strand radios carry SpaceX subscribers on CABLE’s spectrum — the spare-capacity slider sets how much of those radios’ capacity is left over after cable’s own traffic (bracketed assumption; the JV pools everything instead)."}
         </p>
         <p style={{ fontSize: 11.5, color: C.dim, margin: "6px 0 0", lineHeight: 1.5 }}>
@@ -6223,10 +6353,21 @@ function ServiceabilityTab() {
           </label>
         </div>
         <p className="body" style={{ fontSize: 13, color: C.dim, margin: "6px 0 10px" }}>
+          <span style={{ display: "block", marginBottom: 7 }}>
+            <span style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginRight: 8 }}>800 MHz layer (pending Grain) <Src k="grain800" topic="grain800" />:</span>
+            {[[0, "Off"], [5, "5 MHz · B26 (base)"], [7, "7 MHz · n26-capable"]].map(([v, lab]) => (
+              <button key={v} onClick={() => setLowBand(v)} className="chip"
+                style={{ fontFamily: "var(--mono)", fontSize: 10.5, marginRight: 6, padding: "2px 8px", borderRadius: 5,
+                  border: `1px solid ${lowBand === v ? C.amber : C.line}`, color: lowBand === v ? C.amber : C.dim, background: "transparent", cursor: "pointer" }}>
+                {lab}</button>
+            ))}
+          </span>
           Chain: {mhz} MHz × {eff} bps/Hz = <strong style={{ color: C.text }}>{perBeam.toFixed(0)} Mbps/beam</strong> × ~700 beams =
-          <strong style={{ color: C.text }}> ~{(satCapMbps / 1000).toFixed(1)} Gbps/satellite</strong> ÷ ~{Math.round(areaPer / 1000)}k km² patch ÷ {minMbps} Mbps ÷ {activePct}% active =
+          <strong style={{ color: C.text }}> ~{(satCapMbps / 1000).toFixed(1)} Gbps/satellite</strong> at 2 GHz
+          {lowBand > 0 && <span> + 800 MHz layer (pending): {lowBand} MHz × {eff} = {perBeam800.toFixed(1)} Mbps/beam × {Math.round(beams800)} beams (~{Math.round(stats800.A / Math.max(stats800.N, 1)).toLocaleString()} km² cells) = <strong style={{ color: C.amber }}>+{(satCap800 / 1000).toFixed(1)} Gbps</strong></span>}
+          {" "}→ <strong style={{ color: C.text }}>~{(satCapTotal / 1000).toFixed(1)} Gbps/satellite total</strong> ÷ ~{Math.round(areaPer / 1000)}k km² patch ÷ {minMbps} Mbps ÷ {activePct}% active =
           <strong style={{ color: C.amber }}> ~{servDens.toFixed(1)} servable subscribers/km²</strong> (~{(servDens * 2.59).toFixed(1)}/sq mi).
-          {feederFlag && <span style={{ color: C.red }}> ⚠ ~{(satCapMbps / 1000).toFixed(0)} Gbps/satellite approaches feeder/power class limits (~100 Gbps) — treat as a ceiling on a ceiling.</span>}
+          {feederFlag && <span style={{ color: C.red }}> ⚠ ~{(satCapTotal / 1000).toFixed(0)} Gbps/satellite approaches feeder/power class limits (~100 Gbps) — treat as a ceiling on a ceiling.</span>}
         </p>
       </div>
       <div className="card" style={{ borderTop: `2px solid ${C.blue}` }}>
@@ -6917,15 +7058,16 @@ function StarlinkMobileRoadmap() {
 
       <header className="hdr">
         <h1 className="title">Starlink <em>Mobile</em></h1>
-        <div className="kicker">Interactive Roadmap · Data as of Aug 2026</div>
+        <div className="kicker">Interactive Roadmap · Data as of Oct 2026</div>
         <p className="deck">From texts in a field to a fourth carrier.</p>
         <p className="sub">
-          How SpaceX plans to turn 65 MHz of EchoStar spectrum, a 5G constellation, and millions of small cells
+          How SpaceX plans to turn 65 MHz of EchoStar spectrum — plus 2×7 MHz of 800 MHz low band from Grain (pending FCC) — a 5G constellation, and millions of small cells
           — rooftop, pole, and possibly cable-strand — into a phone service — phase by phase, with the physics, the mode-switch, the configuration lab, and the
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v143 · v141 restored + The seams (guard bands & emission masks)</span>
+        <span className="buildTag">build v144 · 800 MHz Grain base case — integrated site-wide (branch)</span>
+          <div style={{ marginTop: 6 }}><span style={{ display: "inline-block", fontFamily: "var(--mono)", fontSize: 10.5, color: C.amber, border: `1px solid ${C.amber}`, borderRadius: 5, padding: "2px 8px", opacity: 0.9 }}>Base case: assumes SpaceX acquires Grain's 800 MHz licenses (pending) · agreement Oct 8 · NPRM vote Oct 29 · D2D filing due Dec 4, 2026</span></div>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
           {CHANGELOG.map((c) => (
