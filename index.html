@@ -57,6 +57,7 @@ const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const BEAM_AREA_800 = Math.PI * (BEAM_KM_800 / 2) * (BEAM_KM_800 / 2); // ~332 km² nadir cell at 865.5 MHz
 const CHANGELOG = [
+  { v: "v145", d: "The film, re-cut to the v144 model (8:03, nine scenes; was 5:50 on pre-v92 numbers). Narration rewritten end to end: beams at ~8.9 km / 62 km², 330 km altitude, the 65 → 79 MHz asset on a broken-axis chart, a new low-band scene (Band 26 in today\u2019s phones; same aperture ⇒ ×2.3 beam, ×5.3 area, the P.2109 indoor verdict unchanged; coverage, not capacity), and the ground-layer capstone rebuilt on the live Serviceability dials — 9.0M / 2.7% orbit-alone, 94M / 28% hybrid on ~2.1M small cells, the city layer shown WITH and WITHOUT CBRS (same reach, headroom ×3.6 vs ×1.1 on the owned H-block alone), the owned 800 + H-block floor on macro towers, and the reported ≥80k-site tower talks paying off the opening line. Gates scene now seven cards plus the public-safety neighbour at 862 MHz. Production pipeline (Kokoro narration, PIL scene renderers, assembly) committed under video/ so the next cut is a re-render, not a rebuild." },
   { v: "v144", d: "The 800 MHz Grain/ESMR base case, integrated site-wide as a separate low-band layer. Base-case banner (acquisition pending: consent + SCS eligibility + payload). Model layer parameterized by band — beamKm(f), BEAM_KM_800 ≈ 20.6 km (×2.31 the 2 GHz beam, 5.3× the area), patchStats/patchZones take a beam argument with band-keyed caches; 2 GHz outputs bit-identical. Spectrum: hatched-pending ESMR block on a broken 800/1650–2250 axis, two ledger rows, readiness row, 65 → 79 tally; the Config Lab deliberately excludes the block (wrong lattice) and says so. Story: Aug–Oct window, the Oct 6/8/22 events incl. the reported ≥80k-site tower talks. Labs: Grain-DL and Gen1@800 beam presets, the P.2109 finding that the indoor verdict does NOT flip at 800 (14.2 vs 15 dB — still 1.6 dB under the floor), 865 MHz Doppler/ppm. Serviceability: an Off/5/7 toggle whose layer sums through the whole chain (+3.1 Gbps at 5 MHz, +8.9% at 5k sats — 249 beams on ~410 km² cells), the three-tier ground doctrine (800 macro anchor · 2 GHz small-cell capacity · satellite elsewhere), and the county-level truth: full 7 MHz for 92.7% of POPs, ~80.7% clean of leases today, no 5 MHz US-primary carrier anywhere on the Canadian border, none at all near Mexico. Verdict: low-band yardstick cell, 0.035 Mbps/km² density line, two new watch items (eight now). Reg: the transfer risk card (seven now), register and standards-pipe rows. Seams panel gains the plain-English fences-not-gaps opener. New sources: grain800 (8 primary) and towers (reported). Fixes: 'entirely adequate' density sentence, satmax scenario MHz." },
   { v: "v141", d: "Coverage Panel 4 now shows the consequence, not just the mechanism. Under the residual-frequency chart sits a second chart on the same beam axis: spectral efficiency (bps/Hz) across the beam for both handsets, driven by the same phone slider, with a live readout at the marker translated into Mbps on a 20 MHz beam, plus a side-by-side \u2018at this spot\u2019 line. Standard phone: strong at center, falling off a cliff past the frequency tolerance. NTN phone: higher everywhere, with a gentle edge roll-off that is the antenna pattern \u2014 NTN fixes frequency error, not geometry. Curve shapes are illustrative, but their area-weighted beam averages are calibrated to the site\u2019s 0.62 and 2.48 bps/Hz, so the familiar headline numbers become visibly the averages of these curves \u2014 and the 4\u00d7 gap reads as two parts: protocol efficiency (vertical gap) and edge usability (shape)." },
   { v: "v140", d: "Panel 1B\u2019s stat grid gains a persistent one-line caption: the site canonical for all capacity math is 8.9 km \u2300 at nadir (the panel-scaled center preset), while the lab\u2019s readout follows whatever preset and sliders are active \u2014 added after the full-aperture floor preset (4.4 km) briefly masqueraded as \u2018the\u2019 number during a deck review. The lab stays a lab; the canonical stays labeled." },
@@ -803,7 +804,7 @@ function StoryTab({ phase, setPhase }) {
           it is.
         </p>
         <div className="hilite">
-          <button className="hiliteBtn" onClick={() => window.__navTo("video", "")}>▸ Watch the film — 5:50</button>
+          <button className="hiliteBtn" onClick={() => window.__navTo("video", "")}>▸ Watch the film — 8:03</button>
           <button className="hiliteBtn" onClick={() => window.__navTo("physics", "phy-ladder")}>▸ The speed ladder — fact vs claim</button>
           <button className="hiliteBtn" onClick={() => window.__navTo("coverage", "cov-6-stitching")}>▸ The strip machine — watch the network run</button>
           <button className="hiliteBtn" onClick={() => window.__navTo("coverage", "cov-1b-lab")}>▸ Beam size — the lab and its receipts</button>
@@ -5703,14 +5704,15 @@ const STD_PIPE = [
 ];
 
 const VIDEO_CHAPTERS = [
-  ["0:00", 0.0, "The pitch — and the discovery tool"],
-  ["0:34", 34.2, "Spectrum & the density dilemma"],
-  ["1:46", 106.4, "The physics wall"],
-  ["2:23", 142.9, "Coverage & the strip machine"],
-  ["2:52", 172.4, "Fleet growth & frequency reuse"],
-  ["3:53", 233.5, "Serviceability — the capstone"],
-  ["4:55", 295.3, "What could break it"],
-  ["5:31", 330.7, "The verdict"],
+  ["0:00", 0.0, "The pitch"],
+  ["0:24", 24.0, "Spectrum & the density dilemma"],
+  ["1:40", 101.0, "The physics wall"],
+  ["2:17", 137.8, "Coverage & the strip machine"],
+  ["2:47", 167.8, "Fleet growth & frequency reuse"],
+  ["3:48", 228.9, "The low band — what 800 MHz buys"],
+  ["4:46", 286.1, "The ground layer — the capstone"],
+  ["6:33", 393.3, "What could break it"],
+  ["7:39", 459.3, "The verdict"],
 ];
 
 function VideoTab() {
@@ -5737,10 +5739,10 @@ function VideoTab() {
   return (
     <div>
       <div className="card" style={{ borderTop: `2px solid ${C.amber}` }}>
-        <div className="eyebrow" style={{ color: C.amber }}>The film — 5:50 · the whole argument in one sitting</div>
+        <div className="eyebrow" style={{ color: C.amber }}>The film — 8:03 · the whole argument in one sitting · v2, Oct 2026</div>
         <p className="body" style={{ margin: 0 }}>
           Every scene below is drawn from this site's own data and models — the census raster, the beam geometry, the
-          reuse thresholds, the femtocell counts. Watch it straight through, or jump by chapter; then open the matching
+          reuse thresholds, the small-cell counts, the 800 MHz layer and the tower talks. Watch it straight through, or jump by chapter; then open the matching
           tab and move the numbers yourself.
         </p>
       </div>
@@ -5759,7 +5761,7 @@ function VideoTab() {
           ))}
         </div>
         <p className="body" style={{ fontSize: 12.5, color: C.dim, margin: "12px 0 0" }}>
-          Prefer a copy? <a href="starlink-mobile-explainer.mp4" download style={{ color: C.blue }}>Download the MP4</a> (1080p · 17 MB) — it's the same file this player streams.
+          Prefer a copy? <a href="starlink-mobile-explainer.mp4" download style={{ color: C.blue }}>Download the MP4</a> (1080p · 20 MB) — it's the same file this player streams.
         </p>
       </div>
     </div>
@@ -7066,7 +7068,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v144 · 800 MHz Grain base case — integrated site-wide (branch)</span>
+        <span className="buildTag">build v145 · film v2 — nine scenes, cut to the v144 model</span>
           <div style={{ marginTop: 6 }}><span style={{ display: "inline-block", fontFamily: "var(--mono)", fontSize: 10.5, color: C.amber, border: `1px solid ${C.amber}`, borderRadius: 5, padding: "2px 8px", opacity: 0.9 }}>Base case: assumes SpaceX acquires Grain's 800 MHz licenses (pending) · agreement Oct 8 · NPRM vote Oct 29 · D2D filing due Dec 4, 2026</span></div>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
