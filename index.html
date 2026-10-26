@@ -57,6 +57,7 @@ const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const BEAM_AREA_800 = Math.PI * (BEAM_KM_800 / 2) * (BEAM_KM_800 / 2); // ~332 km² nadir cell at 865.5 MHz
 const CHANGELOG = [
+  { v: "v147", d: "Spectrum → The seams: fourth to-scale strip for the pending 800 MHz UPLINK (806–829: NPSPAC / interleaved / expansion / 1 MHz guard / ESMR UL / Cellular A UL). The handset-limit row rewritten around the base-receiver geometry (an SCS phone transmits near full power beside a public-safety base site; NS_12–14 application to SCS is open in the draft NPRM; §90.674 applies regardless), plus a new row for the mirror problem — terrestrial mobiles at 806–816 and 824–849 radiating up at the satellite\u2019s 817–824 receiver with 1 MHz / 0 MHz guards: a noise-floor question for the uplink budget, not a protection question. Findings paragraph extended accordingly." },
   { v: "v146", d: "Spectrum → The seams now covers the pending 800 MHz block: a third to-scale strip (NPSPAC / interleaved / expansion / 1 MHz guard / ESMR DL / Cellular A), four quantified rows (Part 90 mask 43+10logP, the \u00a790.672 receiver test at \u2212101 dBm and 20 dB C/(I+N) with \u00a7\u00a790.673\u2013674 strict liability, Band 26 NS_12\u201315 handset limits, and the derived satellite screen: \u2212120 marginal, \u2212114 / \u2212110.6 fail) and a findings paragraph on why this seam is different in kind (public safety, not a carrier). Five Part 90 / rebanding / AST-precedent sources added to the seams key. Companion short film \u2018How adjacent spectrum is protected\u2019 added to the Video tab." },
   { v: "v145", d: "The film, re-cut to the v144 model (8:03, nine scenes; was 5:50 on pre-v92 numbers). Narration rewritten end to end: beams at ~8.9 km / 62 km², 330 km altitude, the 65 → 79 MHz asset on a broken-axis chart, a new low-band scene (Band 26 in today\u2019s phones; same aperture ⇒ ×2.3 beam, ×5.3 area, the P.2109 indoor verdict unchanged; coverage, not capacity), and the ground-layer capstone rebuilt on the live Serviceability dials — 9.0M / 2.7% orbit-alone, 94M / 28% hybrid on ~2.1M small cells, the city layer shown WITH and WITHOUT CBRS (same reach, headroom ×3.6 vs ×1.1 on the owned H-block alone), the owned 800 + H-block floor on macro towers, and the reported ≥80k-site tower talks paying off the opening line. Gates scene now seven cards plus the public-safety neighbour at 862 MHz. Production pipeline (Kokoro narration, PIL scene renderers, assembly) committed under video/ so the next cut is a re-render, not a rebuild." },
   { v: "v144", d: "The 800 MHz Grain/ESMR base case, integrated site-wide as a separate low-band layer. Base-case banner (acquisition pending: consent + SCS eligibility + payload). Model layer parameterized by band — beamKm(f), BEAM_KM_800 ≈ 20.6 km (×2.31 the 2 GHz beam, 5.3× the area), patchStats/patchZones take a beam argument with band-keyed caches; 2 GHz outputs bit-identical. Spectrum: hatched-pending ESMR block on a broken 800/1650–2250 axis, two ledger rows, readiness row, 65 → 79 tally; the Config Lab deliberately excludes the block (wrong lattice) and says so. Story: Aug–Oct window, the Oct 6/8/22 events incl. the reported ≥80k-site tower talks. Labs: Grain-DL and Gen1@800 beam presets, the P.2109 finding that the indoor verdict does NOT flip at 800 (14.2 vs 15 dB — still 1.6 dB under the floor), 865 MHz Doppler/ppm. Serviceability: an Off/5/7 toggle whose layer sums through the whole chain (+3.1 Gbps at 5 MHz, +8.9% at 5k sats — 249 beams on ~410 km² cells), the three-tier ground doctrine (800 macro anchor · 2 GHz small-cell capacity · satellite elsewhere), and the county-level truth: full 7 MHz for 92.7% of POPs, ~80.7% clean of leases today, no 5 MHz US-primary carrier anywhere on the Canadian border, none at all near Mexico. Verdict: low-band yardstick cell, 0.035 Mbps/km² density line, two new watch items (eight now). Reg: the transfer risk card (seven now), register and standards-pipe rows. Seams panel gains the plain-English fences-not-gaps opener. New sources: grain800 (8 primary) and towers (reported). Fixes: 'entirely adequate' density sentence, satmax scenario MHz." },
@@ -1064,6 +1065,8 @@ function SeamsPanel() {
   const x2 = (f) => ((f - LO2) / (HI2 - LO2)) * W;
   const LO3 = 849, HI3 = 876;
   const x3 = (f) => ((f - LO3) / (HI3 - LO3)) * W;
+  const LO4 = 804, HI4 = 831;
+  const x4 = (f) => ((f - LO4) / (HI4 - LO4)) * W;
   const blk = (xf, f0, f1, col, op) => ({ x: xf(f0), w: xf(f1) - xf(f0), col, op });
   return (
     <div className="card" id="spec-seams" style={{ borderTop: `2px solid ${C.red}` }}>
@@ -1159,7 +1162,32 @@ function SeamsPanel() {
         <text x={x3(874)} y="20" textAnchor="end" fill={C.dim} style={{ fontSize: 8.5, fontFamily: "var(--mono)" }}>MHz</text>
         <line x1={x3(851)} y1="70" x2={x3(861)} y2="70" stroke={C.red} strokeWidth="2" />
         <text x={x3(851)} y="82" fill={C.red} style={{ fontSize: 8.5, fontFamily: "var(--mono)" }}>§90.672 receiver test: protected at ≥ −101 dBm if C/(I+N) ≥ 20 dB — not a mask</text>
-        <text x={x3(862)} y="98" fill={C.green} style={{ fontSize: 8.5, fontFamily: "var(--mono)" }}>from orbit: −120 dBW/m²/MHz SCS cap would apply once the band is SCS-eligible (NPRM vote Oct 29, 2026)</text>
+        <text x={x3(862)} y="98" fill={C.green} style={{ fontSize: 8.5, fontFamily: "var(--mono)" }}>from orbit: the −120 dBW/m²/MHz SCS cap applies once the band is SCS-eligible (NPRM vote Oct 29)</text>
+      </svg>
+
+      <div className="statL" style={{ margin: "10px 0 4px" }}>The low-band seam neighborhood — around the pending 800 MHz uplink (to scale) <span style={{ color: C.amber }}>· the phone transmits here; the satellite is the one listening</span></div>
+      <svg viewBox={`0 0 ${W} 108`} style={{ width: "100%", height: "auto", display: "block", background: C.panel2, borderRadius: 8 }}>
+        {[
+          [806, 809, C.red, "NPSPAC", "public safety TX", 0.45],
+          [809, 815, C.red, "INTERLEAVED", "PS · B/ILT · SMR TX", 0.3],
+          [815, 816, C.red, "EXP", "", 0.3],
+          [816, 817, "none", "GB", "1 MHz", 0],
+          [817, 824, C.green, "ESMR 800 UPLINK", "SpaceX via Grain · pending", 0.5],
+          [824, 829, C.dim, "CELLULAR A UL", "phones TX", 0.25],
+        ].map(([f0, f1, col, lab, sub, op], i) => (
+          <g key={i}>
+            {col === "none"
+              ? <rect x={x4(f0)} y="26" width={x4(f1) - x4(f0)} height="36" fill="none" stroke={C.text} strokeDasharray="4 3" strokeWidth="1.2" />
+              : <rect x={x4(f0)} y="26" width={x4(f1) - x4(f0)} height="36" fill={col} fillOpacity={op} stroke={col} strokeWidth="1" />}
+            <text x={x4(f0) + (x4(f1) - x4(f0)) / 2} y="44" textAnchor="middle" fill={C.text} style={{ fontSize: 9.5, fontFamily: "var(--mono)" }}>{lab}</text>
+            <text x={x4(f0) + (x4(f1) - x4(f0)) / 2} y="56" textAnchor="middle" fill={C.dim} style={{ fontSize: 8, fontFamily: "var(--mono)" }}>{sub}</text>
+            <text x={x4(f0)} y="20" textAnchor="middle" fill={C.dim} style={{ fontSize: 8.5, fontFamily: "var(--mono)" }}>{f0}</text>
+          </g>
+        ))}
+        <text x={x4(829)} y="20" textAnchor="end" fill={C.dim} style={{ fontSize: 8.5, fontFamily: "var(--mono)" }}>MHz</text>
+        <line x1={x4(806)} y1="70" x2={x4(816)} y2="70" stroke={C.red} strokeWidth="2" />
+        <text x={x4(806)} y="82" fill={C.red} style={{ fontSize: 8.5, fontFamily: "var(--mono)" }}>victims here are public-safety BASE receivers listening to their own portables — an SCS phone transmits near full power from anywhere, incl. beside a base site</text>
+        <text x={x4(806)} y="98" fill={C.amber} style={{ fontSize: 8.5, fontFamily: "var(--mono)" }}>and the other way: every terrestrial mobile at 806–816 and 824–849 radiates up at the satellite's 817–824 receiver — nobody owes it protection</text>
       </svg>
 
       <div className="eyebrow" style={{ marginTop: 14 }}>The quantified limits — every seam, both directions</div>
@@ -1180,8 +1208,10 @@ function SeamsPanel() {
          "47 CFR §90.691(a): ESMR base stations attenuate everything beyond 37.5 kHz of the block edge by 43 + 10·log₁₀(P) dB — the same −13 dBm/MHz standard as the 2 GHz blocks. Base ≤ 1 kW ERP (§90.635). The 1 MHz guard at 861–862 is the only vacant spectrum, and FCC 04-168 lets licensees relocate into it, so even that is not guaranteed."],
         ["800 MHz · the neighbor is defined by a RECEIVER test, not a mask", "−101 dBm · 20 dB", C.red,
          "47 CFR §90.672: public-safety radio is deemed to suffer \u201cunacceptable interference\u201d whenever its desired signal is at least −104 dBm (mobile) / −101 dBm (portable) and the carrier-to-interference-plus-noise ratio falls below 20 dB. §§90.673–674 make the interferer strictly liable — 24 h to respond, 48 h to fix, immediate shutdown on a sworn \u201cclear and imminent danger\u201d declaration. The 2 GHz seams protect carriers; this seam protects police, fire and EMS dispatch, which is why the fight is different in kind."],
-        ["800 MHz · the handset side", "NS_12–15", C.amber,
-         "Phones on Band 26 carry network-signalled emission limits written for this exact seam: −42 dBm per 6.25 kHz into 806–816 MHz (NS_12–14) and −53 dBm per 6.25 kHz into 851–859 MHz (NS_15), 3GPP TS 36.101. On a satellite link a phone transmits near full power from far outside any terrestrial cell; whether those signalling values are applied to SCS is an open question in the draft NPRM."],
+        ["800 MHz · UPLINK · the handset beside the fire station", "NS_12–15", C.amber,
+         "On the uplink the geometry flips: ESMR phones transmit at 817–824 and the victims are public-safety BASE receivers at 806–816, listening to their own portables. Terrestrially a phone near a base site is power-controlled by its own nearby cell and bound by Band 26's network-signalled limits — −42 dBm per 6.25 kHz into 806–816 (NS_12–14), −53 into 851–859 (NS_15), 3GPP TS 36.101. A phone working a satellite has no nearby cell: it transmits near maximum power from anywhere, so the base-receiver seam depends on whether those signalling values are applied on an SCS link — an open question in the draft NPRM. The §90.674 complaint process applies regardless."],
+        ["800 MHz · UPLINK · the satellite is the one listening", "1 MHz · 0 MHz", C.blue,
+         "In the other direction nobody owes the satellite anything. Every public-safety, B/ILT and SMR mobile at 806–816 and every Cellular phone at 824–849 radiates upward across the ESMR receiver's edges — with a 1 MHz guard below (816–817) and none above (824). Terrestrial systems tolerate it because the serving base is close and the signal is strong; the satellite is 330 km away and the signal is at the thermal floor. This is not a protection problem but a noise-floor problem for the uplink budget the site's 0.10–0.30 Mbps/MHz uplink anchors ride on, and it is the engineering mirror of the downlink's legal exposure. Border plans (§90.619) bind the uplink the same way: Mexico-primary channels at the bottom of the block, 3 MHz usable near Canada — see the county findings."],
         ["800 MHz · SATELLITE · the screen (derived)", "−120 → marginal", C.blue,
          "If the band is added to SCS under today's rules, the same −120 dBW/m²/MHz aggregate cap applies. Worst-case placement of that cap into one 25 kHz public-safety channel gives a 0 dBi portable at the −101 dBm threshold a C/(I+N) of 21.5 dB (5 dB receiver noise figure) or 19.6 dB (8 dB) — straddling the 20 dB criterion. At the −114 floated in the draft NPRM, or the −110.6 SpaceX holds at PCS, it fails at either noise figure. The AST precedent (DA 26-391, Cellular 800) imports the public-safety rules into the SCS grant; expect the same here. Screening arithmetic, not a coexistence study — the noise figures are assumptions."],
       ].map(([h, num, col, body], i) => (
@@ -1223,7 +1253,9 @@ function SeamsPanel() {
         downlink at 862–869 sits 1 MHz above the receivers of every public-safety radio system in the country. The
         protection there is not a mask but a receiver test (§90.672: −101 dBm, 20 dB C/(I+N)) backed by strict liability
         and a shutdown clause, and the derived screen shows the current −120 satellite cap only just meets it. Nothing
-        else in SpaceX's spectrum has a neighbor who can order a transmitter off the air on a sworn statement. The
+        else in SpaceX's spectrum has a neighbor who can order a transmitter off the air on a sworn statement. The uplink
+        is the mirror image: at 817–824 the legal exposure is smaller (base receivers, handset limits, §90.674) but the
+        engineering exposure is larger — the satellite is the weak listener, and nobody is required to protect it. The
         Cellular A block on the other side (869–894) is already an SCS band with an AST grant that imports exactly these
         rules, so the template exists. <em>Assumes the Grain transfer and SCS eligibility clear (pending).</em>
         <br /><br />
@@ -7160,7 +7192,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v146 · the 800 MHz seam + the adjacent-spectrum explainer</span>
+        <span className="buildTag">build v147 · the 800 MHz uplink seam</span>
           <div style={{ marginTop: 6 }}><span style={{ display: "inline-block", fontFamily: "var(--mono)", fontSize: 10.5, color: C.amber, border: `1px solid ${C.amber}`, borderRadius: 5, padding: "2px 8px", opacity: 0.9 }}>Base case: assumes SpaceX acquires Grain's 800 MHz licenses (pending) · agreement Oct 8 · NPRM vote Oct 29 · D2D filing due Dec 4, 2026</span></div>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
