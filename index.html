@@ -57,6 +57,7 @@ const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const BEAM_AREA_800 = Math.PI * (BEAM_KM_800 / 2) * (BEAM_KM_800 / 2); // ~332 km² nadir cell at 865.5 MHz
 const CHANGELOG = [
+  { v: "v150", d: "Tier 3 macro floor rebuilt as a density-tiered requirement. The sized count now leads wherever the site previously quoted the reported 80k-site talks as doctrine — Hybrid Network layer card, Serviceability doctrine, Verdict watch item — each pointing to the Tier 3 card for the defence. Every raster cell in the selected clusters is classed dense core (≥5,000/mi²), urban (1,000–5,000) or suburban (250–1,000), each tier gets its own cell radius (defaults 1.5 / 2.5 / 4.0 km, per-tier buttons), and sites = Σ 1.05 × tier area ÷ πr². The card now shows the delineation table (threshold, radius, basis), the per-tier site table for the selected clusters, the top-10/25/42 ladder split by tier, and a \u2018what this number is and is not\u2019 box with the calibration against T-Mobile\u2019s ~82k-site national network (~40k carrier-grid sites implied inside these 42 clusters at ~2.2 km blended; a 2×5 MHz coverage floor needs fewer) and the raster\u2019s 40 km limitation. Replaces the flat 1.5 km radius of v148–149, which over-counted sites 3–5× by applying downtown spacing to a footprint that is 77% suburban by area." },
   { v: "v149", d: "Tier 3 macro floor: default site basis is now REQUIRED TO COVER — sites = 1.05 × metro footprint ÷ πr², the same coverage-driven sizing the pole grid uses — instead of assuming the reported 80k-site tower talks (kept as an alternative, with custom). New ladder table: sites required and people carried (at the card\u2019s Mbps and at a 100 kbps voice/text class) for the top-10, top-25 and all 42 modelled clusters at the chosen radius and efficiency. Note on the data: the metro set is 42 clusters, so a top-100 ladder needs a rebuilt metro list." },
   { v: "v148", d: "Serviceability: TIER 3 — the 800 MHz macro floor is now a sized model, not doctrine prose. New card after the overlay: on/off, site basis (national count reportedly in talks, 80k default, scaled to the selected metros by population share, or a custom count with DISH–Crown Castle 20k as the precedent), urban cell radius 1–3 km, sector efficiency 1.0–2.0 bps/Hz. Coverage = planned grid of πr² cells over the metro area with low-band indoor reach (half of hostile stock lost); capacity = sites × 3 sectors × usable MHz × efficiency. The floor enters the chain as a union with the small-cell blanket for coverage and a sum for capacity: the hybrid headline, the map's hybrid and capacity layers, the throughput-ceiling line and headroom all include it, and the ceiling line now shows boxes + floor separately. Sticky header gains a MACRO chip. Doctrine encoded: H-block and CBRS on small cells for capacity, 800 on towers for coverage, so CBRS=0 is the owned-only city network (floor + H-block boxes). Base case on, tied to the 800 MHz layer toggle (pending Grain transfer)." },
   { v: "v147", d: "Spectrum → The seams: fourth to-scale strip for the pending 800 MHz UPLINK (806–829: NPSPAC / interleaved / expansion / 1 MHz guard / ESMR UL / Cellular A UL). The handset-limit row rewritten around the base-receiver geometry (an SCS phone transmits near full power beside a public-safety base site; NS_12–14 application to SCS is open in the draft NPRM; §90.674 applies regardless), plus a new row for the mirror problem — terrestrial mobiles at 806–816 and 824–849 radiating up at the satellite\u2019s 817–824 receiver with 1 MHz / 0 MHz guards: a noise-floor question for the uplink budget, not a protection question. Findings paragraph extended accordingly." },
@@ -674,7 +675,7 @@ const QUOTES_BEAR = [
 
 const BENCHMARKS = [
   { t: "FCC consent to the Grain 800 MHz transfer + SCS eligibility for 817–824/862–869", why: "The low-band base case. NPRM vote Oct 29, 2026; complete D2D filing due Dec 4 to qualify for the satellite build-out path. Until then, owned low band is a term sheet." },
-  { t: "Tower leases actually signing (≥80k sites reported in talks — Crown Castle et al.)", why: "The tell that the terrestrial build is real. Spectrum can sit in escrow; a signed anchor-tenant MLA at T-Mobile-grid scale cannot. DISH's 2020 Crown Castle deal (20k towers) is the quarter-scale precedent." },
+  { t: "Tower leases actually signing (≥80k sites reported in talks — Crown Castle et al.; the sized floor needs ~18k in the 42 metro clusters)", why: "The tell that the terrestrial build is real — and the count is the tell within the tell: ~18k sites floors the metros, ~40k is a carrier-scale grid, 80k is national ambition (Serviceability → Tier 3). Spectrum can sit in escrow; a signed anchor-tenant MLA at T-Mobile-grid scale cannot. DISH's 2020 Crown Castle deal (20k towers) is the quarter-scale precedent." },
   { t: "A Big-Three MVNO or Charter offload deal", why: "Instant urban coverage while the hybrid network matures — the single biggest accelerant." },
   { t: "Starship cadence reaching ~4 launches/month", why: "Gates V3, global D2D, and every headline capacity number. If cadence lags, discount all claims." },
   { t: "n252 silicon shipping in mainstream phones", why: "Until AWS-4's satellite config is in handsets, the best 40 MHz can't reach a consumer device from orbit." },
@@ -1609,7 +1610,7 @@ const LAYERS = [
     id: "femto", tone: "ground", name: "Ground layer — the small-cell mix",
     head: "Rooftops, poles, and a territory partition",
     freq: ["800 MHz ESMR: 817 ↑ / 862 ↓ (Grain — pending; the macro-grid anchor-to-be)", "H-block: 1915 ↑ / 1995 ↓ (5/5 owned — the coverage anchor today)", "CBRS n48: 3550–3700 TDD (SAS — the capacity layer, never the anchor)", "Backhaul: host dish · own Ku · cable plant"],
-    body: "Pending the Grain close, the city anchor widens dramatically: 2×7 MHz at 800 MHz on macro towers — Bloomberg reports talks for ≥80,000 sites incl. Crown Castle, about half the US tower base and T-Mobile-grid scale — becomes the licensed floor citywide, the classic low-band layer every incumbent carrier runs. Until then the city layer stands on two kinds of spectrum with two jobs: the owned H-block is the licensed floor every cell can promise service on, and CBRS — priority-shared, channel-shuffled around naval radar by the SAS — pours capacity on top but can never be counted on as coverage. The cells themselves are uplink-capped cells of ~213 m (rooftop, 30 dBm) to ~295 m (pole, 38 dBm), partitioned by what each patch of territory permits: subscriber rooftops where consenting roofs are dense (organic placement, the disorder tax), street poles where they are not (planned grid, lease + permit — the hard sites), and under a partnership, cable strand for the aerial-plant share. Counts are coverage-driven: the class mix, not spectrum, sets the box count.",
+    body: "Pending the Grain close, the city anchor widens dramatically: 2×7 MHz at 800 MHz on macro towers becomes the licensed floor citywide, the classic low-band layer every incumbent carrier runs. How many towers: sized, not assumed — flooring the top-10 clusters takes ~6.9k macro sites and all 42 clusters ~17.8k, from a density-tiered grid (dense core 1.5 km · urban 2.5 km · suburban 4.0 km cells over the census raster; Serviceability → 5 · Metro overlay → Tier 3, where each number carries its defence). For scale, T-Mobile runs its entire US network on ~82k sites, and the ≥80k-site tower talks Bloomberg reported are a national, carrier-scale figure — roughly four times what the floor needs in the 42 clusters — so they signal ambition beyond the metros, not the floor\u2019s requirement. Until then the city layer stands on two kinds of spectrum with two jobs: the owned H-block is the licensed floor every cell can promise service on, and CBRS — priority-shared, channel-shuffled around naval radar by the SAS — pours capacity on top but can never be counted on as coverage. The cells themselves are uplink-capped cells of ~213 m (rooftop, 30 dBm) to ~295 m (pole, 38 dBm), partitioned by what each patch of territory permits: subscriber rooftops where consenting roofs are dense (organic placement, the disorder tax), street poles where they are not (planned grid, lease + permit — the hard sites), and under a partnership, cable strand for the aerial-plant share. Counts are coverage-driven: the class mix, not spectrum, sets the box count.",
   },
   {
     id: "cable", tone: "ground", name: "Partner layer — cable’s plant (optional)",
@@ -6044,6 +6045,29 @@ function RegTab() {
 
 /* ------------------------- SERVICEABILITY TAB ------------------------- */
 
+// v150: the macro-floor delineation. Thresholds in people/km² (= people/mi² ÷ 2.59). Radii are per-tier state.
+const MACRO_TIERS = [
+  { k: "core",  label: "DENSE CORE", thr: "≥ 5,000 / mi² (≥ 1,930 / km²)", lo: 1930, hi: 1e12, presets: [1.0, 1.5, 2.0], c: "#d64545",
+    basis: "downtown low band on a coverage grid; 3GPP UMa spacing (500–750 m ISD) is capacity-driven" },
+  { k: "urban", label: "URBAN",      thr: "1,000 – 5,000 / mi² (386 – 1,930 / km²)", lo: 386, hi: 1930, presets: [2.0, 2.5, 3.0], c: "#e8b23a",
+    basis: "midpoint between core and suburban; interference-limited" },
+  { k: "sub",   label: "SUBURBAN",   thr: "250 – 1,000 / mi² (97 – 386 / km²)", lo: 97, hi: 386, presets: [3.0, 4.0, 5.0], c: "#2fbf71",
+    basis: "between RAN4 suburban-macro (0.9 km ISD, capacity-driven) and rural-macro (6 km)" },
+];
+function macroTiering(n, R) {
+  // sites required to floor the top-n clusters, tier by tier, from the raster cells that belong to them
+  const tiers = MACRO_TIERS.map((t) => ({ k: t.k, area: 0, pop: 0, r: R[t.k], sites: 0 }));
+  const CELLA = US_DENS.cell * US_DENS.cell;   // km² per raster cell (the ServiceabilityTab constant is function-scoped)
+  let area = 0, pop = 0;
+  for (const c of DENS_CELLS) {
+    if (c.mi < 0 || c.mi >= n) continue;
+    const t = c.d >= 1930 ? 0 : c.d >= 386 ? 1 : 2;  // below 97/km² the cell is outside the cluster definition, but keep it in suburban if present
+    tiers[t].area += CELLA; tiers[t].pop += c.d * CELLA; area += CELLA; pop += c.d * CELLA;
+  }
+  for (const t of tiers) t.sites = (1.05 * t.area) / (Math.PI * t.r * t.r);
+  return { n, tiers, area, pop, req: tiers.reduce((a, t) => a + t.sites, 0) };
+}
+
 function ServiceabilityTab() {
   /* anchor for deep links */
   const [mhz, setMhz] = useState(20);
@@ -6099,7 +6123,7 @@ function ServiceabilityTab() {
   const [macroBasis, setMacroBasis] = useState("cover");  // "cover": sites REQUIRED to tile the selected metros at the chosen radius (default, v149) · "scaled": national count × metro share of US pop · "custom": set directly
   const [macroNat, setMacroNat] = useState(80000);        // national sites reportedly in talks (Bloomberg, Oct 22 2026) — about half the US tower base
   const [macroCustom, setMacroCustom] = useState(20000);  // DISH–Crown Castle 2020 (20k) as the quarter-scale precedent
-  const [macroRkm, setMacroRkm] = useState(1.5);          // urban low-band macro cell radius, km — interference-limited, not range-limited
+  const [macroR, setMacroR] = useState({ core: 1.5, urban: 2.5, sub: 4.0 });  // v150: per-tier cell radius, km (see MACRO_TIERS)
   const [macroEff, setMacroEff] = useState(1.5);          // sector-average spectral efficiency, bps/Hz (LTE macro class)
   const perBeamNadir = eff * mhz;                       // ceiling: beam straight overhead, full pool
   const perBeamElev = usableMHz * eff * sinE;           // Panel 3's model at this fleet's elevation
@@ -6226,16 +6250,11 @@ function ServiceabilityTab() {
   // of it lost); capacity = sites × 3 sectors × usable MHz × sector efficiency. The floor is a
   // coverage tier: thin per-site throughput, but owned and carrier-grade in B26 phones. ----
   const popUS = DENS_CELLS.reduce((a, c) => a + c.d * CELLA, 0);
-  const macroCellKm2 = Math.PI * macroRkm * macroRkm;
-  const macroReq = (1.05 * areaM) / macroCellKm2;   // sites required to tile the selected metros at this radius (planned grid)
+  // v150: tiered requirement from the raster (same cells that give popM/areaM)
+  const macroSel = macroTiering(nMetros, macroR);
+  const macroReq = macroSel.req;
   const macroSites = (macroOn && lowBand) ? (macroBasis === "cover" ? macroReq : macroBasis === "scaled" ? macroNat * (popM / popUS) : macroCustom) : 0;
-  // reference ladder (v149): what it takes to floor the top-10 / top-25 / all-42 clusters at this radius — independent of the metro slider
-  const macroLadder = [10, 25, US_METROS.length].map((n) => {
-    const sub = US_METROS.slice(0, n); const pp = sub.reduce((a, m) => a + m.p, 0); const kk = sub.reduce((a, m) => a + m.k, 0);
-    const req = (1.05 * kk) / macroCellKm2; const cap = req * 3 * (lowBand || 5) * macroEff;
-    return { n, pp, kk, req, subs3: (cap / minMbps) / (activePct / 100), subsThin: (cap / 0.1) / (activePct / 100) };
-  });
-  const macroCovFrac = areaM > 0 ? Math.min(1, (macroSites * macroCellKm2) / (1.05 * areaM)) : 0;
+  const macroCovFrac = macroReq > 0 ? Math.min(1, macroSites / macroReq) : 0;   // 100% by construction under "required to cover"
   const macroIndoor = 1 - 0.5 * (hostile / 100);
   const macroServedFrac = macroCovFrac * macroIndoor;
   const macroCapMbps = macroSites * 3 * lowBand * macroEff;
@@ -6243,6 +6262,10 @@ function ServiceabilityTab() {
   const peopleMacro = Math.min(popM * macroServedFrac, macroSubCap);
   const macroThinSubs = (macroCapMbps / 0.1) / (activePct / 100);                 // voice/text/thin-data class: 100 kbps per active user
   const peopleMacroThin = Math.min(popM * macroServedFrac, macroThinSubs);
+  const macroLadder = [10, 25, US_METROS.length].map((n) => {
+    const t = macroTiering(n, macroR); const cap = t.req * 3 * (lowBand || 5) * macroEff;
+    return { ...t, subs3: (cap / minMbps) / (activePct / 100), subsThin: (cap / 0.1) / (activePct / 100) };
+  });
   const gCap = femSubCap + macroSubCap;   // the whole ground layer's throughput ceiling, in subscribers
   const servedFrac = strategy === "blanket"
     ? Cf * (1 - 0.8 * (hostile / 100)) // pure-cellular: indoor usage (80%) served only in penetrable stock — no WiFi crutch; that's this strategy's premise
@@ -6334,7 +6357,7 @@ function ServiceabilityTab() {
           Ground = {gSpec.src}. CBRS is not SpaceX’s and was not in the EchoStar deal — the bracket includes zero
           because the PALs are reportedly being shopped to Verizon. CBRS is TDD, shown as its ~70/30 down/up time split. PALs are priority, not exclusivity — an SAS can shuffle
           channels around naval radar — so CBRS is the ground layer’s CAPACITY workhorse, never its coverage anchor: the
-          owned low band anchors coverage — the pending Grain 800 MHz on the macro grid (talks reported for ≥80,000 tower sites incl. Crown Castle <Src k="towers" topic="towers" />), with the H-block beside it and the satellite above; CBRS pours capacity on top. Three tiers, three jobs: 800 macro = the licensed floor citywide, 2 GHz small cells = capacity, satellite = everywhere the grid isn't. A layer with no licensed floor can promise speed on a good day, not service.
+          owned low band anchors coverage — the pending Grain 800 MHz on the macro grid — sized below in Tier 3 at ~6.9k sites for the top-10 and ~17.8k for all 42 clusters, against the ≥80,000 national sites reported in SpaceX's tower talks <Src k="towers" topic="towers" /> — with the H-block beside it and the satellite above; CBRS pours capacity on top. Three tiers, three jobs: 800 macro = the licensed floor citywide, 2 GHz small cells = capacity, satellite = everywhere the grid isn't. A layer with no licensed floor can promise speed on a good day, not service.
           {ovJv === "barter" && " Under the barter, cable’s strand radios carry SpaceX subscribers on CABLE’s spectrum — the spare-capacity slider sets how much of those radios’ capacity is left over after cable’s own traffic (bracketed assumption; the JV pools everything instead)."}
         </p>
         <p style={{ fontSize: 11.5, color: C.dim, margin: "6px 0 0", lineHeight: 1.5 }}>
@@ -6928,23 +6951,46 @@ function ServiceabilityTab() {
           The two tiers above buy <strong>capacity</strong> in boxes tens of metres wide. This tier buys <strong>coverage</strong>:
           2×{lowBand || 5} MHz of owned low band on macro towers — the layer every carrier builds its city floor on — in the Band 26
           phones people already carry. It is thin (a dozen megahertz across three sectors is coverage, not throughput) but it is
-          owned, carrier-grade, and nobody can turn it off. The default sizes the floor the way the pole grid is sized — by the
-          <strong> sites required</strong> to tile the selected metros at the chosen cell radius — rather than assuming any
-          particular tower deal. The ladder below gives that requirement for the top-10, top-25 and all 42 clusters this site
-          models. "Scaled from national" (the ≥80,000-site talks, nothing signed) and "custom" remain as alternatives.
+          owned, carrier-grade, and nobody can turn it off. The site count is <strong>what it takes to cover the footprint</strong>,
+          computed cell by cell from the census raster with a cell radius set by density tier — not an assumed tower deal.
           <em> Assumes SpaceX acquires Grain's 800 MHz licenses (pending FCC consent).</em>
         </p>
-        <div className="tglRow" style={{ gap: 5, flexWrap: "wrap", marginBottom: 6 }}>
+
+        <div className="statL" style={{ marginBottom: 4 }}>THE DELINEATION — three density tiers, three cell radii (per tier, editable)</div>
+        <div style={{ overflowX: "auto", marginBottom: 8 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--mono)", fontSize: 11.5 }}>
+            <thead><tr style={{ color: C.dim, textAlign: "left" }}><th style={{ padding: "4px 8px" }}>TIER</th><th>DENSITY THRESHOLD</th><th>CELL RADIUS</th><th>BASIS FOR THE RADIUS</th></tr></thead>
+            <tbody>
+              {MACRO_TIERS.map((tr, i) => (
+                <tr key={i} style={{ borderTop: `1px solid ${C.line}` }}>
+                  <td style={{ padding: "4px 8px", color: tr.c, fontWeight: 600 }}>{tr.label}</td>
+                  <td>{tr.thr}</td>
+                  <td>
+                    <span style={{ display: "inline-flex", gap: 4 }}>
+                      {tr.presets.map((r) => (
+                        <button key={r} className={"genBtn" + (macroR[tr.k] === r ? " on" : "")} style={{ padding: "1px 7px", fontSize: 11 }}
+                          onClick={() => setMacroR({ ...macroR, [tr.k]: r })}>{r.toFixed(1)} km</button>
+                      ))}
+                    </span>
+                  </td>
+                  <td style={{ color: C.dim }}>{tr.basis}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="tglRow" style={{ gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
           <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, alignSelf: "center" }}>MACRO FLOOR:</span>
           {[[true, "On"], [false, "Off"]].map(([v, n]) => (
             <button key={n} className={"genBtn" + (macroOn === v ? " on" : "")} onClick={() => setMacroOn(v)}>{n}</button>
           ))}
           <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, alignSelf: "center", marginLeft: 8 }}>SITES:</span>
-          <button className={"genBtn" + (macroBasis === "cover" ? " on" : "")} onClick={() => setMacroBasis("cover")} title="the count needed to tile the selected metros at the chosen radius — coverage-driven, like the pole grid">required to cover</button>
+          <button className={"genBtn" + (macroBasis === "cover" ? " on" : "")} onClick={() => setMacroBasis("cover")} title="the count needed to tile each density tier of the selected metros at that tier's radius">required to cover</button>
           <button className={"genBtn" + (macroBasis === "scaled" ? " on" : "")} onClick={() => setMacroBasis("scaled")} title="national count × these metros' share of US population">scaled from national</button>
           <button className={"genBtn" + (macroBasis === "custom" ? " on" : "")} onClick={() => setMacroBasis("custom")} title="sites across the selected metros, set directly">custom</button>
           {macroBasis === "cover"
-            ? <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: C.dim }}>1.05 × {(areaM / 1e3).toFixed(0)}k km² ÷ π·{macroRkm.toFixed(1)}² = {(macroReq / 1e3).toFixed(1)}k sites</span>
+            ? <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: C.dim }}>Σ over tiers of 1.05 × tier area ÷ π·r² = {(macroReq / 1e3).toFixed(1)}k sites</span>
             : macroBasis === "scaled"
             ? <span style={{ display: "inline-flex", gap: 6, alignItems: "center", fontFamily: "var(--mono)", fontSize: 11 }}>
                 national <input type="number" value={macroNat} min={0} step={5000} onChange={(e) => setMacroNat(Math.max(0, +e.target.value || 0))}
@@ -6954,52 +7000,93 @@ function ServiceabilityTab() {
                 <input type="number" value={macroCustom} min={0} step={1000} onChange={(e) => setMacroCustom(Math.max(0, +e.target.value || 0))}
                   style={{ width: 84, background: C.panel2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 4, padding: "2px 6px", fontFamily: "var(--mono)", fontSize: 11 }} />
                 sites in the top-{nMetros}</span>}
-        </div>
-        <div className="tglRow" style={{ gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
-          <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, alignSelf: "center" }}>URBAN CELL RADIUS:</span>
-          {[1.0, 1.5, 2.0, 3.0].map((r) => (
-            <button key={r} className={"genBtn" + (macroRkm === r ? " on" : "")} onClick={() => setMacroRkm(r)}>{r.toFixed(1)} km</button>
-          ))}
           <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, alignSelf: "center", marginLeft: 8 }}>SECTOR EFFICIENCY:</span>
           {[[1.0, "1.0 · congested"], [1.5, "1.5 · LTE macro avg"], [2.0, "2.0 · clean"]].map(([v, n]) => (
             <button key={v} className={"genBtn" + (macroEff === v ? " on" : "")} onClick={() => setMacroEff(v)}>{n}</button>
           ))}
         </div>
+
+        <div className="statL" style={{ marginBottom: 4 }}>SITES REQUIRED — top-{nMetros} clusters, by tier (the number to defend)</div>
+        <div style={{ overflowX: "auto", marginBottom: 10 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--mono)", fontSize: 11.5 }}>
+            <thead><tr style={{ color: C.dim, textAlign: "left" }}><th style={{ padding: "4px 8px" }}>TIER</th><th>AREA</th><th>SHARE</th><th>PEOPLE</th><th>RADIUS</th><th>CELL AREA</th><th>SITES</th></tr></thead>
+            <tbody>
+              {macroSel.tiers.map((tr, i) => (
+                <tr key={i} style={{ borderTop: `1px solid ${C.line}` }}>
+                  <td style={{ padding: "4px 8px", color: MACRO_TIERS[i].c }}>{MACRO_TIERS[i].label}</td>
+                  <td>{(tr.area / 1e3).toFixed(0)}k km²</td><td>{(tr.area / Math.max(1, macroSel.area) * 100).toFixed(0)}%</td>
+                  <td>{(tr.pop / 1e6).toFixed(1)}M</td><td>{tr.r.toFixed(1)} km</td><td>{(Math.PI * tr.r * tr.r).toFixed(1)} km²</td>
+                  <td style={{ color: C.red, fontWeight: 600 }}>{(tr.sites / 1e3).toFixed(1)}k</td>
+                </tr>
+              ))}
+              <tr style={{ borderTop: `2px solid ${C.line}`, color: C.text, fontWeight: 600 }}>
+                <td style={{ padding: "4px 8px" }}>TOTAL</td><td>{(macroSel.area / 1e3).toFixed(0)}k km²</td><td>100%</td><td>{(macroSel.pop / 1e6).toFixed(0)}M</td><td>—</td><td>—</td>
+                <td style={{ color: C.red }}>{(macroReq / 1e3).toFixed(1)}k</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <div className="statGrid">
-          <div className="stat" style={{ borderColor: C.red }}><div className="statL">Macro sites in the top-{nMetros}</div><div className="statV" style={{ fontSize: 22, color: C.red }}>{macroSites >= 950 ? (macroSites / 1e3).toFixed(1) + "k" : Math.round(macroSites)}<span style={{ fontSize: 12, color: C.dim }}> · {(macroSites * macroCellKm2 / 1e3).toFixed(0)}k km² of cells at {macroRkm.toFixed(1)} km vs {(areaM / 1e3).toFixed(0)}k km² metro area</span></div></div>
-          <div className="stat"><div className="statL">Metro area under the floor</div><div className="statV" style={{ fontSize: 22 }}>{(macroCovFrac * 100).toFixed(0)}%<span style={{ fontSize: 12, color: C.dim }}> · indoors {(macroIndoor * 100).toFixed(0)}% (half of the {hostile}% hostile stock lost)</span></div></div>
+          <div className="stat" style={{ borderColor: C.red }}><div className="statL">Macro sites in the model</div><div className="statV" style={{ fontSize: 22, color: C.red }}>{macroSites >= 950 ? (macroSites / 1e3).toFixed(1) + "k" : Math.round(macroSites)}<span style={{ fontSize: 12, color: C.dim }}> · {macroBasis === "cover" ? "required to cover" : macroBasis === "scaled" ? "scaled from national" : "custom"} · covers {(macroCovFrac * 100).toFixed(0)}% of footprint</span></div></div>
+          <div className="stat"><div className="statL">Indoor reach of the floor</div><div className="statV" style={{ fontSize: 22 }}>{(macroIndoor * 100).toFixed(0)}%<span style={{ fontSize: 12, color: C.dim }}> · low band at tower height; half of the {hostile}% hostile stock lost</span></div></div>
           <div className="stat"><div className="statL">People the floor can carry</div><div className="statV" style={{ fontSize: 22 }}>{(peopleMacro / 1e6).toFixed(0)}M<span style={{ fontSize: 12, color: C.dim }}> of {(popM / 1e6).toFixed(0)}M · {macroSubCap < popM * macroServedFrac ? "CAPACITY BINDS" : "coverage binds"} at {minMbps} Mbps · {(peopleMacroThin / 1e6).toFixed(0)}M at a 100 kbps voice/text class</span></div></div>
           <div className="stat" style={{ borderColor: C.green }}><div className="statL">Ground layer, all three tiers</div><div className="statV" style={{ fontSize: 22, color: C.green }}>{(peopleGround / 1e6).toFixed(0)}M<span style={{ fontSize: 12, color: C.dim }}> served · coverage {(unionFrac * 100).toFixed(0)}% · headroom ×{gMult.toFixed(1)} ({(femSubCap / 1e6).toFixed(0)}M boxes + {(macroSubCap / 1e6).toFixed(0)}M floor)</span></div></div>
         </div>
+
         <div style={{ overflowX: "auto", marginTop: 10 }}>
-          <div className="statL" style={{ marginBottom: 4 }}>WHAT IT TAKES — macro sites required to floor the metro footprint at {macroRkm.toFixed(1)} km cells, 2×{lowBand || 5} MHz, {macroEff.toFixed(1)} bps/Hz per sector</div>
+          <div className="statL" style={{ marginBottom: 4 }}>WHAT IT TAKES — the same tiering applied to the top-10 / top-25 / all 42 modelled clusters ({macroR.core.toFixed(1)} / {macroR.urban.toFixed(1)} / {macroR.sub.toFixed(1)} km · 2×{lowBand || 5} MHz · {macroEff.toFixed(1)} bps/Hz)</div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--mono)", fontSize: 11.5 }}>
-            <thead><tr style={{ color: C.dim, textAlign: "left" }}><th style={{ padding: "4px 8px" }}>CLUSTERS</th><th>PEOPLE</th><th>FOOTPRINT</th><th>SITES REQUIRED</th><th>CARRIES @ {minMbps} Mbps</th><th>CARRIES @ 100 kbps</th></tr></thead>
+            <thead><tr style={{ color: C.dim, textAlign: "left" }}><th style={{ padding: "4px 8px" }}>CLUSTERS</th><th>PEOPLE</th><th>FOOTPRINT</th><th>CORE</th><th>URBAN</th><th>SUBURBAN</th><th>SITES</th><th>CARRIES @ {minMbps} Mbps</th><th>@ 100 kbps</th></tr></thead>
             <tbody>
               {macroLadder.map((r, i) => (
                 <tr key={i} style={{ borderTop: `1px solid ${C.line}`, color: r.n === nMetros ? C.text : C.dim }}>
-                  <td style={{ padding: "4px 8px" }}>top-{r.n}{r.n === US_METROS.length ? " (all modelled)" : ""}</td>
-                  <td>{(r.pp / 1e6).toFixed(0)}M</td><td>{(r.kk / 1e3).toFixed(0)}k km²</td>
-                  <td style={{ color: C.red }}>{(r.req / 1e3).toFixed(1)}k</td>
-                  <td>{(Math.min(r.subs3, r.pp) / 1e6).toFixed(1)}M <span style={{ color: C.dim }}>({(Math.min(r.subs3, r.pp) / r.pp * 100).toFixed(0)}%)</span></td>
-                  <td>{(Math.min(r.subsThin, r.pp) / 1e6).toFixed(0)}M <span style={{ color: C.dim }}>({(Math.min(r.subsThin, r.pp) / r.pp * 100).toFixed(0)}%)</span></td>
+                  <td style={{ padding: "4px 8px" }}>top-{r.n}{r.n === US_METROS.length ? " (all)" : ""}</td>
+                  <td>{(r.pop / 1e6).toFixed(0)}M</td><td>{(r.area / 1e3).toFixed(0)}k km²</td>
+                  <td>{(r.tiers[0].sites / 1e3).toFixed(1)}k</td><td>{(r.tiers[1].sites / 1e3).toFixed(1)}k</td><td>{(r.tiers[2].sites / 1e3).toFixed(1)}k</td>
+                  <td style={{ color: C.red, fontWeight: 600 }}>{(r.req / 1e3).toFixed(1)}k</td>
+                  <td>{(Math.min(r.subs3, r.pop) / 1e6).toFixed(1)}M <span style={{ color: C.dim }}>({(Math.min(r.subs3, r.pop) / r.pop * 100).toFixed(0)}%)</span></td>
+                  <td>{(Math.min(r.subsThin, r.pop) / 1e6).toFixed(0)}M <span style={{ color: C.dim }}>({(Math.min(r.subsThin, r.pop) / r.pop * 100).toFixed(0)}%)</span></td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginTop: 4 }}>
-            for scale: the US has ~150k macro towers in total; the ≥80k reportedly in talks is about half of them. The site's metro set is 42 clusters (every ≥250/mi² census cell assigned to its nearest anchor), so "top-100" needs a rebuilt metro list — not yet done.
+        </div>
+
+        <div className="info" style={{ marginTop: 12, borderLeft: `2px solid ${C.amber}` }}>
+          <div className="statL" style={{ color: C.amber, marginBottom: 6 }}>WHAT THIS NUMBER IS — AND IS NOT (read before quoting it)</div>
+          <div className="body" style={{ fontSize: 12.5 }}>
+            <strong>What it is.</strong> The number of macro sites needed so that every census cell in the selected metro clusters sits inside a
+            planned grid of cells whose radius is set by that cell's population density. Three tiers, thresholds in people per square mile:
+            dense core ≥ 5,000 · urban 1,000–5,000 · suburban 250–1,000 (the cluster footprint stops at 250/mi²). Formula per tier:
+            sites = 1.05 × tier area ÷ πr², the same planned-grid overlap factor the pole tier uses; then summed.
+            <br /><br />
+            <strong>Where the radii come from.</strong> Core 1.5 km is a judgement for downtown low band on a coverage (not capacity) grid —
+            3GPP's urban-macro evaluation spacing is tighter (500–750 m inter-site distance, TR 38.901 / RAN4) but that spacing exists for
+            capacity on 100+ MHz, which a 2×5 MHz floor has no reason to copy. Suburban 4.0 km sits between RAN4's suburban-macro ISD class
+            (0.9 km, capacity-driven) and its rural class (6 km); urban 2.5 km is the midpoint. All three are buttons — change them and
+            every table recomputes.
+            <br /><br />
+            <strong>Calibration.</strong> T-Mobile runs its entire US network on roughly 82,000 macro sites. If about half sit inside these
+            42 clusters, that is ~40k sites over 600k km² — an implied blended radius of ~2.2 km for a capacity-driven carrier grid.
+            A coverage floor on 2×5 MHz should need fewer, and this model does: the all-42 total at the default radii is a fraction of
+            that, not a multiple. The ≥80k sites reportedly in SpaceX's tower talks is a national figure about half the US tower base;
+            it is shown as the "scaled from national" alternative, not used as a basis.
+            <br /><br />
+            <strong>What it is not.</strong> Not a prediction of any tower deal. Not a capacity network — the "carries" columns show
+            that at broadband rates (3 Mbps per active user) the floor serves about one per cent of the people it covers, and at a 100 kbps voice/text class about a fifth. With fewer, wider cells the floor is thinner still — the site count and the capacity move together, and both are shown.
+            Not terrain-aware: no clutter, no morphology beyond density, no reuse of existing sites. The raster is 40 km cells, so
+            downtown cores are blended with their suburbs and the core area (and its site count) is understated; a finer raster
+            would move some urban area into core and raise the total modestly.
           </div>
         </div>
+
         <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
-          Model (derived): coverage = sites × πr² ÷ (1.05 × metro area), capped at 100% — a planned grid, like poles; indoor
-          reach = 1 − ½ × hostile share (low band at 1 kW ERP class penetrates ordinary stock and loses half of hostile stock);
-          capacity = sites × 3 sectors × usable MHz × sector efficiency, converted to subscribers at the card's Mbps and
-          busy-hour share. The floor and the small-cell blanket combine as a union for coverage and a sum for capacity.
-          <strong> The doctrine this encodes:</strong> H-block and CBRS stay on small cells for capacity; 800 MHz goes on
-          towers for coverage. With CBRS at 0 the owned-only city network is this floor plus H-block boxes — the honest
-          no-CBRS case. Site radius is interference-limited in cities (1–2 km); 3 km is suburban. Macro site count, radius
-          and sector efficiency are all unmeasured for SpaceX — this card exists so the floor is sized rather than asserted.
+          Model (derived): coverage = Σ sites × πr² ÷ (1.05 × area) per tier, 100% by construction when "required to cover" is on;
+          indoor reach = 1 − ½ × hostile share; capacity = sites × 3 sectors × usable MHz × sector efficiency, converted to subscribers at
+          the card's Mbps and busy-hour share. The floor and the small-cell blanket combine as a union for coverage and a sum for capacity.
+          <strong> Doctrine encoded:</strong> H-block and CBRS stay on small cells for capacity; 800 MHz goes on towers for coverage —
+          with CBRS at 0 the owned-only city network is this floor plus H-block boxes.
         </p>
       </div>
       </>)}
@@ -7309,7 +7396,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v149 · macro floor sized by what it takes to cover</span>
+        <span className="buildTag">build v150 · macro floor tiered by density — the defensible count</span>
           <div style={{ marginTop: 6 }}><span style={{ display: "inline-block", fontFamily: "var(--mono)", fontSize: 10.5, color: C.amber, border: `1px solid ${C.amber}`, borderRadius: 5, padding: "2px 8px", opacity: 0.9 }}>Base case: assumes SpaceX acquires Grain's 800 MHz licenses (pending) · agreement Oct 8 · NPRM vote Oct 29 · D2D filing due Dec 4, 2026</span></div>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
