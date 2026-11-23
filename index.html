@@ -59,6 +59,7 @@ const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const BEAM_AREA_800 = Math.PI * (BEAM_KM_800 / 2) * (BEAM_KM_800 / 2); // ~332 km² nadir cell at 865.5 MHz
 const CHANGELOG = [
+  { v: "v153", d: "Two robustness tools, after Nick asked whether the undisclosed 2027 beam size undermines the site. (1) Serviceability gains a 2027 beam-size selector \u2014 4.4 km floor \u00b7 8.9 km center \u00b7 19.9 km upper \u2014 and the chain now states the beams actually used (the old text always said ~700, even when fewer wide beams fit a patch). (2) The Verdict gains \u2018What would change the verdict?\u2019: ten assumptions (efficiency, beam size, beam count, fleet, lowest usable angle, CBRS, the 800 MHz layer, speed per user, busy-hour activity, elevation treatment), each moved to its bear-side and bull-side end with everything else canonical, plus all-at-once stress rows, showing orbit-alone and hybrid reach and coverage continuity. To make that table honest, the Serviceability equations were lifted into one function (svcModel) that both the tab and the table call \u2014 the canonical outputs are unchanged (9.0 M orbit-alone, 101 M hybrid)." },
   { v: "v152", d: "Today\u2019s D2C fleet altitude corrected site-wide: the first-generation direct-to-cell satellites fly in shells at ~360 km (53\u00b0) and ~358.5 km (43\u00b0) per SpaceX\u2019s own space-safety altitude table, lowered from ~525\u2013535 km under the FCC\u2019s Nov 2024 grant \u2014 not the ~530 km the Gen1 beam arithmetic still assumed. Beam size scales with distance, so the filed Schedule S beam classes now read ~43 / 31 / 22 / 16 km at nadir (\u00bc / \u00bd / 1 / 2 panels) instead of 64 / 45 / 32 / 23, and the whole-array ideal ~11 km instead of ~16. Ookla\u2019s measured ~38 km effective beam doesn\u2019t move \u2014 it is a measurement \u2014 but from ~360 km it sits between the \u00bd- and \u00bc-panel classes, so in-service Gen1 beams stay ~30\u201345 km and are evidently formed on smaller sub-panels than the old reading implied. Updated: the beam-ladder note, the beam-size lab presets, the Beam receipts (altitude, Schedule S, Ookla, arithmetic rows), the Technology generation card and per-satellite budget card (footprint ~1,320 km across, ~4% lit), the \u201860-second\u2019 beam explainer, and the cell-isolation note. The 2027 bracket (4.4 / 8.9 / 19.9 km at 330 km) is computed from aperture alone, so no capacity, serviceability or verdict number changes." },
   { v: "v151", d: "Coverage continuity, simulated instead of assumed. Panel 1\u2019s satellite count was a 3.3\u00d7 rule of thumb calibrated to \u2018650 satellites \u2248 continuous 25\u00b0 from 530 km\u2019 \u2014 but today\u2019s D2C satellites fly at ~360 km, and at the 2027 altitude (330 km) that same rule says ~1,436, while every fleet slider started at 650 and read as continuous. Replaced with a Walker-delta orbit simulation (53\u00b0, circular orbits, Earth rotation, CONUS 25\u201349\u00b0N on a 0.5\u00b0\u00d71.5\u00b0 grid, 20 s steps over 24 h): a perfectly phased constellation with every satellite working is gap-free at 25\u00b0 from ~720 satellites (~1,650 at 35\u00b0, ~3,350 at 45\u00b0); with 5% of satellites out, gaps only become rare (~15 s a day) at ~1,400 \u2014 which is where the old 3.3\u00d7 factor lands, so it survives as the realistic threshold, re-justified. Panel 1 shows both numbers, a latitude-reach readout (53\u00b0 shells stop near 58.5\u00b0N \u2014 most of Alaska is outside; 43\u00b0 shells stop near 48.5\u00b0N), and an 800 MHz what-if (a 20\u00b0 mask would cut the perfect minimum to ~580). Every fleet slider now carries a continuity bar (red below the perfect minimum, amber to the realistic one, green beyond) with gap minutes per day and the longest gap. Panel 1c gains a 2 GHz / 800 MHz toggle: the patch is identical (fleet only), but 800 MHz cells are ~5.3\u00d7 fewer, so 700 beams light the whole patch from ~1,070 satellites \u2014 temporal continuity, not geometric. The deployment clock now times the two continuity thresholds instead of an illustrative 2,000." },
   { v: "v150", d: "Tier 3 macro floor rebuilt as a density-tiered requirement. The sized count now leads wherever the site previously quoted the reported 80k-site talks as doctrine — Hybrid Network layer card, Serviceability doctrine, Verdict watch item — each pointing to the Tier 3 card for the defence. Every raster cell in the selected clusters is classed dense core (≥5,000/mi²), urban (1,000–5,000) or suburban (250–1,000), each tier gets its own cell radius (defaults 1.5 / 2.5 / 4.0 km, per-tier buttons), and sites = Σ 1.05 × tier area ÷ πr². The card now shows the delineation table (threshold, radius, basis), the per-tier site table for the selected clusters, the top-10/25/42 ladder split by tier, and a \u2018what this number is and is not\u2019 box with the calibration against T-Mobile\u2019s ~82k-site national network (~40k carrier-grid sites implied inside these 42 clusters at ~2.2 km blended; a 2×5 MHz coverage floor needs fewer) and the raster\u2019s 40 km limitation. Replaces the flat 1.5 km radius of v148–149, which over-counted sites 3–5× by applying downtown spacing to a footprint that is 77% suburban by area." },
@@ -1783,6 +1784,7 @@ const VER_SECTIONS = [
   { id: "ver-cases", label: "Bull v Bear" },
   { id: "ver-yardstick", label: "The competitive yardstick" },
   { id: "ver-selfcarry", label: "The other scoreboard" },
+  { id: "ver-sens", label: "What would change the verdict?" },
   { id: "ver-watch", label: "Eight things to watch" },
 ];
 
@@ -1896,6 +1898,142 @@ function SelfCarryCard() {
         hybrid bracket is 87\u2013101M served. Assumption types: traffic mix = industry convention; bands + 111M =
         claim-anchored (Barros, Aug 2026); cable barter/JV = this site’s extension — no deal exists or is reported;
         cable-desert cap = industry-attested.
+      </p>
+    </div>
+  );
+}
+
+/* v153: one-at-a-time sensitivity on the Serviceability model (svcModel). Each row moves ONE assumption to the
+   bear-side or bull-side end of its labelled range and re-runs the exact Serviceability equations. */
+const SENS_ROWS = [
+  { k: "Throughput per MHz", why: "spectral efficiency — the bracket at the heart of the debate", tag: "measured ↔ claim-anchored",
+    lo: ["0.62 bps/Hz · measured", { effMode: "meas" }], c: "2.48 · claim-anchored", hi: null, hiNote: "7.5 is a one-user peak, not an average" },
+  { k: "2027 beam size", why: "undisclosed; bracket from aperture physics", tag: "derived",
+    lo: ["19.9 km · upper", { beamKm: BEAM_MAX_KM }], c: "8.9 km · center", hi: ["4.4 km · floor", { beamKm: BEAM_FLOOR_KM }] },
+  { k: "Beams per satellite", why: "undisclosed; ~700-class derived from the 16× claim", tag: "derived",
+    lo: ["~64 · the other reading of “20×20”", { nBeams: 64 }], c: "~700", hi: null, hiNote: "no claim supports more" },
+  { k: "Fleet size", why: "authorized up to 15,000; launch cadence decides", tag: "claim-anchored",
+    lo: ["2,000", { fleet: 2000 }], c: "5,000", hi: ["15,000", { fleet: 15000 }] },
+  { k: "Lowest usable satellite angle", why: "open sky 25°, trees 35°, suburbs 45° — moves continuity, not capacity", tag: "derived",
+    lo: ["45°", { mask: 45 }], c: "25° · open sky", hi: null, hiNote: "25° is already the open-sky best case" },
+  { k: "CBRS for the ground layer", why: "not SpaceX's; PALs reportedly shopped to Verizon", tag: "claim-anchored",
+    lo: ["none", { cbrs: 0 }], c: "15 MHz", hi: ["40 MHz", { cbrs: 40 }] },
+  { k: "800 MHz (Grain) layer", why: "pending FCC consent and satellite eligibility", tag: "pending",
+    lo: ["off", { lowBand: 0 }], c: "5 MHz · B26", hi: ["7 MHz · n26", { lowBand: 7 }] },
+  { k: "Speed per active user", why: "the service promise", tag: "derived",
+    lo: ["10 Mbps", { minMbps: 10 }], c: "3 Mbps", hi: ["1 Mbps", { minMbps: 1 }] },
+  { k: "Busy-hour activity", why: "share of subscribers online at the peak", tag: "derived",
+    lo: ["20%", { activePct: 20 }], c: "10%", hi: ["5%", { activePct: 5 }] },
+  { k: "Beam rate vs elevation", why: "nadir ceiling or elevation-adjusted (Serviceability toggle)", tag: "derived",
+    lo: ["elevation-adjusted", { beamMode: "elev" }], c: "nadir ceiling", hi: null, hiNote: "the ceiling is already the generous case" },
+];
+function sensRun(over) {
+  const base = svcCanonState();
+  const o = { ...over };
+  const mask = o.mask || 25; delete o.mask;
+  if (o.cbrs !== undefined) { base.femMhz = Math.max(1, Math.round(groundSpec("canon", o.cbrs, false).dl)); delete o.cbrs; }
+  const st = { ...base, ...o };
+  const m = svcModel(st);
+  return { orbit: m.popServ, orbitPct: (m.popServ / m.popTot) * 100, hyb: m.hybServ, hybPct: (m.hybServ / m.hybTot) * 100,
+    cont: contState(st.fleet, 330, mask), head: m.popM > 0 ? m.gCap / m.popM : 0 };
+}
+function VerdictSensitivity() {
+  const canon = sensRun({});
+  const runs = SENS_ROWS.map((r) => ({ r, lo: r.lo ? sensRun(r.lo[1]) : null, hi: r.hi ? sensRun(r.hi[1]) : null }));
+  const ALL_BEAR = Object.assign({}, ...SENS_ROWS.filter((r) => r.lo).map((r) => r.lo[1]));
+  const ALL_BULL = Object.assign({}, ...SENS_ROWS.filter((r) => r.hi).map((r) => r.hi[1]));
+  const bearAll = sensRun(ALL_BEAR), bullAll = sensRun(ALL_BULL);
+  const singles = runs.flatMap((x) => [x.lo, x.hi].filter(Boolean)).concat([canon]);
+  const oMin = Math.min(...singles.map((x) => x.orbitPct)), oMax = Math.max(...singles.map((x) => x.orbitPct));
+  const hMin = Math.min(...singles.map((x) => x.hybPct)), hMax = Math.max(...singles.map((x) => x.hybPct));
+  const FLIP_ORBIT = 25, FLIP_HYB = 15; // a mass-market satellite network, or a hybrid that collapses to a niche
+  const flips = singles.some((x) => x.orbitPct >= FLIP_ORBIT || x.hybPct < FLIP_HYB);
+  const fM = (p) => (p >= 10e6 ? Math.round(p / 1e6) : (p / 1e6).toFixed(1)) + " M";
+  const tagCol = (t) => (t.startsWith("measured") ? "#6BDB8F" : t === "derived" ? "#C79BFF" : t === "pending" ? C.amber : C.blue);
+  const contDot = (c) => <span title="coverage continuity (orbit simulation, 5% of fleet out)" style={{ color: c.tier === "red" ? C.red : c.tier === "amber" ? C.amber : C.green }}>●</span>;
+  const Cell = ({ x, lab, note, isC }) => (
+    <td style={{ padding: "7px 8px", verticalAlign: "top", borderBottom: `1px solid ${C.line}`, background: isC ? "rgba(255,180,84,0.06)" : "transparent" }}>
+      {x ? (
+        <>
+          <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginBottom: 2 }}>{lab}</div>
+          <div style={{ fontSize: 13 }}>
+            <span style={{ color: x.orbitPct >= FLIP_ORBIT ? C.red : C.text }}>orbit {fM(x.orbit)}</span>
+            <span style={{ color: C.dim }}> ({x.orbitPct.toFixed(1)}%)</span>
+          </div>
+          <div style={{ fontSize: 13 }}>
+            <span style={{ color: x.hybPct < FLIP_HYB ? C.red : C.text }}>hybrid {fM(x.hyb)}</span>
+            <span style={{ color: C.dim }}> ({x.hybPct.toFixed(0)}%)</span> {contDot(x.cont)}
+          </div>
+        </>
+      ) : <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim }}>{note || "—"}</div>}
+    </td>
+  );
+  return (
+    <div className="card" id="ver-sens" style={{ borderLeft: `2px solid ${C.amber}`, marginTop: 16 }}>
+      <div className="eyebrow" style={{ color: C.amber }}>What would change the verdict? — every major assumption, moved one at a time</div>
+      <p className="body" style={{ marginBottom: 10 }}>
+        The verdict rests on two numbers from the Serviceability tab: how many Americans the satellites alone can carry,
+        and how many the hybrid network (orbit plus the ground layer in the top-10 metros) reaches. This table re-runs
+        exactly those equations with one assumption pushed to the bear-side or bull-side end of its labelled range and
+        everything else held at the canonical case. The dot is coverage continuity at that fleet and angle
+        (<span style={{ color: C.green }}>●</span> gaps rare · <span style={{ color: C.amber }}>●</span> gaps come and go ·
+        <span style={{ color: C.red }}> ●</span> regular gaps).
+      </p>
+      <div className="indoorNote" style={{ borderColor: flips ? C.red : C.green, marginBottom: 12 }}>
+        <strong style={{ color: flips ? C.red : C.green }}>{flips ? "At least one assumption flips the verdict." : "No single assumption flips the verdict."}</strong>{" "}
+        Across every row, orbit alone carries <strong>{oMin.toFixed(1)}–{oMax.toFixed(1)}%</strong> of the continental US
+        and the hybrid network <strong>{hMin.toFixed(0)}–{hMax.toFixed(0)}%</strong>. The verdict — a coverage product with a
+        city ground layer, not a fourth carrier like the other three — would flip only if orbit alone could carry a mass
+        market (here: {FLIP_ORBIT}%+ of Americans) or the hybrid collapsed to a niche (under {FLIP_HYB}%).
+        {!flips && (bearAll.hybPct < FLIP_HYB || bullAll.orbitPct >= FLIP_ORBIT) && <>{" "}Only the all-at-once stress rows cross a line:
+        every bear-side end together takes the hybrid to {bearAll.hybPct.toFixed(0)}%, and every bull-side end together lifts
+        orbit alone to {bullAll.orbitPct.toFixed(0)}% — which takes the 1 Mbps service promise, a 5% busy hour, 15,000
+        satellites and 4.4 km beams all at the same time.</>}
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
+          <thead>
+            <tr style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, textAlign: "left", letterSpacing: "0.06em" }}>
+              <th style={{ padding: "6px 8px", borderBottom: `1px solid ${C.line}` }}>ASSUMPTION</th>
+              <th style={{ padding: "6px 8px", borderBottom: `1px solid ${C.line}` }}>BEAR-SIDE END</th>
+              <th style={{ padding: "6px 8px", borderBottom: `1px solid ${C.line}`, color: C.amber }}>CANONICAL</th>
+              <th style={{ padding: "6px 8px", borderBottom: `1px solid ${C.line}` }}>BULL-SIDE END</th>
+            </tr>
+          </thead>
+          <tbody>
+            {runs.map(({ r, lo, hi }) => (
+              <tr key={r.k}>
+                <td style={{ padding: "7px 8px", verticalAlign: "top", borderBottom: `1px solid ${C.line}`, maxWidth: 230 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{r.k}</div>
+                  <div style={{ fontSize: 11, color: C.dim }}>{r.why} · <span style={{ color: tagCol(r.tag) }}>{r.tag}</span></div>
+                  {r.k.startsWith("CBRS") && lo && hi && (
+                    <div style={{ fontSize: 11, color: C.amber, marginTop: 3 }}>moves the city layer's headroom, not its reach: ×{lo.head.toFixed(1)} → ×{canon.head.toFixed(1)} → ×{hi.head.toFixed(1)} capacity over demand — at ×1 the boxes are full at the busy hour</div>
+                  )}
+                </td>
+                <Cell x={lo} lab={r.lo && r.lo[0]} note={r.loNote} />
+                <Cell x={canon} lab={r.c} isC />
+                <Cell x={hi} lab={r.hi && r.hi[0]} note={r.hiNote} />
+              </tr>
+            ))}
+            <tr>
+              <td style={{ padding: "9px 8px", verticalAlign: "top", borderTop: `2px solid ${C.line}` }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>Everything at once</div>
+                <div style={{ fontSize: 11, color: C.dim }}>every row at the same end together — a stress test, not a forecast</div>
+              </td>
+              <Cell x={bearAll} lab="all bear-side ends" />
+              <Cell x={canon} lab="canonical" isC />
+              <Cell x={bullAll} lab="all bull-side ends" />
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 10 }}>
+        How to read it: the beam size, beam count, efficiency and fleet rows move the satellite number; CBRS and the
+        800 MHz layer move the city number; the angle row moves only continuity. Hybrid reach stays close to its
+        canonical value in most rows because the ground layer, not the satellites, carries the metros — which is the
+        verdict's point. "Everything at once" is deliberately extreme: it shows the walls of the box, not where reality
+        sits. Ranges come from the labelled brackets elsewhere on the site; change any of them on Serviceability and the
+        numbers there match the row here. Derived.
       </p>
     </div>
   );
@@ -2057,6 +2195,7 @@ function VerdictTab() {
       </div>
 
       <SelfCarryCard />
+      <VerdictSensitivity />
       <div className="card" id="ver-watch">
         <div className="eyebrow">Eight things that decide it — watch these</div>
         <div className="benchGrid">
@@ -6241,46 +6380,12 @@ function macroTiering(n, R) {
   return { n, tiers, area, pop, req: tiers.reduce((a, t) => a + t.sites, 0) };
 }
 
-function ServiceabilityTab() {
-  /* anchor for deep links */
-  const [mhz, setMhz] = useState(20);
-  const [fleet, setFleet] = useState(5000);
-  const [minMbps, setMinMbps] = useState(3);
-  const [activePct, setActivePct] = useState(10);
-  const [effMode, setEffMode] = useState("claim");
-  const [layer, setLayer] = useState("serve");
-  const [stSel, setStSel] = useState(-1);
-  const [nMetros, setNMetros] = useState(10);
-  const [band, setBand] = useState("2ghz");
-  const [femMhz, setFemMhz] = useState(5);
-  const [femEff, setFemEff] = useState(3);
-  const [covT, setCovT] = useState(90);
-  const [depMode, setDepMode] = useState("organic");
-  const [hostile, setHostile] = useState(40);
-  const [strategy, setStrategy] = useState("sidewalk");
-  const [clsDbm, setClsDbm] = useState(38);   // outdoor equipment class: 20 femto · 30 rooftop SC · 38 pole SC
-  const [scenario, setScenario] = useState("canon");
-  const [strandPct, setStrandPct] = useState(0);   // share of metro coverage carried by cable strand cells under a JV
-  const [mixRoof, setMixRoof] = useState(60);      // rooftop share of the mixed SpaceX build (%)
-  const [roofClu, setRoofClu] = useState(false);   // rooftop adoption clusters (organic ×1.4)
-  const [ovJv, setOvJv] = useState("none");        // none | barter | jv — the metro build's partnership posture
-  const [spareCap, setSpareCap] = useState(50);    // barter: share of cable-radio capacity actually spare for SpaceX subs (%)
-  useEffect(() => { setStrandPct(ovJv === "jv" ? 60 : ovJv === "barter" ? 10 : 0); }, [ovJv]);
-  const [cbrsMhz, setCbrsMhz] = useState(15);
-  const gSpec = groundSpec(scenario, cbrsMhz, ovJv === "jv");
-  const satSpec = SPEC_SCEN.find((x) => x.k === (SITE_SCEN.find((z) => z.k === scenario) || SITE_SCEN[1]).spec) || SPEC_SCEN[1];
-  useEffect(() => { setFemMhz(Math.max(1, Math.round(groundSpec(scenario, cbrsMhz, ovJv === "jv").dl))); }, [scenario, cbrsMhz, ovJv]);
-  const [sub, setSub] = useState("map");
-  useEffect(() => {
-    const sc = SITE_SCEN.find((x) => x.k === scenario);
-    if (!sc) return;
-    setClsDbm(sc.clsDbm);
-    setBand(sc.ovBand);
-    setMhz(sc.mapDl);   // satellite side of THIS card must track the scenario's spectrum too
-    // ground DL now comes from the explicit per-scenario spectrum ledger (see header)
-  }, [scenario]);
-  const [popMode, setPopMode] = useState("uniform");
-  const [beamMode, setBeamMode] = useState("ceiling"); // "ceiling" = nadir-class · "elev" = elevation-adjusted
+/* v153: the Serviceability model as one pure function. ServiceabilityTab renders it; The Verdict's
+   sensitivity table re-runs it with one assumption moved — so both always use the same equations. */
+function svcModel(S) {
+  const { mhz, fleet, minMbps, activePct, effMode, stSel, nMetros, band, femMhz, femEff, covT, depMode, hostile, strategy, clsDbm, strandPct, mixRoof, roofClu, ovJv, spareCap, popMode, beamMode, lowBand, macroOn, macroBasis, macroNat, macroCustom, macroR, macroEff, beamKm = BEAM_KM, nBeams = 700 } = S;
+  const B_AREA = Math.PI * (beamKm / 2) * (beamKm / 2);   // nadir cell at the chosen 2027 beam
+  const B_KM_800 = (beamKm * 2.0) / ESMR.dlGHz;            // same aperture at 865.5 MHz
   const eff = effMode === "claim" ? 2.48 : 0.62;
   const areaPer = 510e6 / fleet;
   // ---- serving geometry first: elevation sets the reuse regime, which sets usable MHz ----
@@ -6290,22 +6395,15 @@ function ServiceabilityTab() {
   const cellElev = (Math.atan2(Math.cos(lamCell) - RE_KM / (RE_KM + H_KM), Math.sin(lamCell)) * 180) / Math.PI;
   const sinE = Math.sin((Math.max(cellElev, 8) * Math.PI) / 180);
   const usableMHz = cellElev >= 60 ? mhz : cellElev >= 42 ? (mhz * 2) / 3 : mhz / 3; // Panel 3's reuse thirds
-  const [lowBand, setLowBand] = useState(5);            // 800 MHz layer (pending): 0 off · 5 B26 base · 7 n26
   // ---- tier 3 (v148): the 800 MHz MACRO floor on leased towers — coverage, not capacity ----
-  const [macroOn, setMacroOn] = useState(true);          // on under the base case (assumes the Grain transfer clears)
-  const [macroBasis, setMacroBasis] = useState("cover");  // "cover": sites REQUIRED to tile the selected metros at the chosen radius (default, v149) · "scaled": national count × metro share of US pop · "custom": set directly
-  const [macroNat, setMacroNat] = useState(80000);        // national sites reportedly in talks (Bloomberg, Oct 22 2026) — about half the US tower base
-  const [macroCustom, setMacroCustom] = useState(20000);  // DISH–Crown Castle 2020 (20k) as the quarter-scale precedent
-  const [macroR, setMacroR] = useState({ core: 1.5, urban: 2.5, sub: 4.0 });  // v150: per-tier cell radius, km (see MACRO_TIERS)
-  const [macroEff, setMacroEff] = useState(1.5);          // sector-average spectral efficiency, bps/Hz (LTE macro class)
   const perBeamNadir = eff * mhz;                       // ceiling: beam straight overhead, full pool
   const perBeamElev = usableMHz * eff * sinE;           // Panel 3's model at this fleet's elevation
   const perBeam = beamMode === "elev" ? perBeamElev : perBeamNadir;
-  const beamsUsable = Math.min(700, areaPer / BEAM_AREA); // beyond ~11.7k satellites a patch can’t hold 700 beams of this size (v92)
+  const beamsUsable = Math.min(nBeams, areaPer / B_AREA); // beyond ~11.7k satellites a patch can’t hold 700 beams of this size (v92)
   const satCapMbps = beamsUsable * perBeam;
   // ---- the pending 800 MHz layer: its own ~21 km beams, area-weighted cells (Panel 3b convention) ----
-  const stats800 = patchStats(fleet, BEAM_KM_800, ESMR.beams);
-  const beams800 = lowBand ? Math.min(ESMR.beams, stats800.N) : 0;
+  const stats800 = patchStats(fleet, B_KM_800, nBeams);
+  const beams800 = lowBand ? Math.min(nBeams, stats800.N) : 0;
   const perBeam800 = lowBand ? (beamMode === "elev" ? lowBand * eff * sinE : lowBand * eff) : 0;
   const satCap800 = beams800 * perBeam800;
   const satCapTotal = satCapMbps + satCap800;
@@ -6313,10 +6411,10 @@ function ServiceabilityTab() {
   const servDens = satCapTotal / areaPer / minMbps / (activePct / 100); // servable subscribers per km²
   const feederFlag = satCapTotal > 100000;
   // ---- the typical cell ----
-  const beamAlong = BEAM_KM / (sinE * sinE);      // stretch along the look direction
-  const beamAcross = BEAM_KM / sinE;              // slant widening
+  const beamAlong = beamKm / (sinE * sinE);      // stretch along the look direction
+  const beamAcross = beamKm / sinE;              // slant widening
   const cellAreaKm2 = (Math.PI / 4) * beamAlong * beamAcross;
-  const dutyFrac = patchStats(fleet).duty;   // area-weighted cell count (Panel 3b), not nadir-sized
+  const dutyFrac = patchStats(fleet, beamKm, nBeams).duty;   // area-weighted cell count (Panel 3b), not nadir-sized
   const cellAvgMbps = perBeam * dutyFrac;     // averaged over the hop schedule
   const cellSubs = servDens * cellAreaKm2;    // subscribers this cell can carry
   const cellActive = cellSubs * (activePct / 100);
@@ -6457,6 +6555,70 @@ function ServiceabilityTab() {
     const p = c.d * CELLA; hybTot += p;
     hybServ += (c.mi >= 0 && c.mi < nMetros) ? p * servedFracCap : p * Math.min(1, servDens / c.d);
   }
+  return { eff, areaPer, H_KM, RE_KM, cellSpacing, lamCell, cellElev, sinE, usableMHz, perBeamNadir, perBeamElev, perBeam, beamsUsable, satCapMbps, stats800, beams800, perBeam800, satCap800, satCapTotal, satsUS, servDens, feederFlag, beamAlong, beamAcross, cellAreaKm2, dutyFrac, cellAvgMbps, cellSubs, cellActive, cellReuse, cellPts, satVacatesMetros, CELLA, cellsIn, popTot, popServ, landFull, natPct, landPct, scopeName, fG, MIX_ROOF, rPoleK, rRoofK, rOut, rIn, rFem, Cf, cellAf, lamOrg, lam, metroSel, popM, areaM, mixMode, strandShare, lamPoleP, lamRoofO, lamStr, areaResid, mixRoofBoxes, mixPoleBoxes, strandBoxes, spxBoxes, femtos, perFemMbps, subsPerFem, strandPerMbps, subsPerStrand, femSubCap, popUS, macroSel, macroReq, macroSites, macroCovFrac, macroIndoor, macroServedFrac, macroCapMbps, macroSubCap, peopleMacro, macroThinSubs, peopleMacroThin, macroLadder, gCap, servedFrac, peopleFem, unionFrac, servedFracCap, peopleGround, hybServ, hybTot };
+}
+// the canonical inputs exactly as ServiceabilityTab starts (scenario 'canon' effects applied)
+function svcCanonState() {
+  const sc = SITE_SCEN.find((x) => x.k === "canon");
+  return { mhz: sc.mapDl, fleet: 5000, minMbps: 3, activePct: 10, effMode: "claim", stSel: -1, nMetros: 10,
+    band: sc.ovBand, femMhz: Math.max(1, Math.round(groundSpec("canon", 15, false).dl)), femEff: 3, covT: 90,
+    depMode: "organic", hostile: 40, strategy: "sidewalk", clsDbm: sc.clsDbm, strandPct: 0, mixRoof: 60,
+    roofClu: false, ovJv: "none", spareCap: 50, popMode: "uniform", beamMode: "ceiling", lowBand: 5,
+    macroOn: true, macroBasis: "cover", macroNat: 80000, macroCustom: 20000, macroR: { core: 1.5, urban: 2.5, sub: 4.0 },
+    macroEff: 1.5, beamKm: BEAM_KM, nBeams: 700 };
+}
+
+function ServiceabilityTab() {
+  /* anchor for deep links */
+  const [mhz, setMhz] = useState(20);
+  const [fleet, setFleet] = useState(5000);
+  const [minMbps, setMinMbps] = useState(3);
+  const [activePct, setActivePct] = useState(10);
+  const [effMode, setEffMode] = useState("claim");
+  const [layer, setLayer] = useState("serve");
+  const [stSel, setStSel] = useState(-1);
+  const [nMetros, setNMetros] = useState(10);
+  const [band, setBand] = useState("2ghz");
+  const [femMhz, setFemMhz] = useState(5);
+  const [femEff, setFemEff] = useState(3);
+  const [covT, setCovT] = useState(90);
+  const [depMode, setDepMode] = useState("organic");
+  const [hostile, setHostile] = useState(40);
+  const [strategy, setStrategy] = useState("sidewalk");
+  const [clsDbm, setClsDbm] = useState(38);   // outdoor equipment class: 20 femto · 30 rooftop SC · 38 pole SC
+  const [scenario, setScenario] = useState("canon");
+  const [strandPct, setStrandPct] = useState(0);   // share of metro coverage carried by cable strand cells under a JV
+  const [mixRoof, setMixRoof] = useState(60);      // rooftop share of the mixed SpaceX build (%)
+  const [roofClu, setRoofClu] = useState(false);   // rooftop adoption clusters (organic ×1.4)
+  const [ovJv, setOvJv] = useState("none");        // none | barter | jv — the metro build's partnership posture
+  const [spareCap, setSpareCap] = useState(50);    // barter: share of cable-radio capacity actually spare for SpaceX subs (%)
+  useEffect(() => { setStrandPct(ovJv === "jv" ? 60 : ovJv === "barter" ? 10 : 0); }, [ovJv]);
+  const [cbrsMhz, setCbrsMhz] = useState(15);
+  const gSpec = groundSpec(scenario, cbrsMhz, ovJv === "jv");
+  const satSpec = SPEC_SCEN.find((x) => x.k === (SITE_SCEN.find((z) => z.k === scenario) || SITE_SCEN[1]).spec) || SPEC_SCEN[1];
+  useEffect(() => { setFemMhz(Math.max(1, Math.round(groundSpec(scenario, cbrsMhz, ovJv === "jv").dl))); }, [scenario, cbrsMhz, ovJv]);
+  const [sub, setSub] = useState("map");
+  useEffect(() => {
+    const sc = SITE_SCEN.find((x) => x.k === scenario);
+    if (!sc) return;
+    setClsDbm(sc.clsDbm);
+    setBand(sc.ovBand);
+    setMhz(sc.mapDl);   // satellite side of THIS card must track the scenario's spectrum too
+    // ground DL now comes from the explicit per-scenario spectrum ledger (see header)
+  }, [scenario]);
+  const [popMode, setPopMode] = useState("uniform");
+  const [beamMode, setBeamMode] = useState("ceiling"); // "ceiling" = nadir-class · "elev" = elevation-adjusted
+  const [lowBand, setLowBand] = useState(5);            // 800 MHz layer (pending): 0 off · 5 B26 base · 7 n26
+  const [macroOn, setMacroOn] = useState(true);          // on under the base case (assumes the Grain transfer clears)
+  const [macroBasis, setMacroBasis] = useState("cover");  // "cover": sites REQUIRED to tile the selected metros at the chosen radius (default, v149) · "scaled": national count × metro share of US pop · "custom": set directly
+  const [macroNat, setMacroNat] = useState(80000);        // national sites reportedly in talks (Bloomberg, Oct 22 2026) — about half the US tower base
+  const [macroCustom, setMacroCustom] = useState(20000);  // DISH–Crown Castle 2020 (20k) as the quarter-scale precedent
+  const [macroR, setMacroR] = useState({ core: 1.5, urban: 2.5, sub: 4.0 });  // v150: per-tier cell radius, km (see MACRO_TIERS)
+  const [macroEff, setMacroEff] = useState(1.5);          // sector-average spectral efficiency, bps/Hz (LTE macro class)
+  const [beamSel, setBeamSel] = useState(BEAM_KM);   // v153: 2027 beam size is undisclosed — floor / center / upper
+  const {
+    eff, areaPer, H_KM, RE_KM, cellSpacing, lamCell, cellElev, sinE, usableMHz, perBeamNadir, perBeamElev, perBeam, beamsUsable, satCapMbps, stats800, beams800, perBeam800, satCap800, satCapTotal, satsUS, servDens, feederFlag, beamAlong, beamAcross, cellAreaKm2, dutyFrac, cellAvgMbps, cellSubs, cellActive, cellReuse, cellPts, satVacatesMetros, CELLA, cellsIn, popTot, popServ, landFull, natPct, landPct, scopeName, fG, MIX_ROOF, rPoleK, rRoofK, rOut, rIn, rFem, Cf, cellAf, lamOrg, lam, metroSel, popM, areaM, mixMode, strandShare, lamPoleP, lamRoofO, lamStr, areaResid, mixRoofBoxes, mixPoleBoxes, strandBoxes, spxBoxes, femtos, perFemMbps, subsPerFem, strandPerMbps, subsPerStrand, femSubCap, popUS, macroSel, macroReq, macroSites, macroCovFrac, macroIndoor, macroServedFrac, macroCapMbps, macroSubCap, peopleMacro, macroThinSubs, peopleMacroThin, macroLadder, gCap, servedFrac, peopleFem, unionFrac, servedFracCap, peopleGround, hybServ, hybTot,
+  } = svcModel({ mhz, fleet, minMbps, activePct, effMode, stSel, nMetros, band, femMhz, femEff, covT, depMode, hostile, strategy, clsDbm, strandPct, mixRoof, roofClu, ovJv, spareCap, popMode, beamMode, lowBand, macroOn, macroBasis, macroNat, macroCustom, macroR, macroEff, beamKm: beamSel, nBeams: 700 });
   // map geometry: same frame as Panel 6
   const MW = 5140, kpx = 880 / MW, ox = 10, oy = 8;
   const cpx = US_DENS.cell * kpx;
@@ -6722,7 +6884,23 @@ function ServiceabilityTab() {
                 {lab}</button>
             ))}
           </span>
-          Chain: {mhz} MHz × {eff} bps/Hz = <strong style={{ color: C.text }}>{perBeam.toFixed(0)} Mbps/beam</strong> × ~700 beams =
+          <span style={{ display: "block", marginBottom: 7 }}>
+            <span style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginRight: 8 }}>2027 beam size (undisclosed) <Src k="antenna" topic="fleet" />:</span>
+            {[[BEAM_FLOOR_KM, "4.4 km · floor"], [BEAM_KM, "8.9 km · center"], [BEAM_MAX_KM, "19.9 km · upper"]].map(([v, lab]) => (
+              <button key={v} onClick={() => setBeamSel(v)} className="chip"
+                style={{ fontFamily: "var(--mono)", fontSize: 10.5, marginRight: 6, padding: "2px 8px", borderRadius: 5,
+                  border: `1px solid ${beamSel === v ? C.amber : C.line}`, color: beamSel === v ? C.amber : C.dim, background: "transparent", cursor: "pointer" }}>
+                {lab}</button>
+            ))}
+            <span style={{ fontSize: 11.5, color: C.dim }}>
+              {beamSel === BEAM_KM ? "the site's central case — every other tab uses it"
+                : beamSel < BEAM_KM ? "the physical floor: the whole 125 m² array on every beam — smaller beams don't add capacity here, they only lower duty"
+                : "Gen1-sized panels reused: fewer wide beams fit a patch without overlapping, so per-satellite capacity falls"}
+              {" · "}<button className="nextlink" style={{ display: "inline", margin: 0, padding: 0, fontSize: 11.5 }}
+                onClick={() => window.__navTo("verdict", "ver-sens")}>does it change the verdict? →</button>
+            </span>
+          </span>
+          Chain: {mhz} MHz × {eff} bps/Hz = <strong style={{ color: C.text }}>{perBeam.toFixed(0)} Mbps/beam</strong> × {Math.round(beamsUsable)} beams{beamsUsable < 699.5 ? ` (only ${Math.round(beamsUsable)} ${beamSel}-km beams fit a ~${Math.round(areaPer / 1000)}k km² patch without overlapping)` : ""} =
           <strong style={{ color: C.text }}> ~{(satCapMbps / 1000).toFixed(1)} Gbps/satellite</strong> at 2 GHz
           {lowBand > 0 && <span> + 800 MHz layer (pending): {lowBand} MHz × {eff} = {perBeam800.toFixed(1)} Mbps/beam × {Math.round(beams800)} beams (~{Math.round(stats800.A / Math.max(stats800.N, 1)).toLocaleString()} km² cells) = <strong style={{ color: C.amber }}>+{(satCap800 / 1000).toFixed(1)} Gbps</strong></span>}
           {" "}→ <strong style={{ color: C.text }}>~{(satCapTotal / 1000).toFixed(1)} Gbps/satellite total</strong> ÷ ~{Math.round(areaPer / 1000)}k km² patch ÷ {minMbps} Mbps ÷ {activePct}% active =
@@ -6797,7 +6975,7 @@ function ServiceabilityTab() {
               <div>
                 <div className="statL">Cell footprint</div>
                 <div className="statV" style={{ fontSize: 19 }}>{Math.round(cellAreaKm2)}<span style={{ fontSize: 11, color: C.dim }}> km²</span></div>
-                <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim }}>vs ~62 km² at nadir (8.9 km beam — Panel 1b bracket center)</div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: C.dim }}>vs ~{Math.round(Math.PI * (beamSel / 2) * (beamSel / 2))} km² at nadir ({beamSel} km beam — Panel 1b bracket {beamSel === BEAM_KM ? "center" : beamSel < BEAM_KM ? "floor" : "upper"})</div>
               </div>
               <div>
                 <div className="statL">Subscribers served here</div>
@@ -7570,7 +7748,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v152 · today's D2C fleet at ~360 km — Gen1 beam arithmetic corrected</span>
+        <span className="buildTag">build v153 · what would change the verdict — every assumption, moved one at a time</span>
           <div style={{ marginTop: 6 }}><span style={{ display: "inline-block", fontFamily: "var(--mono)", fontSize: 10.5, color: C.amber, border: `1px solid ${C.amber}`, borderRadius: 5, padding: "2px 8px", opacity: 0.9 }}>Base case: assumes SpaceX acquires Grain's 800 MHz licenses (pending) · agreement Oct 8 · NPRM vote Oct 29 · D2D filing due Dec 4, 2026</span></div>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
