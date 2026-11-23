@@ -41,8 +41,10 @@ const C = {
 // ---- Canonical beam model (v92) --------------------------------------------
 // Gen1 (V2-Mini D2C): FCC Schedule S (SAT-MOD-20230207-00021) files a 29/32/35/38 dBi
 // gain ladder that maps onto ¼/½/1/2 panels of the four-panel ~25 m² array (3 DL + 1 UL,
-// ~6.25 m² each) at a consistent ~92% aperture efficiency. One-panel beams ≈ 32 km at
-// nadir from 530 km; Ookla's Aug-2026 measurement (~38 km effective) sits mid-ladder.
+// ~6.25 m² each) at a consistent ~92% aperture efficiency. v152: the D2C shells fly at ~360 km
+// (SpaceX space-safety table: 360 km/53°, 358.5 km/43°), so one-panel beams ≈ 22 km at nadir and
+// the ladder reads ~43/31/22/16 km; Ookla's Aug-2026 measurement (~38 km effective) sits between
+// the ½- and ¼-panel classes. None of this moves the 2027 bracket below (aperture at 330 km).
 // 2027 dedicated D2C per-beam aperture is undisclosed → bracket:
 //   floor  4.4 km  (full 125 m² coherent — ideal; no flying system forms beams this way)
 //   center 8.9 km  (Gen1 panelization scaled 5× → ~31 m²/beam)  ← site-wide canonical
@@ -57,6 +59,7 @@ const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const BEAM_AREA_800 = Math.PI * (BEAM_KM_800 / 2) * (BEAM_KM_800 / 2); // ~332 km² nadir cell at 865.5 MHz
 const CHANGELOG = [
+  { v: "v152", d: "Today\u2019s D2C fleet altitude corrected site-wide: the first-generation direct-to-cell satellites fly in shells at ~360 km (53\u00b0) and ~358.5 km (43\u00b0) per SpaceX\u2019s own space-safety altitude table, lowered from ~525\u2013535 km under the FCC\u2019s Nov 2024 grant \u2014 not the ~530 km the Gen1 beam arithmetic still assumed. Beam size scales with distance, so the filed Schedule S beam classes now read ~43 / 31 / 22 / 16 km at nadir (\u00bc / \u00bd / 1 / 2 panels) instead of 64 / 45 / 32 / 23, and the whole-array ideal ~11 km instead of ~16. Ookla\u2019s measured ~38 km effective beam doesn\u2019t move \u2014 it is a measurement \u2014 but from ~360 km it sits between the \u00bd- and \u00bc-panel classes, so in-service Gen1 beams stay ~30\u201345 km and are evidently formed on smaller sub-panels than the old reading implied. Updated: the beam-ladder note, the beam-size lab presets, the Beam receipts (altitude, Schedule S, Ookla, arithmetic rows), the Technology generation card and per-satellite budget card (footprint ~1,320 km across, ~4% lit), the \u201860-second\u2019 beam explainer, and the cell-isolation note. The 2027 bracket (4.4 / 8.9 / 19.9 km at 330 km) is computed from aperture alone, so no capacity, serviceability or verdict number changes." },
   { v: "v151", d: "Coverage continuity, simulated instead of assumed. Panel 1\u2019s satellite count was a 3.3\u00d7 rule of thumb calibrated to \u2018650 satellites \u2248 continuous 25\u00b0 from 530 km\u2019 \u2014 but today\u2019s D2C satellites fly at ~360 km, and at the 2027 altitude (330 km) that same rule says ~1,436, while every fleet slider started at 650 and read as continuous. Replaced with a Walker-delta orbit simulation (53\u00b0, circular orbits, Earth rotation, CONUS 25\u201349\u00b0N on a 0.5\u00b0\u00d71.5\u00b0 grid, 20 s steps over 24 h): a perfectly phased constellation with every satellite working is gap-free at 25\u00b0 from ~720 satellites (~1,650 at 35\u00b0, ~3,350 at 45\u00b0); with 5% of satellites out, gaps only become rare (~15 s a day) at ~1,400 \u2014 which is where the old 3.3\u00d7 factor lands, so it survives as the realistic threshold, re-justified. Panel 1 shows both numbers, a latitude-reach readout (53\u00b0 shells stop near 58.5\u00b0N \u2014 most of Alaska is outside; 43\u00b0 shells stop near 48.5\u00b0N), and an 800 MHz what-if (a 20\u00b0 mask would cut the perfect minimum to ~580). Every fleet slider now carries a continuity bar (red below the perfect minimum, amber to the realistic one, green beyond) with gap minutes per day and the longest gap. Panel 1c gains a 2 GHz / 800 MHz toggle: the patch is identical (fleet only), but 800 MHz cells are ~5.3\u00d7 fewer, so 700 beams light the whole patch from ~1,070 satellites \u2014 temporal continuity, not geometric. The deployment clock now times the two continuity thresholds instead of an illustrative 2,000." },
   { v: "v150", d: "Tier 3 macro floor rebuilt as a density-tiered requirement. The sized count now leads wherever the site previously quoted the reported 80k-site talks as doctrine — Hybrid Network layer card, Serviceability doctrine, Verdict watch item — each pointing to the Tier 3 card for the defence. Every raster cell in the selected clusters is classed dense core (≥5,000/mi²), urban (1,000–5,000) or suburban (250–1,000), each tier gets its own cell radius (defaults 1.5 / 2.5 / 4.0 km, per-tier buttons), and sites = Σ 1.05 × tier area ÷ πr². The card now shows the delineation table (threshold, radius, basis), the per-tier site table for the selected clusters, the top-10/25/42 ladder split by tier, and a \u2018what this number is and is not\u2019 box with the calibration against T-Mobile\u2019s ~82k-site national network (~40k carrier-grid sites implied inside these 42 clusters at ~2.2 km blended; a 2×5 MHz coverage floor needs fewer) and the raster\u2019s 40 km limitation. Replaces the flat 1.5 km radius of v148–149, which over-counted sites 3–5× by applying downtown spacing to a footprint that is 77% suburban by area." },
   { v: "v149", d: "Tier 3 macro floor: default site basis is now REQUIRED TO COVER — sites = 1.05 × metro footprint ÷ πr², the same coverage-driven sizing the pole grid uses — instead of assuming the reported 80k-site tower talks (kept as an alternative, with custom). New ladder table: sites required and people carried (at the card\u2019s Mbps and at a 100 kbps voice/text class) for the top-10, top-25 and all 42 modelled clusters at the chosen radius and efficiency. Note on the data: the metro set is 42 clusters, so a top-100 ladder needs a rebuilt metro list." },
@@ -1499,7 +1502,7 @@ function PhysicsTab({ cfg, setCfg }) {
           <p className="body" style={{ marginTop: 16 }}>
             The fixes: ~25 m² phased arrays today (5× larger next-gen; AST's BlueBirds go to ~223 m²), satellite-side Doppler
             pre-compensation at 7.5 km/s, 3GPP NTN timing (Rel-17 → Rel-19), laser ISLs to hand off between ~3-minute passes,
-            and flying low — the D2C shells (326–360 km) sit ~4–5 dB closer than the 550 km broadband fleet. Physics you can't fix: steel and concrete — measured median
+            and flying low — the D2C shells (326–360 km) sit ~3–4.5 dB closer than the broadband fleet (~550 km, being lowered toward ~480 km). Physics you can't fix: steel and concrete — measured median
             RSRP −121 dBm vs −97 dBm terrestrial, and indoors the satellite simply isn't there. That's the job of WiFi over the dish — and, outdoors in the metros, the small-cell layer.
           </p>
           <Info label="what's a dB, and how bad is 30–50 dB really?">
@@ -2328,6 +2331,7 @@ const SRC = {
   contiguity: [
     { t: "FCC DA 25-1018 — D2C application on public notice: up to 15,000 satellites at 326–335 km (GN 25-340)", u: "https://docs.fcc.gov/public/attachments/DA-25-1018A1.pdf", k: "primary" },
     { t: "Satellite Today (Oct 7, 2026) — FCC grants the 15,000-satellite D2D system", u: "https://www.satellitetoday.com/connectivity/2026/10/07/fcc-grants-spacex-approval-for-15000-direct-to-device-satellites-in-mss-spectrum/", k: "claim" },
+    { t: "SpaceX space safety — V1 DTC shells at 360 km (53°) and 358.5 km (43°)", u: "https://space-safety.starlink.com/docs/space-safety-articles/constellation_altitudes/", k: "primary" },
     { t: "KeepTrack — today's D2C satellites fly ~360 km (e.g. STARLINK-11526 at ~360 km, 43°); ~650 in orbit", u: "https://keeptrack.space/deep-dive/starlink-direct-to-cell", k: "claim" },
     { t: "This site — Walker-delta coverage simulation: 53°, 330 km, CONUS 25–49°N, 20 s × 24 h; perfect fleet vs 5% of satellites out", u: "sources.html#derived", k: "derived" },
   ],
@@ -2341,6 +2345,8 @@ const SRC = {
     { t: "AST SpaceMobile — Block 2 BlueBird", u: "https://ast-science.com/next-gen-bluebird/", k: "primary" },
     { t: "Axis Intelligence teardown — 3 DL antennas × 8 beams × 2 pol = 48 DL beams/satellite", u: "https://axis-intelligence.com/starlink-direct-to-cell-2026-mobile-sat/", k: "claim" },
     { t: "FCC Schedule S (SAT-MOD-20230207-00021) — 29/32/35/38 dBi beam-class ladder, UL+DL, 0° & 35° scan patterns", u: "https://fcc.report/IBFS/SAT-MOD-20230207-00021", k: "primary" },
+    { t: "SpaceX space safety — constellation altitudes: V1 DTC shells at 360 km (53°) and 358.5 km (43°), mean semi-major axis", u: "https://space-safety.starlink.com/docs/space-safety-articles/constellation_altitudes/", k: "primary" },
+    { t: "SpaceNews (Nov 2024) — FCC lets Gen2 satellites operate at 340–360 km, down from 525–535 km", u: "https://spacenews.com/?p=509427", k: "claim" },
     { t: "Ookla via ISPreview (Aug 2026) — measured DTC beams: ~19 km effective radius near-nadir, ~44 km at ~30° elevation", u: "https://www.ispreview.co.uk/index.php/2026/08/ookla-maps-size-of-starlinks-direct-to-cell-4g-mobile-satellite-beams.html", k: "primary" },
   ],
   nextgen: [
@@ -2656,8 +2662,9 @@ function FootprintPanel() {
         A common misreading of the ladder: that launching more satellites shrinks the beams. It doesn't — beam size is
         frozen into each satellite's hardware at the factory by the diffraction limit (wavelength ÷ antenna size) and the
         orbital altitude. A thousand more identical satellites leave every beam exactly as big as before. Densification
-        actually runs on two separate clocks. <strong>Hardware generations shrink beams:</strong> Gen1's ~25 m² arrays at
-        530 km paint ~20–50 km spots; the 2027 satellites' ~5× arrays at 330 km paint ~5–10 km — and there's a floor: at
+        actually runs on two separate clocks. <strong>Hardware generations shrink beams:</strong> Gen1's ~25 m² arrays,
+        now flying near 360 km, paint ~30–45 km spots in service (they form beams on sub-panels, not the whole array);
+        the 2027 satellites' ~5× arrays at 330 km paint ~5–10 km — and there's a floor: at
         phone frequencies, ~4–5 km is roughly the physical minimum for buildable antennas (sub-km would need a ~50 m
         panel; nobody's flying that — see the beam-size lab below). <strong>Fleet growth densifies by stacking:</strong>
         more satellites overhead means more beams available per km², higher revisit duty-cycle per cell — and, subtly,
@@ -2705,12 +2712,13 @@ function BeamSizeLab() {
   const area = Math.PI * (across / 2) * (along / 2);
   const Dsub = lam * h;               // aperture side for 1-km nadir cells at this f & h
   const PRESETS = [
-    { n: "V2-Mini · 1 panel (35 dBi filed)", D: 2.5, f: 2.0, h: 530 },
-    { n: "V2-Mini · 2-panel class (38 dBi)", D: 3.5, f: 2.0, h: 530 },
+    { n: "V2-Mini · ½ panel (32 dBi filed)", D: 1.77, f: 2.0, h: 360 },
+    { n: "V2-Mini · 1 panel (35 dBi filed)", D: 2.5, f: 2.0, h: 360 },
+    { n: "V2-Mini · 2-panel class (38 dBi)", D: 3.5, f: 2.0, h: 360 },
     { n: "2027 · panel-scaled center", D: 5.6, f: 2.0, h: 330 },
     { n: "2027 · full-aperture floor", D: 11.2, f: 2.0, h: 330 },
     { n: "2027 · 800 MHz Grain DL (pending)", D: 5.6, f: 0.8655, h: 330 },
-    { n: "Gen1 panel @ 800 MHz", D: 2.5, f: 0.8655, h: 530 },
+    { n: "Gen1 panel @ 800 MHz", D: 2.5, f: 0.8655, h: 360 },
     { n: "AST BB2 · 850 MHz low-band", D: 14.9, f: 0.85, h: 520 },
     { n: "AST BB2 · same panel @ 2 GHz", D: 14.9, f: 2.0, h: 520 },
   ];
@@ -2724,7 +2732,7 @@ function BeamSizeLab() {
         beamwidth ≈ wavelength ÷ panel side). <strong>Frequency</strong>: higher frequency → shorter wavelength → narrower
         beam (why low-band partner spectrum re-widens AST's beams despite its giant panel). <strong>Altitude</strong>:
         the beam is a cone — farther away, wider spot. <strong>Look angle</strong>: off-nadir, the slant is longer and the
-        landing oblique → the ellipse from Panel 1. Presets are per-beam apertures of real systems, not whole physical arrays (Gen1 forms each beam on 1–2 of its four ~6.25 m² panels — see the receipts); then break physics on purpose — drag the
+        landing oblique → the ellipse from Panel 1. Presets are per-beam apertures of real systems, not whole physical arrays (Gen1 forms each beam on a sub-panel of its four ~6.25 m² panels — the FCC ladder files ¼ to 2 panels, and from today's ~360 km the measured ~38 km beams match the ½- to ¼-panel classes; see the receipts); then break physics on purpose — drag the
         panel slider and watch what sub-km cells would demand.
       </p>
       <div className="tglRow" style={{ marginBottom: 10 }}>
@@ -2854,7 +2862,7 @@ function BeamSizeLab() {
       <p className="body" style={{ fontSize: 12, color: C.dim, marginTop: 10 }}>
         Model: beamwidth ≈ λ/D — this k = 1 convention applies to the per-beam aperture; the site-wide canonical (v92) is 8.9 km ⌀ at nadir for 2027 — the bracket center (floor 4.4 full-aperture · upper 19.9 Gen1-panels) — used identically by the budget card, the Stitching panel, and Serviceability (half-power conventions vary by taper; treat sizes as ±30% estimates); spot at elevation ε
         widens by the longer slant (h/sin ε) and stretches 1/sin ε along the look direction; scan loss not included. Preset
-        notes: today's payload is ~25 m² in four panels — beams form on 1–2 panels (2.5–3.5 m side, per the FCC gain ladder); 2027 ≈ 5× → ~125 m², per-beam ~31 m² if panelization scales (5.6 m side); AST Block 2 ≈ 223 m²
+        notes: today's payload is ~25 m² in four panels, flying near 360 km — beams form on sub-panels (the FCC gain ladder files ¼ to 2 panels, ~1.25–3.5 m side; the measured ~38 km beams match ½–¼ panel from that altitude); 2027 ≈ 5× → ~125 m², per-beam ~31 m² if panelization scales (5.6 m side); AST Block 2 ≈ 223 m²
         — click its two presets back-to-back: the identical panel paints ~12 km spots on 850 MHz partner low-band but
         ~5 km at 2 GHz. The panel is real; the wavelength decides what it buys — spectrum choice is silently a beam-size
         choice. The purple readout is the punchline: sub-km cells at phone frequencies demand a
@@ -2885,11 +2893,11 @@ function BeamReceipts() {
   const ROWS = [
     { k: "INPUT · aperture", tone: "#C79BFF", t: "Gen1 D2C antenna ≈ 25 m² — four panels: 3 downlink + 1 uplink, ~6.25 m² each", d: "Musk’s “five or six meters on a side” (Aug 2022) describes the total; AIAA corroborates 25 m², and the payload teardown gives the split: 3 DL antennas × 8 beams × 2 pol = 48 DL / 16 UL beams. Beams are formed per sub-panel, never by the whole array — the one assumption the old ~16 km figure silently got wrong. The 2027 satellites: “5× larger” per MWC → ~125 m² (~11.2 m side, derived). AST Block 2: 223 m² (company spec).", s: "primary + teardown" },
     { k: "INPUT · frequency", tone: "#C79BFF", t: "Phone-band: 1.9–2.2 GHz → wavelength 14–16 cm", d: "PCS G-block (1990–1995 DL) today; n252 (2180–2200 DL) for the owned network. Wavelength = c/f — arithmetic, not opinion.", s: "primary (FCC band plan)" },
-    { k: "INPUT · altitude", tone: "#C79BFF", t: "~530 km today · 326–335 km dedicated constellation", d: "Gen2 authorization; FCC DA 25-1018 for the dedicated D2C shell. Beam is a cone: spot diameter scales linearly with distance.", s: "primary (FCC)" },
+    { k: "INPUT · altitude", tone: "#C79BFF", t: "~360 km today · 326–335 km dedicated constellation", d: "Today's D2C satellites sit in two shells — 360 km at 53° and 358.5 km at 43° (mean semi-major axis, SpaceX's space-safety altitude table) — lowered from ~525–535 km after the FCC's Nov 2024 grant allowed Gen2 operations at 340–360 km. The broadband fleet flies higher (being lowered from ~550 km toward ~450–490 km by end-2026, per the same table); don't mix the two. FCC DA 25-1018 for the dedicated D2C shell. Beam is a cone: spot diameter scales linearly with distance.", s: "primary (SpaceX, FCC)" },
     { k: "PHYSICS", tone: "#6BDB8F", t: "Diffraction: beamwidth ≈ wavelength ÷ antenna size", d: "The non-negotiable exchange rate for any aperture — laser pointers to radio telescopes. Taper conventions move the constant between ~0.9 and ~1.2; nothing moves it 10×.", s: "textbook" },
-    { k: "FILED · Schedule S", tone: "#6BDB8F", t: "SpaceX’s own gain ladder — 29/32/35/38 dBi = ¼/½/1/2 panels at a consistent ~92% efficiency", d: "SAT-MOD-20230207-00021 files four beam classes per polarization, UL and DL, with patterns at 0° and 35° scan. Gain → aperture (G = 4πA/λ²) reproduces the whole ladder from panel subdivision alone: nadir beam classes ~64 / 45 / 32 / 23 km from 530 km. The array is excellent (~92% efficient); it simply never points 25 m² at one beam.", s: "primary (FCC)" },
-    { k: "MEASURED · Ookla 2026", tone: "#6BDB8F", t: "Crowdsourced beam mapping — ~38 km effective ⌀ near-nadir, wider at low elevation", d: "Phones decoding the same satellite ID + beam index, matched against orbital data: ~19 km effective radius near-overhead, ~44 km radius at ~30° elevation — mid-ladder between the 35 and 32 dBi classes, and matching the −3/−5 dB contours (15–22.5 km radius) in SpaceX’s 2023 filing. Measurement, filing, and Musk’s “~15 mile” description all reconcile.", s: "primary (measurement)" },
-    { k: "ARITHMETIC", tone: C.amber, t: "Gen1: ideal 16 km vs real 32–45 km — so the 2027 bracket is 4.4 / 8.9 / 19.9 km", d: "Ideal λ/D on the whole Gen1 array (0.157 ÷ 5 → ~16 km) is a floor no panelized array reaches — filed + measured beams run 32–45 km in service. Same logic for 2027: full-aperture floor 0.15 ÷ 11.2 → 4.4 km; Gen1 panelization scaled 5× (~31 m²/beam) → ~8.9 km, the site-wide canonical center; unchanged 6.25 m² panels → ~19.9 km. Off-nadir smear (1/sin ε + slant) stretches every class further. The per-beam aperture is SpaceX’s undisclosed design choice; the bracket is multiplication.", s: "derived" },
+    { k: "FILED · Schedule S", tone: "#6BDB8F", t: "SpaceX’s own gain ladder — 29/32/35/38 dBi = ¼/½/1/2 panels at a consistent ~92% efficiency", d: "SAT-MOD-20230207-00021 files four beam classes per polarization, UL and DL, with patterns at 0° and 35° scan. Gain → aperture (G = 4πA/λ²) reproduces the whole ladder from panel subdivision alone: nadir beam classes ~43 / 31 / 22 / 16 km from today's ~360 km (they read ~64 / 45 / 32 / 23 km from the ~530 km the filing was made at). The array is excellent (~92% efficient); it simply never points 25 m² at one beam.", s: "primary (FCC)" },
+    { k: "MEASURED · Ookla 2026", tone: "#6BDB8F", t: "Crowdsourced beam mapping — ~38 km effective ⌀ near-nadir, wider at low elevation", d: "Phones decoding the same satellite ID + beam index, matched against orbital data: ~19 km effective radius near-overhead, ~44 km radius at ~30° elevation. A measurement doesn't depend on our altitude assumption — the reading does: from today's ~360 km it sits between the 32 and 29 dBi classes (~31 and ~43 km), so in-service beams are being formed on ½- to ¼-panel apertures; from the ~530 km of the 2023 filing it would have sat between the 35 and 32 dBi classes. Either way the in-service beam is ~30–45 km across, and Musk’s “~15 mile” description agrees.", s: "primary (measurement)" },
+    { k: "ARITHMETIC", tone: C.amber, t: "Gen1: ideal ~11 km vs real ~30–45 km — so the 2027 bracket is 4.4 / 8.9 / 19.9 km", d: "Ideal λ/D on the whole Gen1 array (0.157 ÷ 5 × 360 km → ~11 km) is a floor no panelized array reaches — filed + measured beams run ~30–45 km in service, ~3–4× wider than the whole array could make them. Same logic for 2027: full-aperture floor 0.15 ÷ 11.2 → 4.4 km; Gen1 panelization scaled 5× (~31 m²/beam) → ~8.9 km, the site-wide canonical center; unchanged 6.25 m² panels → ~19.9 km. Off-nadir smear (1/sin ε + slant) stretches every class further. The per-beam aperture is SpaceX’s undisclosed design choice; the bracket is multiplication.", s: "derived" },
     { k: "CROSS-CHECK 1", tone: C.blue, t: "An independent system lands on the same order", d: "AST's 223 m² panel — 3× SpaceX's next-gen linear size — still paints ~12 km spots on 850 MHz and ~5 km at 2 GHz. Different company, same equation, same kilometers. If sub-km beams were buildable, the biggest antenna in orbit would have them.", s: "corroboration" },
     { k: "CROSS-CHECK 2", tone: C.blue, t: "SpaceX’s own capacity claims only add up with km-scale beams", d: "“100× data density” decomposes as more beams × smaller beams × better efficiency. Going ~35 km (measured Gen1) → ~9 km is ~15× by area; ×4 efficiency and more simultaneous beams covers the rest. Sub-km beams would imply ~1,000×+ density — a claim SpaceX conspicuously does not make.", s: "consistency" },
   ];
@@ -5645,7 +5653,7 @@ const GENS = [
       ["Phased array", "~25 m²"],
       ["Beams", "Few, wide — footprints tens of km"],
       ["Beam bandwidth", "5 MHz DL (leased G-block) · pending: 5 MHz at 800 (owned)"],
-      ["Beam footprint", "~20–50 km across (derived)"],
+      ["Beam footprint", "~30–45 km across in service (~38 km measured; from ~360 km)"],
       ["Per-beam DL", "~3.1 Mbps (measured)"],
       ["Launch", "Falcon 9, ~20+ per flight"],
     ],
@@ -5722,7 +5730,7 @@ function TechTab() {
         hardware improves it through four compounding channels. <strong>1 · The aperture (dominant, confirmed):</strong>
         isolation is really about how fast a beam's energy falls off outside its cell, and the right unit is
         <em> beam-widths of separation, not km</em>. Two same-channel cells 40 km apart sit inside each other's skirts for
-        Gen1 (~30–50 km beams) but are comfortably separated for the 2027 satellite (~5–10 km beams) — same spacing,
+        Gen1 (~30–45 km beams) but are comfortably separated for the 2027 satellite (~5–10 km beams) — same spacing,
         radically better isolation, purely from a 5× array at a lower altitude. <strong>2 · Element count → pattern
         control (implied):</strong> a phased array's ability to sculpt where energy <em>doesn't</em> go — taper down
         sidelobes, steer deliberate nulls toward co-channel cells — scales with element count, which scales with area;
@@ -5755,7 +5763,7 @@ function TechTab() {
         </div>
         {(() => {
           const G = {
-            gen1: { alt: 530, mask: 25, beamD: 38, nBeams: 48, nLabel: "~43–48 downlink (converging secondary sources: AIAA “up to 43”; payload teardown 3 DL antennas × 8 beams × 2 polarizations = 48). No SpaceX primary. Early service ran far fewer active LTE carriers — a config fact once misread as beam capability.", ap: "~25 m² · 4 panels: 3 DL + 1 UL (Musk total; teardown split)", mhz: 5, mhzL: "5 MHz leased G-block DL", perBeam: "~3.1 Mbps (UPM-measured)", tone: C.dim },
+            gen1: { alt: 360, mask: 25, beamD: 38, nBeams: 48, nLabel: "~43–48 downlink (converging secondary sources: AIAA “up to 43”; payload teardown 3 DL antennas × 8 beams × 2 polarizations = 48). No SpaceX primary. Early service ran far fewer active LTE carriers — a config fact once misread as beam capability.", ap: "~25 m² · 4 panels: 3 DL + 1 UL (Musk total; teardown split)", mhz: 5, mhzL: "5 MHz leased G-block DL", perBeam: "~3.1 Mbps (UPM-measured)", tone: C.dim },
             v2: { alt: 330, mask: 25, beamD: 8.9, nBeams: 700, nLabel: "undisclosed — ~700-class derived (16× the ~43–48 Gen1 beams). Residual ambiguity: MWC’s “20×20 MHz beams” could parse as twenty 20-MHz beams; the count is genuinely not public.", ap: "~125 m² (5× claim, derived)", mhz: 20, mhzL: "20 MHz owned n252 DL per beam (the “20×20 MHz beams” claim)", perBeam: "~12 Mbps at measured efficiency → ~50 Mbps claim-anchored", tone: C.amber },
             v3: { alt: 350, mask: 25, beamD: 3, nBeams: 0, nLabel: "different product: GHz-wide Ku beams to dish antennas (real gain, powered, steered) — 1 Tbps/satellite claim. No phone radio as specced; it backhauls the femtocells that serve phones instead.", ap: "Ku/E-band arrays", mhz: 0, mhzL: "", perBeam: "", tone: C.blue },
           };
@@ -5818,11 +5826,12 @@ function TechTab() {
         <div className="eyebrow">How big is a spot beam? — the 60-second version</div>
         <p className="body">
           A phased array's beamwidth follows one rule: <span style={{ fontFamily: "var(--mono)", color: C.amber }}>beam angle ≈ wavelength ÷ antenna width</span>.
-          At ~2 GHz the wavelength is ~15 cm, and today's ~25 m² array (~5 m across) yields a ~2° beam — a footprint of
-          roughly <strong>20–50 km</strong> on the ground from 550 km, wider toward the edges of coverage. The 2027 dedicated D2C
-          satellites shrink that two ways at once: arrays ~5× the area (~2.2× wider, so a ~2.2× narrower beam) flying at
-          lower altitude (326–335 km), landing footprints around <strong style={{ color: C.amber }}>5–10 km at nadir</strong> — a ~25×
-          smaller patch of ground per beam. That shrink <em>is</em> the capacity gain: ~25× fewer people share each 20 MHz
+          At ~2 GHz the wavelength is ~15 cm. Today's ~25 m² array (~5 m across), flying at ~360 km, could in principle
+          form a ~1.7° beam about 11 km wide — but it is four panels and forms each beam on a sub-panel, so in service the
+          beams land roughly <strong>30–45 km</strong> across near overhead (Ookla measured ~38 km), wider toward the edges of
+          coverage. The 2027 dedicated D2C satellites shrink that two ways: arrays ~5× the area (~2.2× wider, so a ~2.2×
+          narrower beam) flying a little lower (326–335 km), landing footprints around <strong style={{ color: C.amber }}>5–10 km at nadir</strong> —
+          a ~25× smaller patch of ground per beam. That shrink <em>is</em> the capacity gain: ~25× fewer people share each 20 MHz
           channel, and 16× more beams can tile the same region re-using the same 65 MHz. (These are physics-derived
           estimates, not published specs — and the λ/D rule is also why nobody gets sub-km phone beams at 2 GHz from
           orbit without a hundred-meter antenna. AST's ~223 m² arrays buy beams only ~2× tighter than SpaceX's next-gen.)
@@ -7561,7 +7570,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v151 · coverage continuity simulated — how many satellites before the gaps close</span>
+        <span className="buildTag">build v152 · today's D2C fleet at ~360 km — Gen1 beam arithmetic corrected</span>
           <div style={{ marginTop: 6 }}><span style={{ display: "inline-block", fontFamily: "var(--mono)", fontSize: 10.5, color: C.amber, border: `1px solid ${C.amber}`, borderRadius: 5, padding: "2px 8px", opacity: 0.9 }}>Base case: assumes SpaceX acquires Grain's 800 MHz licenses (pending) · agreement Oct 8 · NPRM vote Oct 29 · D2D filing due Dec 4, 2026</span></div>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
