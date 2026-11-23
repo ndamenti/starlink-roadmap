@@ -57,6 +57,7 @@ const BEAM_MAX_KM = 19.9;
 const BEAM_AREA = Math.PI * (BEAM_KM / 2) * (BEAM_KM / 2); // ~62 km² nadir cell
 const BEAM_AREA_800 = Math.PI * (BEAM_KM_800 / 2) * (BEAM_KM_800 / 2); // ~332 km² nadir cell at 865.5 MHz
 const CHANGELOG = [
+  { v: "v151", d: "Coverage continuity, simulated instead of assumed. Panel 1\u2019s satellite count was a 3.3\u00d7 rule of thumb calibrated to \u2018650 satellites \u2248 continuous 25\u00b0 from 530 km\u2019 \u2014 but today\u2019s D2C satellites fly at ~360 km, and at the 2027 altitude (330 km) that same rule says ~1,436, while every fleet slider started at 650 and read as continuous. Replaced with a Walker-delta orbit simulation (53\u00b0, circular orbits, Earth rotation, CONUS 25\u201349\u00b0N on a 0.5\u00b0\u00d71.5\u00b0 grid, 20 s steps over 24 h): a perfectly phased constellation with every satellite working is gap-free at 25\u00b0 from ~720 satellites (~1,650 at 35\u00b0, ~3,350 at 45\u00b0); with 5% of satellites out, gaps only become rare (~15 s a day) at ~1,400 \u2014 which is where the old 3.3\u00d7 factor lands, so it survives as the realistic threshold, re-justified. Panel 1 shows both numbers, a latitude-reach readout (53\u00b0 shells stop near 58.5\u00b0N \u2014 most of Alaska is outside; 43\u00b0 shells stop near 48.5\u00b0N), and an 800 MHz what-if (a 20\u00b0 mask would cut the perfect minimum to ~580). Every fleet slider now carries a continuity bar (red below the perfect minimum, amber to the realistic one, green beyond) with gap minutes per day and the longest gap. Panel 1c gains a 2 GHz / 800 MHz toggle: the patch is identical (fleet only), but 800 MHz cells are ~5.3\u00d7 fewer, so 700 beams light the whole patch from ~1,070 satellites \u2014 temporal continuity, not geometric. The deployment clock now times the two continuity thresholds instead of an illustrative 2,000." },
   { v: "v150", d: "Tier 3 macro floor rebuilt as a density-tiered requirement. The sized count now leads wherever the site previously quoted the reported 80k-site talks as doctrine — Hybrid Network layer card, Serviceability doctrine, Verdict watch item — each pointing to the Tier 3 card for the defence. Every raster cell in the selected clusters is classed dense core (≥5,000/mi²), urban (1,000–5,000) or suburban (250–1,000), each tier gets its own cell radius (defaults 1.5 / 2.5 / 4.0 km, per-tier buttons), and sites = Σ 1.05 × tier area ÷ πr². The card now shows the delineation table (threshold, radius, basis), the per-tier site table for the selected clusters, the top-10/25/42 ladder split by tier, and a \u2018what this number is and is not\u2019 box with the calibration against T-Mobile\u2019s ~82k-site national network (~40k carrier-grid sites implied inside these 42 clusters at ~2.2 km blended; a 2×5 MHz coverage floor needs fewer) and the raster\u2019s 40 km limitation. Replaces the flat 1.5 km radius of v148–149, which over-counted sites 3–5× by applying downtown spacing to a footprint that is 77% suburban by area." },
   { v: "v149", d: "Tier 3 macro floor: default site basis is now REQUIRED TO COVER — sites = 1.05 × metro footprint ÷ πr², the same coverage-driven sizing the pole grid uses — instead of assuming the reported 80k-site tower talks (kept as an alternative, with custom). New ladder table: sites required and people carried (at the card\u2019s Mbps and at a 100 kbps voice/text class) for the top-10, top-25 and all 42 modelled clusters at the chosen radius and efficiency. Note on the data: the metro set is 42 clusters, so a top-100 ladder needs a rebuilt metro list." },
   { v: "v148", d: "Serviceability: TIER 3 — the 800 MHz macro floor is now a sized model, not doctrine prose. New card after the overlay: on/off, site basis (national count reportedly in talks, 80k default, scaled to the selected metros by population share, or a custom count with DISH–Crown Castle 20k as the precedent), urban cell radius 1–3 km, sector efficiency 1.0–2.0 bps/Hz. Coverage = planned grid of πr² cells over the metro area with low-band indoor reach (half of hostile stock lost); capacity = sites × 3 sectors × usable MHz × efficiency. The floor enters the chain as a union with the small-cell blanket for coverage and a sum for capacity: the hybrid headline, the map's hybrid and capacity layers, the throughput-ceiling line and headroom all include it, and the ceiling line now shows boxes + floor separately. Sticky header gains a MACRO chip. Doctrine encoded: H-block and CBRS on small cells for capacity, 800 on towers for coverage, so CBRS=0 is the owned-only city network (floor + H-block boxes). Base case on, tied to the 800 MHz layer toggle (pending Grain transfer)." },
@@ -2089,10 +2090,13 @@ const CADENCE_PRESETS = [
 function DeployClock({ compact }) {
   const [per, setPer] = useState(55);
   const [pm, setPm] = useState(4);
-  const FLEET = 15000, LIFE = 5, SERVICE = 2000;
+  const FLEET = 15000, LIFE = 5;
+  const GAPFREE_PERFECT = Math.round(contIdealN(330, 25) / 10) * 10;   // v151: ~720, orbit simulation
+  const GAPFREE_REAL = Math.round(contRealN(330, 25) / 10) * 10;       // ~1,440 with 5% of the fleet out
   const monthly = per * pm;
   const yearsToFleet = FLEET / (monthly * 12);
-  const monthsToService = SERVICE / monthly;
+  const monthsPerfect = GAPFREE_PERFECT / monthly, monthsReal = GAPFREE_REAL / monthly;
+  const fmtMo = (m) => (m < 1 ? "<1" : m.toFixed(m < 10 ? 1 : 0));
   const sustainPerMonth = FLEET / LIFE / 12 / per; // launches/mo to replace 3,000/yr
   const steadyState = Math.round(per * pm * 12 * LIFE); // fleet this cadence can sustain
   const starved = steadyState < FLEET;
@@ -2127,8 +2131,8 @@ function DeployClock({ compact }) {
         </div>
         <div className="zoneNums" style={{ alignItems: "flex-start" }}>
           <div>
-            <span className="zN" style={{ color: C.amber }}>{monthsToService < 1 ? "<1" : monthsToService.toFixed(0)}</span><span className="zU">mo</span>
-            <div className="zM">to a ~2,000-sat continuous-coverage-class fleet (illustrative)</div>
+            <span className="zN" style={{ color: C.amber }}>{fmtMo(monthsPerfect)}–{fmtMo(monthsReal)}</span><span className="zU">mo</span>
+            <div className="zM">to gap-free 25° coverage over CONUS: ~{GAPFREE_PERFECT.toLocaleString()} (perfect fleet) to ~{GAPFREE_REAL.toLocaleString()} (5% out) — derived, orbit simulation</div>
           </div>
           <div>
             <span className="zN" style={{ color: yearsToFleet > 8 ? C.red : C.text }}>{yearsToFleet.toFixed(1)}</span><span className="zU">yrs</span>
@@ -2148,8 +2152,10 @@ function DeployClock({ compact }) {
       {!compact && (
         <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 10 }}>
           Assumptions on the label: ~55/launch echoes the ~1,200-in-six-months filing math; 5-year life reflects 326–335 km
-          drag and deorbit-compliance rules; ~2,000 for continuous coverage is an illustrative service threshold (the
-          end-2028 target needs the low thousands, not 15k). Attrition, failed launches, and mixed manifests all push these
+          drag and deorbit-compliance rules; the continuity thresholds come from Panel 1's orbit simulation — ~720 satellites
+          close every 25° gap over CONUS if the fleet is perfectly phased and fully working, ~1,440 make gaps rare with 5% of
+          satellites out, and a reliable 35–45° bar needs several thousand. The end-2028 continuous-coverage target needs
+          the low thousands, not 15k. Launches start on Falcon 9, so the first months run slower than the Starship presets. Attrition, failed launches, and mixed manifests all push these
           numbers the wrong way. This is why every capacity claim in this tool carries the same footnote: Starship cadence.
         </p>
       )}
@@ -2169,8 +2175,92 @@ function footprintGeom(hKm, elevDeg) {
   const rKm = Re * lam;
   const area = 2 * Math.PI * Re * Re * (1 - Math.cos(lam));
   const cap = (1 - Math.cos(lam)) / 2;
-  const N = Math.round(3.3 / cap); // Walker-overlap factor calibrated to ~650 @ 25°/530 km
-  return { rKm, area, N };
+  const N = Math.round(3.3 / cap); // v151: the realistic (5%-of-fleet-out) continuity threshold — see contRealN
+  return { rKm, area, N, lamDeg: (lam * 180) / Math.PI };
+}
+
+/* ---------- v151: coverage continuity, simulated (derived) ----------
+   Walker-delta simulation: 53° inclination, circular orbits, Earth rotation; CONUS 25–49°N on a 0.5° × 1.5°
+   grid, 20 s steps over 24 h. "Perfect" = the best plane count and phasing found, every satellite working.
+   "Realistic" = the same constellations with 5% of satellites randomly out (three draws). Anchors are at 330 km;
+   other altitudes and masks scale by footprint cap (coverage tracks fleet × cap fraction). */
+function capFrac(hKm, elevDeg) {
+  const Re = 6371, e = (elevDeg * Math.PI) / 180;
+  const lam = Math.acos((Re / (Re + hKm)) * Math.cos(e)) - e;
+  return (1 - Math.cos(lam)) / 2;
+}
+const CONT_IDEAL_330 = [[20, 580], [25, 720], [35, 1650], [45, 3350]]; // gap-free minimum, perfect constellation
+function contIdealN(hKm, elevDeg) {
+  const A = CONT_IDEAL_330, last = A[A.length - 1];
+  let n;
+  if (elevDeg <= A[0][0]) n = (A[0][1] * capFrac(330, A[0][0])) / capFrac(330, elevDeg);
+  else if (elevDeg >= last[0]) n = (last[1] * capFrac(330, last[0])) / capFrac(330, elevDeg);
+  else {
+    for (let i = 0; i < A.length - 1; i++) {
+      if (elevDeg <= A[i + 1][0]) {
+        const [e0, n0] = A[i], [e1, n1] = A[i + 1], t = (elevDeg - e0) / (e1 - e0);
+        n = Math.exp(Math.log(n0) + t * (Math.log(n1) - Math.log(n0)));
+        break;
+      }
+    }
+  }
+  return (n * capFrac(330, elevDeg)) / capFrac(hKm, elevDeg);
+}
+// realistic threshold: 3.3 ÷ cap ≈ 1,436 at 330 km / 25° — the simulation puts "gaps rare" (<0.02% of the day) at ~1,400 with 5% out
+function contRealN(hKm, elevDeg) { return 3.3 / capFrac(hKm, elevDeg); }
+// realistic gap table at 330 km / 25°, 5% of satellites out: [fleet, % of the day with no satellite above the mask, longest gap s]
+const CONT_GAPS = [[150, 55, 2640], [250, 36, 980], [350, 20.6, 680], [450, 9.9, 520], [550, 4.3, 400], [650, 1.6, 340],
+  [720, 1.2, 340], [900, 0.42, 200], [1000, 0.16, 200], [1100, 0.061, 200], [1200, 0.037, 120], [1300, 0.025, 100],
+  [1440, 0.017, 90], [1600, 0.0096, 90], [1800, 0.0023, 60], [2000, 0.0017, 60]];
+function contState(fleet, hKm = 330, elevDeg = 25) {
+  const eq = (fleet * capFrac(hKm, elevDeg)) / capFrac(330, 25);
+  const idealN = contIdealN(hKm, elevDeg), realN = contRealN(hKm, elevDeg);
+  const T = CONT_GAPS, last = T[T.length - 1];
+  let unc = T[0][1], gap = T[0][2];
+  if (eq >= last[0]) { unc = last[1] * Math.pow(last[0] / eq, 4); gap = 60; }
+  else if (eq > T[0][0]) {
+    for (let i = 0; i < T.length - 1; i++) {
+      if (eq <= T[i + 1][0]) {
+        const t = (eq - T[i][0]) / (T[i + 1][0] - T[i][0]);
+        unc = Math.exp(Math.log(T[i][1]) + t * (Math.log(T[i + 1][1]) - Math.log(T[i][1])));
+        gap = T[i][2] + t * (T[i + 1][2] - T[i][2]);
+        break;
+      }
+    }
+  }
+  const tier = fleet < idealN ? "red" : fleet < realN ? "amber" : "green";
+  return { eq, idealN, realN, unc, gap, tier, secPerDay: (unc / 100) * 86400 };
+}
+function fmtDur(sec) {
+  if (sec >= 3600) return (sec / 3600).toFixed(1) + " h";
+  if (sec >= 90) return Math.round(sec / 60) + " min";
+  return Math.max(1, Math.round(sec)) + " s";
+}
+function ContinuityBar({ fleet, min, max, hKm = 330, mask = 25, here }) {
+  const st = contState(fleet, hKm, mask);
+  const pct = (v) => Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100));
+  const a = pct(st.idealN), b = pct(st.realN);
+  const col = st.tier === "red" ? C.red : st.tier === "amber" ? C.amber : C.green;
+  const r10 = (x) => (Math.round(x / 10) * 10).toLocaleString();
+  return (
+    <span style={{ display: "block", marginTop: 5 }}>
+      <span style={{ display: "block", position: "relative", height: 5, borderRadius: 3, opacity: 0.8,
+        background: `linear-gradient(90deg, ${C.red} 0%, ${C.red} ${a}%, ${C.amber} ${a}%, ${C.amber} ${b}%, ${C.green} ${b}%, ${C.green} 100%)` }}>
+        <span style={{ position: "absolute", left: `calc(${pct(fleet)}% - 1px)`, top: -3, width: 2, height: 11, background: C.text }} />
+      </span>
+      <span style={{ display: "block", fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim, marginTop: 4, lineHeight: 1.45 }}>
+        <span style={{ color: col }}>●</span> Coverage continuity, CONUS, {mask}° mask:{" "}
+        {st.tier === "green"
+          ? <>gaps rare — {st.secPerDay >= 5 ? `~${fmtDur(st.secPerDay)}` : "a few seconds or less"} a day with no satellite, even with 5% of the fleet out</>
+          : <>~{fmtDur(st.secPerDay)} a day with no satellite, gaps up to ~{fmtDur(st.gap)} (5% of the fleet out)</>}
+        {" · "}{fleet >= st.idealN ? "a perfect fleet is gap-free here" : `a perfect fleet needs ~${r10(st.idealN)}`}
+        {st.tier !== "green" && <>{" · "}realistic gap-free ~{r10(st.realN)}</>}
+        {!here && <>{" · "}<button className="nextlink" style={{ display: "inline", margin: 0, padding: 0, fontSize: 10.5 }}
+          onClick={(e) => { e.preventDefault(); window.__navTo("coverage", "cov-1-reach"); }}>how it's computed →</button></>}
+        <span style={{ marginLeft: 6, color: C.purple || "#C79BFF" }}>derived</span>
+      </span>
+    </span>
+  );
 }
 
 function mulberry(seed) {
@@ -2234,6 +2324,12 @@ const SRC = {
   d2capp: [
     { t: "FCC Public Notice DA 25-1018 (Dec 5, 2025)", u: "https://docs.fcc.gov/public/attachments/DA-25-1018A1.pdf", k: "primary" },
     { t: "FCC Order DA 26-398 (Apr 23, 2026)", u: "https://docs.fcc.gov/public/attachments/DA-26-398A1.pdf", k: "primary" },
+  ],
+  contiguity: [
+    { t: "FCC DA 25-1018 — D2C application on public notice: up to 15,000 satellites at 326–335 km (GN 25-340)", u: "https://docs.fcc.gov/public/attachments/DA-25-1018A1.pdf", k: "primary" },
+    { t: "Satellite Today (Oct 7, 2026) — FCC grants the 15,000-satellite D2D system", u: "https://www.satellitetoday.com/connectivity/2026/10/07/fcc-grants-spacex-approval-for-15000-direct-to-device-satellites-in-mss-spectrum/", k: "claim" },
+    { t: "KeepTrack — today's D2C satellites fly ~360 km (e.g. STARLINK-11526 at ~360 km, 43°); ~650 in orbit", u: "https://keeptrack.space/deep-dive/starlink-direct-to-cell", k: "claim" },
+    { t: "This site — Walker-delta coverage simulation: 53°, 330 km, CONUS 25–49°N, 20 s × 24 h; perfect fleet vs 5% of satellites out", u: "sources.html#derived", k: "derived" },
   ],
   fleet: [
     { t: "KeepTrack — D2C fleet status", u: "https://keeptrack.space/deep-dive/starlink-direct-to-cell", k: "claim" },
@@ -2354,7 +2450,7 @@ function FootprintPanel() {
         <button className={"envBtn" + (elev === 57 ? " on" : "")} onClick={() => setElev(57)}>Urban canyon / forest · 57°</button>
       </div>
       <div className="tglRow" style={{ marginBottom: 10 }}>
-        <button className={"genBtn" + (alt === 530 ? " on" : "")} onClick={() => setAlt(530)}>Today's fleet · ~530 km</button>
+        <button className={"genBtn" + (alt === 360 ? " on" : "")} onClick={() => setAlt(360)}>Today's D2C fleet · ~360 km</button>
         <button className={"genBtn" + (alt === 330 ? " on" : "")} onClick={() => setAlt(330)}>2027 dedicated D2C · ~330 km</button>
       </div>
       <div className="split" style={{ alignItems: "center" }}>
@@ -2379,12 +2475,19 @@ function FootprintPanel() {
           <div className="statGrid" style={{ marginTop: 14 }}>
             <div className="stat"><div className="statL">Usable footprint</div>
               <div className="statV">~{Math.round(f.rKm)} km radius · ~{(f.area / 1000).toFixed(0)}k km²</div></div>
-            <div className="stat"><div className="statL">Satellites for continuous 1× coverage</div>
-              <div className="statV" style={{ color: C.amber }}>~{f.N.toLocaleString()} <span style={{ color: C.dim, fontSize: 11 }}>(geometry est.)</span></div></div>
+            <div className="stat"><div className="statL">Satellites for gap-free coverage over CONUS (53° shells)</div>
+              <div className="statV" style={{ color: C.amber }}>~{(Math.round(contIdealN(alt, elev) / 10) * 10).toLocaleString()} <span style={{ color: C.dim, fontSize: 11 }}>perfect fleet</span>
+                {" · "}~{(Math.round(contRealN(alt, elev) / 10) * 10).toLocaleString()} <span style={{ color: C.dim, fontSize: 11 }}>realistic (5% out)</span></div>
+              <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 2 }}>orbit simulation, derived — below the first number every fleet leaves gaps; between them, gaps come and go with failures</div></div>
+            <div className="stat"><div className="statL">How far north the service reaches</div>
+              <div className="statV" style={{ fontSize: 15 }}>53° shells: ~{(53 + f.lamDeg).toFixed(1)}°N · 43° shells: ~{(43 + f.lamDeg).toFixed(1)}°N</div>
+              <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 2 }}>CONUS tops out at 49°N; Anchorage sits at 61°N, Fairbanks 65°N — Alaska needs higher-inclination shells, and the 15,000-sat grant's shell inclinations aren't public</div></div>
           </div>
           <div className="ladder">
-            <div className="rung"><span className="rungN">~650</span><span className="rungT">a bar of signal everywhere — today's fleet ≈ continuous coverage at ~25° elevation (texting works)</span></div>
-            <div className="rung"><span className="rungN">~2–6k</span><span className="rungT">a <em>reliable</em> bar — continuous coverage at 45°+, the statistic the FCC milestones actually measure</span></div>
+            <div className="rung"><span className="rungN">~650</span><span className="rungT">almost a bar everywhere — today's count; at 330 km and 25° even a perfect fleet this size leaves gaps up to ~40 s at ~10% of CONUS (texting survives, a call doesn't)</span></div>
+            <div className="rung"><span className="rungN">~720</span><span className="rungT">the bare minimum — a perfectly phased 330 km fleet with every satellite working closes every 25° gap over CONUS</span></div>
+            <div className="rung"><span className="rungN">~1,400</span><span className="rungT">gap-free in practice at 25° — with ~5% of satellites out (failures, deorbits, the 5-year treadmill), gaps shrink to ~15 s a day</span></div>
+            <div className="rung"><span className="rungN">~1.7–5.7k</span><span className="rungT">a <em>reliable</em> bar — gap-free at 35–45° (perfect ~1,650–3,350; realistic ~2,900–5,700), the statistic the FCC milestones actually measure</span></div>
             <div className="rung"><span className="rungN">15,000</span><span className="rungT">enough bars for a business — extra satellites buy beams-per-km², not coverage</span></div>
           </div>
         </div>
@@ -2479,10 +2582,20 @@ function FootprintPanel() {
         </p>
       </div>
       <p className="body" style={{ fontSize: 12.5, color: C.dim, marginTop: 12 }}>
-        Model: spherical-cap geometry with a ~3.3× Walker-constellation overlap factor calibrated to the real fleet
-        (~650 satellites ≈ continuous 25° coverage from 530 km). Estimates ignore latitude structure — 53°-inclined orbits
-        crowd satellites near ±53° and thin them toward the equator, so coverage quality carries a latitude asterisk.
+        Model: an orbit simulation, not a rule of thumb. Walker-delta constellations at 53° inclination, propagated with
+        Earth's rotation over 24 hours in 20-second steps and tested against a CONUS grid (25–49°N): a location counts
+        as covered when at least one satellite is above the mask. Two numbers result — the perfect-fleet minimum (best
+        plane count and phasing, every satellite working) and the realistic one (the same fleets with 5% of satellites
+        out). Other altitudes and masks scale by footprint area. <Src k="contiguity" topic="derived" />
       </p>
+      <div className="indoorNote" style={{ borderColor: C.amber, marginTop: 10 }}>
+        <strong>800 MHz what-if (not established):</strong> geometry doesn't care about frequency — the same satellites at
+        the same mask give the same coverage. But a 5 MHz carrier at 865 MHz diffracts and penetrates foliage better than
+        2 GHz, so the low band <em>might</em> hold a link nearer the horizon. If it closed down to a 20° mask, the
+        perfect-fleet minimum at 330 km would fall to ~{(Math.round(contIdealN(330, 20) / 10) * 10).toLocaleString()} and
+        the realistic one to ~{(Math.round(contRealN(330, 20) / 10) * 10).toLocaleString()} (from ~720 and ~1,440 at 25°) —
+        and only for satellites that carry the 800 MHz payload. <em>Assumes SpaceX acquires Grain's 800 MHz licenses (pending).</em>
+      </div>
       <Info label="walk me through elevation angle — why it decides everything">
         Stand outside and point at a satellite. If it's 25° above the horizon, your arm is nearly level — and the signal
         path between you skims across everything around you: every tree line, rooftop, hill, and even your own body when
@@ -2495,15 +2608,31 @@ function FootprintPanel() {
         is why its rules don't say "cover at 45°"; they say "deliver a usable signal ≥70% (later 90%) of the time" —
         letting statistics over the whole sky do the talking.
       </Info>
-      <Info label="how the satellite-count estimate is computed">
-        Each satellite covers a circular cap of Earth's surface (the amber circle). Basic geometry gives that cap's size
-        from altitude and elevation angle. Dividing Earth's surface by the cap area gives a theoretical minimum satellite
-        count — but real constellations can't tile the sphere perfectly: orbits bunch coverage at some latitudes and
-        satellites' circles must overlap to leave no gaps. We apply a ~3.3× "overlap inefficiency" factor, chosen so the
-        model reproduces reality — SpaceX's actual ~650-satellite first-generation fleet delivering continuous ~25°
-        coverage from 530 km. With the model anchored to a known truth, the other slider positions become credible
-        extrapolations rather than guesses. It remains an estimate: real constellation design juggles inclinations,
-        planes, and phasing that no single factor captures.
+      <Info label="how the satellite-count estimate is computed — and why 'continuous' needs two numbers">
+        Each satellite covers a circular cap of Earth's surface (the amber circle). Dividing Earth's surface by that cap
+        gives a floor no real constellation reaches: orbits can't tile a sphere, and their circles must overlap to leave
+        no gaps. So instead of a factor, the site now runs the orbits. Walker-delta constellations (evenly spaced planes,
+        satellites evenly spaced within each plane, a phase offset between planes) at 53° inclination are propagated for
+        a day with Earth turning underneath, and every point of a CONUS grid is checked every 20 seconds for a satellite
+        above the mask. For each fleet size the simulation searches plane counts and phasings for the best one.
+        <br /><br />
+        <strong>Perfect fleet</strong> — the best arrangement, every satellite working. At 330 km and a 25° mask the gaps
+        close at ~720 satellites (36 planes of 20). At 650 the best arrangement still leaves gaps of up to ~40 seconds at
+        ~10% of locations; a poorly phased 650 leaves gaps of nearly two minutes at more than half. At 35° the minimum
+        is ~1,650, at 45° ~3,350.
+        <br /><br />
+        <strong>Realistic fleet</strong> — the same constellations with 5% of satellites randomly out, which is normal for a
+        fleet that fails, deorbits and replaces itself every ~5 years. One missing satellite opens a hole along its whole
+        track, so the threshold roughly doubles: at 25° the gaps fall to ~15 seconds a day around ~1,400 satellites, and
+        even 2,000 leaves a rare blink. That realistic figure is what the old 3.3× rule of thumb happened to produce at
+        330 km (~1,436), so the rule survives as the realistic estimate for other masks — now with a reason.
+        <br /><br />
+        <strong>What changed in v151.</strong> The old rule was calibrated to "650 satellites ≈ continuous 25° from 530
+        km". Today's D2C satellites actually fly near 360 km, where footprints are much smaller — the same rule gives
+        ~1,235 there — so the claim that today's fleet is continuous didn't hold, and the fleet sliders that start at
+        650 now say so. <strong>What the model still ignores:</strong> multiple shells at different inclinations (the
+        grant's nine shells at 326–335 km haven't published theirs), spare satellites, and the link itself — a
+        satellite above the mask still has to close the link at that angle.
       </Info>
       <Info label="reach vs share vs illumination — the three circle sizes on this site">
         This site draws circles at three very different scales, and they nest. <strong>Reach</strong> (this panel's amber
@@ -2521,7 +2650,7 @@ function FootprintPanel() {
         ±200 Hz — but the residual-across-a-beam picture is set by beam width (∝ v/D), so it carries over.
         Moving from the leased G-block
         (1.99 GHz) to owned n252 (2.19 GHz) shrinks the <em>beams</em> ~10% (a capacity effect, Panel 1b) and costs
-        ~1.2 dB of extra path loss (a link-margin nibble), but the footprint — and the ~650 — doesn't move.
+        ~1.2 dB of extra path loss (a link-margin nibble), but the footprint — and the continuity thresholds — don't move.
       </Info>
       <Info label="why more satellites ≠ smaller beams (how coverage becomes capacity)">
         A common misreading of the ladder: that launching more satellites shrinks the beams. It doesn't — beam size is
@@ -2535,7 +2664,7 @@ function FootprintPanel() {
         <em> steeper average look angles</em>: with ten satellites in view instead of two, every cell gets handed to one
         nearly overhead, pushing more of the map into the full-menu reuse-1 zone (Panel 3). That last effect means
         per-cell spectrum and efficiency improve purely from fleet count, with zero hardware change — a capacity gain
-        hiding inside a coverage number. So the ladder's real meaning: ~650 saturates coverage; everything beyond
+        hiding inside a coverage number. So the ladder's real meaning: ~720–1,400 saturates 25° coverage; everything beyond
         multiplies capacity along three compounding axes — beams-per-area, duty cycle, and look-angle quality — until the
         aperture floor, regulatory power-density ceilings, and the launch treadmill become the binding constraints.
         15,000 satellites isn't more coverage; it's the same coverage served ~20× more densely at steadily steeper angles.
@@ -3219,6 +3348,7 @@ function SawtoothPanel() {
         <label className="sliderL" style={{ flex: 1, minWidth: 220, fontSize: 12 }}>
           Fleet size: <strong>{fleet.toLocaleString()}</strong> satellites (~{kVis.toFixed(1)} typically in view above {mask}°)
           <input type="range" min="650" max="15000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
+          <ContinuityBar fleet={fleet} min={650} max={15000} mask={mask} hKm={alt} />
         </label>
       </div>
       <svg viewBox="0 0 900 320" style={{ width: "100%", display: "block" }} role="img" aria-label="Serving satellite elevation and per-cell throughput over time for the selected fleet size">
@@ -3245,7 +3375,8 @@ function SawtoothPanel() {
         <div className="stat"><div className="statL">Mean per-cell DL</div><div className="statV">~{mean.toFixed(0)} Mbps</div></div>
         <div className="stat"><div className="statL">p10 – p90 swing</div><div className="statV" style={{ color: C.amber }}>{p10.toFixed(0)} – {p90.toFixed(0)} Mbps {mean > 0 ? `(±${(((p90 - p10) / 2 / mean) * 100).toFixed(0)}%)` : ""}</div></div>
         <div className="stat"><div className="statL">Time in reuse-1 (≥60°)</div><div className="statV" style={{ color: C.green }}>{r1pct.toFixed(0)}%</div></div>
-        <div className="stat"><div className="statL">Coverage gaps (no sat ≥{mask}°)</div><div className="statV" style={{ color: outage > 0.5 ? C.red : C.dim }}>{outage.toFixed(1)}% of time</div></div>
+        <div className="stat"><div className="statL">Coverage gaps (no sat ≥{mask}°) · orbit simulation, 5% of fleet out</div><div className="statV" style={{ color: contState(fleet, alt, mask).unc > 0.05 ? C.red : C.dim }}>{(() => { const u = contState(fleet, alt, mask).unc; return u >= 1 ? u.toFixed(1) : u >= 0.01 ? u.toFixed(2) : "<0.01"; })()}% of time</div>
+          <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 2 }}>the schematic trace above shows {outage.toFixed(0)}% — it draws a few random passes, not a phased constellation; the simulated share is the number to quote</div></div>
       </div>
       <Info label="how to read these two charts">
         The green trace is the elevation (in degrees, left axis) of the <em>best</em> satellite in your sky. Each hump is
@@ -3643,6 +3774,7 @@ function GapLab({ rows, g, spec, setSpec, mhz, setMhz, fleet, setFleet, loss, se
           D2C fleet: <strong>{fleet.toLocaleString()}</strong>{" "}
           <span style={{ color: C.dim }}>— duty {(duty * 100).toFixed(0)}% · {Math.round(ps.N).toLocaleString()} cells/patch</span>
           <input type="range" min="650" max="46000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
+          <ContinuityBar fleet={fleet} min={650} max={46000} />
         </label>
         <label className="sliderL">
           Decode floor: <strong>{floorDb}</strong> dB SNR <span style={{ color: C.dim }}>(below this the link does not close)</span>
@@ -4342,6 +4474,7 @@ function StitchPanel() {
         <label className="sliderL" style={{ flex: 2, minWidth: 260 }}>
           D2C fleet (global): <strong>{fleet.toLocaleString()}</strong> — ~{satsUS.toFixed(0)} over CONUS at any instant
           <input type="range" min="650" max="15000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
+          <ContinuityBar fleet={fleet} min={650} max={15000} />
         </label>
         <label className="sliderL" style={{ flex: 1, minWidth: 180 }}>
           Time speed: <strong>{spd === 0 ? "paused" : "×" + spd}</strong> <span style={{ color: C.dim, fontSize: 11 }}>(0 = pause · 5 = near-real motion · 100 = max)</span>
@@ -4449,9 +4582,9 @@ function StitchPanel() {
       </div>
       <Info label="why this panel and Panel 1 quote different elevations for the same fleet">
         They answer different questions, and together they bracket reality. Panel 1 asks: how many satellites
-        <em> guarantee</em> that every point, at every instant, has a satellite above the mask — using a 3.3× overlap
-        factor calibrated to the real fleet (650 satellites ≈ continuous 25°), which bakes in genuine constellation
-        waste: inclination bunching, imperfect phasing, the bad moments. This panel asks: in an idealized perfect hex
+        <em> guarantee</em> that every point, at every instant, has a satellite above the mask — using the 3.3× factor
+        the v151 orbit simulation validates as the realistic threshold (~1,400 satellites at 25° with 5% of the fleet
+        out), which bakes in genuine constellation waste: inclination bunching, imperfect phasing, dead satellites. This panel asks: in an idealized perfect hex
         lattice (with 1.3× mid-latitude crowding), how steep is the <em>typical</em> patch edge — zero waste assumed.
         Divide the two models' implied service areas and the entire gap is ~3.3 ÷ 1.3: at 5,000 satellites, typical
         serving elevation ≈ 57° while the guaranteed-everywhere floor ≈ 43°. Your phone usually lives near the first
@@ -4880,6 +5013,9 @@ const CONUS_KM2 = 8.08e6;
 
 function PatchFirstPrinciples() {
   const [fleet, setFleet] = useState(5000);
+  const [band, setBand] = useState("2");   // v151: 2 GHz n252 or the pending 800 MHz layer — the patch is the same, the cells aren't
+  const ps2 = patchStats(fleet), ps8 = patchStats(fleet, BEAM_KM_800, ESMR.beams);
+  const psB = band === "8" ? ps8 : ps2;
   const A = 510e6 / fleet;
   const R = Math.sqrt(A / Math.PI);
   const st = closestState(A);
@@ -4908,7 +5044,13 @@ function PatchFirstPrinciples() {
       <label className="sliderL">
         D2C fleet: <strong>{fleet.toLocaleString()}</strong> satellites
         <input type="range" min="650" max="48000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
+        <ContinuityBar fleet={fleet} min={650} max={48000} />
       </label>
+      <div className="tglRow" style={{ marginTop: 8, alignItems: "center" }}>
+        <button className={"genBtn" + (band === "2" ? " on" : "")} onClick={() => setBand("2")}>2 GHz · n252 (~{BEAM_KM.toFixed(1)} km beams)</button>
+        <button className={"genBtn" + (band === "8" ? " on" : "")} onClick={() => setBand("8")}>800 MHz · ESMR, pending (~{BEAM_KM_800.toFixed(1)} km beams)</button>
+        <span style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: C.dim }}>the band changes the cells inside the patch — never the patch</span>
+      </div>
       <div className="split" style={{ marginTop: 10, alignItems: "start" }}>
         <div>
           <div className="statL" style={{ marginBottom: 6 }}>Patches drawn to scale over the continental US</div>
@@ -4958,12 +5100,24 @@ function PatchFirstPrinciples() {
             </div>
           ))}
           <div className="stat" style={{ borderLeft: `2px solid ${C.blue}` }}>
-            <div className="statL">And the cells inside it</div>
-            <div className="statV" style={{ fontSize: 19, color: C.blue }}>{Math.round(patchStats(fleet).N).toLocaleString()} cells</div>
+            <div className="statL">And the cells inside it · {band === "8" ? "800 MHz layer (pending)" : "2 GHz n252"}</div>
+            <div className="statV" style={{ fontSize: 19, color: C.blue }}>{Math.round(psB.N).toLocaleString()} cells</div>
             <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 2 }}>
-              at ~{patchStats(fleet).avgCell.toFixed(1)} km² each · 700 beams cover {(patchStats(fleet).duty * 100).toFixed(patchStats(fleet).duty < 0.1 ? 1 : 0)}% at a time —{" "}
+              at ~{psB.avgCell.toFixed(psB.avgCell >= 100 ? 0 : 1)} km² each · 700 beams cover {(psB.duty * 100).toFixed(psB.duty < 0.1 ? 1 : 0)}% at a time
+              {band === "8" ? " (700 at 800 MHz is assumed — undisclosed)" : ""} —{" "}
               <button className="nextlink" style={{ display: "inline", margin: 0, padding: 0 }}
                 onClick={() => window.__navTo("coverage", "cov-7-patch")}>see Panel 3b →</button>
+            </div>
+          </div>
+          <div className="stat" style={{ borderLeft: `2px solid ${C.green}`, marginTop: 7 }}>
+            <div className="statL">Same patch, two bands — how often a beam is on your cell</div>
+            <div className="statV" style={{ fontSize: 15 }}>
+              2 GHz: <span style={{ color: C.blue }}>{(ps2.duty * 100).toFixed(0)}%</span>{" · "}800 MHz: <span style={{ color: C.green }}>{(ps8.duty * 100).toFixed(0)}%</span>
+            </div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: C.dim, marginTop: 2 }}>
+              {Math.round(ps2.N).toLocaleString()} vs {Math.round(ps8.N).toLocaleString()} cells to visit ·{" "}
+              {ps8.duty >= 1 ? "the 800 MHz layer lights the whole patch at once — no waiting for a hop" : `800 MHz lights the whole patch from ~1,070 satellites`}
+              {" "}· continuity in time, not more capacity · <em>assumes Grain's 800 MHz licenses are acquired (pending)</em>
             </div>
           </div>
         </div>
@@ -4985,6 +5139,15 @@ function PatchFirstPrinciples() {
         7.5 km/s, so the territory each one owns sweeps across the surface continuously, and a given town is handed from
         one satellite's patch to the next every minute or two. The patch is a snapshot of an assignment that is being
         recomputed constantly — which is what Panel 6's strip machine shows in motion.
+        <br /><br />
+        <strong>Does the 800 MHz band change it? No.</strong> Nothing in the division mentions frequency: the same
+        satellites own the same territory whichever band they speak. What the band changes is the <em>cells</em> inside
+        the territory. On the same ~5.6 m panel an 865 MHz beam is ~2.3× wider (~21 km vs ~9 km, ~5.3× the area), so a
+        patch holds ~5.3× fewer cells — at 5,000 satellites ~250 instead of ~1,330. With the same beam budget the
+        satellite visits each low-band cell far more often: ~80% of the time at 650 satellites against ~15% at 2 GHz,
+        and the whole patch at once from ~1,070. That makes the low band continuous in time — fewer waits for a hop —
+        without adding capacity (Serviceability). Coverage contiguity, whether a satellite is above you at all, is
+        geometry and is identical in both bands (Panel 1). <em>Assumes SpaceX acquires Grain's 800 MHz licenses (pending).</em>
         <br /><br />
         <strong>Why it matters so much.</strong> Patch size is the hinge of the whole system. It sets how many cells one
         satellite must cover (and therefore the duty cycle), how far from nadir the rim sits (and therefore the reuse
@@ -5077,6 +5240,7 @@ function PatchTilePanel() {
           D2C fleet: <strong>{fleet.toLocaleString()}</strong>{" "}
           <span style={{ color: C.dim }}>(patch radius ~{Math.round(ps.R)} km · area ~{Math.round(ps.A).toLocaleString()} km²)</span>
           <input type="range" min="650" max="48000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
+          <ContinuityBar fleet={fleet} min={650} max={48000} />
         </label>
         <label className="sliderL">
           Hop speed: <strong>{hopSpd === 0 ? "paused" : "×" + hopSpd}</strong> <span style={{ color: C.dim }}>(0 = pause)</span>
@@ -6526,6 +6690,7 @@ function ServiceabilityTab() {
           <label className="sliderL" style={{ flex: 1, minWidth: 200 }}>
             D2C fleet: <strong>{fleet.toLocaleString()}</strong> <span style={{ color: C.dim, fontSize: 11 }}>(~{satsUS.toFixed(0)} over CONUS)</span>
             <input type="range" min="650" max="15000" step="50" value={fleet} onChange={(e) => setFleet(+e.target.value)} />
+            <ContinuityBar fleet={fleet} min={650} max={15000} />
           </label>
         </div>
         <div className="tglRow" style={{ alignItems: "center" }}>
@@ -7396,7 +7561,7 @@ function StarlinkMobileRoadmap() {
           skeptics included.
         </p>
         <a className="srcA" href="sources.html">Sources &amp; citations →</a>
-        <span className="buildTag">build v150 · macro floor tiered by density — the defensible count</span>
+        <span className="buildTag">build v151 · coverage continuity simulated — how many satellites before the gaps close</span>
           <div style={{ marginTop: 6 }}><span style={{ display: "inline-block", fontFamily: "var(--mono)", fontSize: 10.5, color: C.amber, border: `1px solid ${C.amber}`, borderRadius: 5, padding: "2px 8px", opacity: 0.9 }}>Base case: assumes SpaceX acquires Grain's 800 MHz licenses (pending) · agreement Oct 8 · NPRM vote Oct 29 · D2D filing due Dec 4, 2026</span></div>
         <details style={{ marginTop: 8, position: "relative", zIndex: 30, background: C.ink, borderRadius: 4 }}>
           <summary style={{ cursor: "pointer", fontFamily: "var(--mono)", fontSize: 10, letterSpacing: "0.1em", color: C.dim }}>CHANGELOG</summary>
